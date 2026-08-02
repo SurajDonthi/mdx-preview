@@ -1,0 +1,31 @@
+{
+  "entities": {
+    "users": {
+      "title": "User Profile",
+      "description": "User account information",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "displayName": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["uid", "email"]
+    },
+    "documents": {
+      "title": "MDX Document",
+      "description": "Stored user MDX documents in Firestore",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "content": { "type": "string" },
+        "updatedAt": { "type": "string" },
+        "driveFileId": { "type": "string" }
+      },
+      "required": ["userId", "title", "content"]
+    }
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "name": "MDX Studio & Live Viewer",
+  "description": "An all-batteries-included MDX viewer and editor featuring live preview, custom React components, code syntax highlighting, front matter parsing, theme switching, header navigation sidebar, and file uploads.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

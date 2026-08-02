@@ -1,0 +1,69 @@
+@import "tailwindcss";
+
+/* Custom Scrollbars */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.25);
+  border-radius: 9999px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.45);
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Print Styles for PDF export & System Print */
+@media print {
+  /* Hide header, navigation, sidebar, editor, and modals */
+  header, nav, button, .no-print, [role="dialog"], .file-sidebar, .mdx-editor-container {
+    display: none !important;
+  }
+
+  body, html, main, #root {
+    background: white !important;
+    color: #0f172a !important;
+    overflow: visible !important;
+    height: auto !important;
+    width: 100% !important;
+    position: static !important;
+  }
+
+  /* Unhide and expand preview container across all view modes and mobile viewports */
+  .preview-container, #mdx-preview-content {
+    display: block !important;
+    position: static !important;
+    left: auto !important;
+    top: auto !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 24px !important;
+    margin: 0 !important;
+    color: #0f172a !important;
+    background-color: white !important;
+  }
+
+  /* Ensure page breaks don't chop headings or diagrams */
+  h1, h2, h3, h4, .mermaid-svg-container, table, pre {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+  h1, h2 {
+    page-break-after: avoid;
+    break-after: avoid;
+  }
+}
+
