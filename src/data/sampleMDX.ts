@@ -2,6 +2,90 @@ import { MdxDocSample } from '../types';
 
 export const SAMPLE_DOCUMENTS: MdxDocSample[] = [
   {
+    id: 'mermaid-pdf-test',
+    title: '🧪 Mermaid Diagram & PDF Test Document',
+    description: 'A test document containing flowcharts, sequence diagrams, gantt charts, and inline code snippets for PDF exporter testing.',
+    category: 'Testing',
+    iconName: 'GitFork',
+    content: `---
+title: "WebMCP & Mermaid Diagram Test Spec"
+description: "Test document to verify clean A4 PDF generation with flowcharts, sequence diagrams, and inline code."
+author: "Engineering Team"
+date: "2026-08-01"
+category: "Architecture Spec"
+tags: ["Mermaid", "PDF Test", "Architecture"]
+status: "Draft"
+---
+
+# WebMCP Integration Architecture Spec
+
+Two wiring paths: Path A — a \`gtag()\` call inside the GTM tool's \`execute()\` (marketing-owned) · Path B — inside the Chapter 9 telemetry wrapper (engineering-owned).
+
+Four custom dimensions to register in GA4: \`tool_name\`, \`channel\`, \`visit_session_id\`, \`agent_brand\`.
+
+Leads from the agent funnel arrive with \`no UTM parameters\` — \`lead_source\` is the only reliable channel marker.
+
+---
+
+## Chapter 3 · How It Works — The Referee Model
+
+WebMCP is a **three-party conversation** where no two parties talk directly — every call is routed through the browser.
+
+\`\`\`mermaid
+flowchart LR
+    Website["Website"] -- "registers tools on page load" --> Browser["Browser the referee"]
+    Browser -- "hands agent the tool menu" --> Agent["AI Agent"]
+    Agent -- "calls a tool by name" --> Browser
+    Browser -- "routes call to execute" --> Website
+    Website -- "returns structured result" --> Browser
+    Browser -- "returns result" --> Agent
+\`\`\`
+
+---
+
+## Chapter 12 · The 90-Day Playbook
+
+Gantt chart rollout plan across marketing and tech teams:
+
+\`\`\`mermaid
+gantt
+    title 90-Day Rollout Plan
+    dateFormat  YYYY-MM-DD
+    section Phase 1
+    Context / Tech Picks :a1, 2026-08-01, 15d
+    section Phase 2
+    Ship 3 Instrumented Read-Only Tools :a2, after a1, 30d
+    section Phase 3
+    GTM Calculator + Funnel Skeleton :a3, after a2, 30d
+    section Phase 4
+    1 Gated Write Tool + Soft-Lead Tool :a4, after a3, 15d
+\`\`\`
+
+---
+
+## Chapter 10 · The Agent Funnel
+
+Sequence diagram of lead capture flow:
+
+\`\`\`mermaid
+sequenceDiagram
+    autonumber
+    actor User as Human Customer
+    participant Agent as AI Agent Planner
+    participant Browser as Web Browser
+    participant Tool as captureInterestForFollowUp Tool
+    participant CRM as Marketing CRM
+
+    User->>Agent: Request product recommendations
+    Agent->>Browser: Query WebMCP registered tools
+    Browser-->>Agent: Return tool menu JSON
+    Agent->>Tool: Execute lead capture tool
+    Tool->>CRM: Hand soft-lead payload
+    CRM-->>User: Trigger email/SMS follow-up
+\`\`\`
+`,
+  },
+  {
     id: 'all-in-one-showcase',
     title: '🚀 Batteries-Included MDX Showcase',
     description: 'A comprehensive MDX document showcasing frontmatter, custom React components, charts, code blocks, and layout structures.',

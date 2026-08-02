@@ -10,9 +10,11 @@ import {
   setActiveDocumentId,
   deleteDocument,
   createNewDocument,
+  mergeDocuments,
   StoredDocument,
 } from './utils/storage';
-import { initAuth } from './utils/auth';
+import { initAuth, getAccessToken } from './utils/auth';
+import { saveFileToDrive } from './utils/driveService';
 import {
   subscribeToUserDocuments,
   saveDocumentToFirestore,
@@ -101,13 +103,11 @@ export default function App() {
     if (!currentUser) return;
 
     const unsubscribeFirestore = subscribeToUserDocuments(currentUser.uid, (cloudDocs) => {
-      if (cloudDocs.length > 0) {
-        setDocuments(cloudDocs);
-        if (!cloudDocs.some((d) => d.id === activeDocId)) {
-          setActiveDocId(cloudDocs[0].id);
-        }
-      } else {
-        const localDocs = loadAllDocuments();
+      const localDocs = loadAllDocuments();
+      const merged = mergeDocuments(localDocs, cloudDocs);
+      setDocuments(merged);
+
+      if (cloudDocs.length === 0 && localDocs.length > 0) {
         localDocs.forEach((d) => saveDocumentToFirestore(currentUser.uid, d));
       }
     });
@@ -115,10 +115,10 @@ export default function App() {
     return () => unsubscribeFirestore();
   }, [currentUser]);
 
-  // Debounced Auto-save to LocalStorage & Firestore
+  // Debounced Auto-save to LocalStorage, Firestore & Google Drive
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const executeSave = () => {
+  const executeSave = async () => {
     const updatedDoc: StoredDocument = {
       id: activeDocId,
       title: documentTitle,
@@ -135,6 +135,17 @@ export default function App() {
     if (currentUser) {
       saveDocumentToFirestore(currentUser.uid, updatedDoc);
     }
+
+    // 3. Auto-save to Google Drive if linked and token exists
+    const token = getAccessToken();
+    if (currentDriveFileId && token) {
+      try {
+        await saveFileToDrive(token, documentTitle, mdxContent, currentDriveFileId);
+      } catch (err: any) {
+        console.warn('Auto-save to Google Drive failed:', err?.message || err);
+      }
+    }
+
     setIsSaving(false);
   };
 
@@ -229,18 +240,28 @@ export default function App() {
 
   // Handle document loaded from Google Drive
   const handleLoadFromDrive = (content: string, title: string, driveFileId: string) => {
-    const newDoc = createNewDocument(title, content);
-    const updatedDoc = {
-      ...newDoc,
-      driveFileId,
-    };
-    const updatedDocs = saveDocument(updatedDoc);
-    setDocuments(updatedDocs);
-    setActiveDocId(newDoc.id);
-    setCurrentDriveFileId(driveFileId);
-
-    if (currentUser) {
-      saveDocumentToFirestore(currentUser.uid, updatedDoc);
+    // Check if doc already exists for this driveFileId
+    const existing = documents.find((d) => d.driveFileId === driveFileId);
+    if (existing) {
+      const updated = {
+        ...existing,
+        title,
+        content,
+        updatedAt: new Date().toISOString(),
+      };
+      const updatedDocs = saveDocument(updated);
+      setDocuments(updatedDocs);
+      setActiveDocId(existing.id);
+      setCurrentDriveFileId(driveFileId);
+      if (currentUser) saveDocumentToFirestore(currentUser.uid, updated);
+    } else {
+      const newDoc = createNewDocument(title, content);
+      newDoc.driveFileId = driveFileId;
+      const updatedDocs = saveDocument(newDoc);
+      setDocuments(updatedDocs);
+      setActiveDocId(newDoc.id);
+      setCurrentDriveFileId(driveFileId);
+      if (currentUser) saveDocumentToFirestore(currentUser.uid, newDoc);
     }
   };
 

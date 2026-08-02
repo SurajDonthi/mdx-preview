@@ -66,6 +66,13 @@ export const googleSignIn = async (): Promise<{ user: User; accessToken: string 
     return { user: result.user, accessToken: cachedAccessToken };
   } catch (error: any) {
     console.error('Google Sign-In Error:', error);
+    if (error?.code === 'auth/network-request-failed') {
+      throw new Error('Network request failed. Please check your internet connection or browser security settings.');
+    } else if (error?.code === 'auth/popup-blocked') {
+      throw new Error('Sign-in popup was blocked by your browser. Please allow popups for this site.');
+    } else if (error?.code === 'auth/popup-closed-by-user') {
+      throw new Error('Sign-in popup was closed before completing authentication.');
+    }
     throw error;
   } finally {
     isSigningIn = false;

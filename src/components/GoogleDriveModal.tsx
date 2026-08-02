@@ -68,16 +68,35 @@ export function GoogleDriveModal({
     }
   }, [isOpen, token, activeTab]);
 
+  const handleExpiredToken = () => {
+    localStorage.removeItem('google_access_token');
+    setToken(null);
+    setUser(null);
+    setDriveFiles([]);
+    setStatusMessage({
+      type: 'error',
+      text: 'Google Drive access token expired. Please click "Sign in with Google" to re-authenticate.',
+    });
+  };
+
   const fetchDriveFiles = async () => {
-    if (!token) return;
+    const currentToken = token || getAccessToken();
+    if (!currentToken) {
+      setStatusMessage({ type: 'error', text: 'Google Drive access token required. Please sign in below.' });
+      return;
+    }
     setIsLoadingFiles(true);
     setStatusMessage(null);
     try {
-      const files = await listDriveFiles(token);
+      const files = await listDriveFiles(currentToken);
       setDriveFiles(files);
     } catch (err: any) {
       console.error('Error fetching Drive files:', err);
-      setStatusMessage({ type: 'error', text: err.message || 'Failed to list Google Drive files' });
+      if (err.message && err.message.includes('TOKEN_EXPIRED')) {
+        handleExpiredToken();
+      } else {
+        setStatusMessage({ type: 'error', text: err.message || 'Failed to list Google Drive files' });
+      }
     } finally {
       setIsLoadingFiles(false);
     }
@@ -91,7 +110,7 @@ export function GoogleDriveModal({
       if (result) {
         setUser(result.user);
         setToken(result.accessToken);
-        setStatusMessage({ type: 'success', text: `Connected as ${result.user.email}` });
+        setStatusMessage({ type: 'success', text: `Connected to Google Drive as ${result.user.email}` });
       }
     } catch (err: any) {
       console.error('Sign-In failure:', err);
@@ -134,7 +153,11 @@ export function GoogleDriveModal({
       });
     } catch (err: any) {
       console.error('Save to Drive error:', err);
-      setStatusMessage({ type: 'error', text: err.message || 'Failed to save document to Google Drive' });
+      if (err.message && err.message.includes('TOKEN_EXPIRED')) {
+        handleExpiredToken();
+      } else {
+        setStatusMessage({ type: 'error', text: err.message || 'Failed to save document to Google Drive' });
+      }
     } finally {
       setIsSaving(false);
     }
@@ -142,7 +165,10 @@ export function GoogleDriveModal({
 
   const handleLoadFile = async (file: DriveFile) => {
     const currentToken = token || getAccessToken();
-    if (!currentToken) return;
+    if (!currentToken) {
+      setStatusMessage({ type: 'error', text: 'Google Drive access token missing. Please sign in.' });
+      return;
+    }
 
     setLoadingFileId(file.id);
     setStatusMessage(null);
@@ -157,7 +183,11 @@ export function GoogleDriveModal({
       }, 800);
     } catch (err: any) {
       console.error('Load file error:', err);
-      setStatusMessage({ type: 'error', text: err.message || 'Failed to read file content' });
+      if (err.message && err.message.includes('TOKEN_EXPIRED')) {
+        handleExpiredToken();
+      } else {
+        setStatusMessage({ type: 'error', text: err.message || 'Failed to read file content' });
+      }
     } finally {
       setLoadingFileId(null);
     }

@@ -55,22 +55,65 @@ async function getOrCreateAppFolder(token: string): Promise<string | null> {
  * List MDX and Markdown files stored in Google Drive
  */
 export async function listDriveFiles(token: string): Promise<DriveFile[]> {
-  const query = "trashed=false and (name contains '.mdx' or name contains '.md' or mimeType='text/plain' or mimeType='text/markdown')";
-  const url = `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(
-    query
-  )}&fields=files(id, name, mimeType, modifiedTime, size)&orderBy=modifiedTime desc&pageSize=50`;
+  try {
+    const folderId = await getOrCreateAppFolder(token);
 
-  const response = await fetch(url, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
+    const fetchedFilesMap = new Map<string, DriveFile>();
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Google Drive API Error (${response.status}): ${errorText}`);
+    // 1. Fetch files inside the MDX Studio Documents folder if it exists
+    if (folderId) {
+      const folderQuery = `'${folderId}' in parents and trashed=false`;
+      const folderUrl = `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(
+        folderQuery
+      )}&fields=files(id, name, mimeType, modifiedTime, size)&orderBy=modifiedTime desc&pageSize=50`;
+
+      const folderRes = await fetch(folderUrl, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (folderRes.status === 401 || folderRes.status === 403) {
+        throw new Error('TOKEN_EXPIRED: Your Google Drive session has expired. Please re-authenticate.');
+      }
+
+      if (folderRes.ok) {
+        const folderData = await folderRes.json();
+        if (folderData.files) {
+          folderData.files.forEach((f: DriveFile) => fetchedFilesMap.set(f.id, f));
+        }
+      }
+    }
+
+    // 2. Also fetch all non-folder files accessible to this app
+    const generalQuery = "trashed=false and mimeType != 'application/vnd.google-apps.folder'";
+    const generalUrl = `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(
+      generalQuery
+    )}&fields=files(id, name, mimeType, modifiedTime, size)&orderBy=modifiedTime desc&pageSize=50`;
+
+    const generalRes = await fetch(generalUrl, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (generalRes.status === 401 || generalRes.status === 403) {
+      throw new Error('TOKEN_EXPIRED: Your Google Drive session has expired. Please re-authenticate.');
+    }
+
+    if (generalRes.ok) {
+      const generalData = await generalRes.json();
+      if (generalData.files) {
+        generalData.files.forEach((f: DriveFile) => fetchedFilesMap.set(f.id, f));
+      }
+    }
+
+    const fileList = Array.from(fetchedFilesMap.values());
+    fileList.sort((a, b) => new Date(b.modifiedTime).getTime() - new Date(a.modifiedTime).getTime());
+    return fileList;
+  } catch (err: any) {
+    if (err.message && err.message.startsWith('TOKEN_EXPIRED')) {
+      throw err;
+    }
+    console.error('Error in listDriveFiles:', err);
+    throw new Error(err.message || 'Failed to list files from Google Drive');
   }
-
-  const data = await response.json();
-  return data.files || [];
 }
 
 /**
@@ -84,6 +127,9 @@ export async function downloadDriveFile(token: string, fileId: string): Promise<
   });
 
   if (!response.ok) {
+    if (response.status === 401 || response.status === 403) {
+      throw new Error('TOKEN_EXPIRED: Your Google Drive session has expired. Please re-authenticate.');
+    }
     throw new Error(`Failed to download file from Google Drive (${response.status})`);
   }
 
@@ -115,6 +161,9 @@ export async function saveFileToDrive(
     });
 
     if (!response.ok) {
+      if (response.status === 401 || response.status === 403) {
+        throw new Error('TOKEN_EXPIRED: Your Google Drive session has expired. Please re-authenticate.');
+      }
       throw new Error(`Failed to update file in Google Drive (${response.status})`);
     }
 
@@ -164,6 +213,9 @@ export async function saveFileToDrive(
     );
 
     if (!response.ok) {
+      if (response.status === 401 || response.status === 403) {
+        throw new Error('TOKEN_EXPIRED: Your Google Drive session has expired. Please re-authenticate.');
+      }
       const errText = await response.text();
       throw new Error(`Failed to create file in Google Drive (${response.status}): ${errText}`);
     }

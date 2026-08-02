@@ -181,7 +181,7 @@ function CustomCodeElement({
   // Inline code rendering
   return (
     <code
-      className={`px-1.5 py-0.5 mx-0.5 rounded-md text-[0.875em] font-mono font-medium border border-slate-700/40 bg-slate-800/60 text-cyan-300 dark:text-cyan-300 inline-block align-baseline ${themeConfig.codeBgClass} ${themeConfig.codeTextClass}`}
+      className={`px-1.5 py-0.5 mx-0.5 rounded-md text-[0.85em] leading-tight font-mono font-medium border border-slate-200 dark:border-slate-700/50 bg-slate-100 dark:bg-slate-800/80 text-indigo-700 dark:text-cyan-300 inline-block align-baseline ${themeConfig.codeBgClass} ${themeConfig.codeTextClass}`}
       {...props}
     >
       {children}
@@ -344,6 +344,23 @@ export function MdxRenderer({
         >
           {children}
         </a>
+      ),
+
+      // Lists (ul, ol, li) overrides
+      ul: ({ children, ...props }: any) => (
+        <ul className="list-disc pl-6 my-4 space-y-1.5 marker:text-indigo-500 dark:marker:text-indigo-400" {...props}>
+          {children}
+        </ul>
+      ),
+      ol: ({ children, ...props }: any) => (
+        <ol className="list-decimal pl-6 my-4 space-y-1.5 marker:text-indigo-500 dark:marker:text-indigo-400 font-medium" {...props}>
+          {children}
+        </ol>
+      ),
+      li: ({ children, ...props }: any) => (
+        <li className="pl-1 leading-relaxed text-slate-700 dark:text-slate-300" {...props}>
+          {children}
+        </li>
       ),
 
       // Custom interactive component map

@@ -63,6 +63,39 @@ export function setActiveDocumentId(id: string): void {
 }
 
 /**
+ * Intelligently merges local documents and cloud documents.
+ * Returns a combined list sorted by updatedAt descending.
+ * Prevents newly created local documents from disappearing when Firestore snapshot updates.
+ */
+export function mergeDocuments(localDocs: StoredDocument[], cloudDocs: StoredDocument[]): StoredDocument[] {
+  const map = new Map<string, StoredDocument>();
+
+  // Add all local documents first
+  localDocs.forEach((doc) => {
+    map.set(doc.id, doc);
+  });
+
+  // Merge cloud documents: if cloud version has newer timestamp or isn't in local, replace/add it
+  cloudDocs.forEach((cloudDoc) => {
+    const existing = map.get(cloudDoc.id);
+    if (!existing) {
+      map.set(cloudDoc.id, cloudDoc);
+    } else {
+      const localTime = new Date(existing.updatedAt).getTime();
+      const cloudTime = new Date(cloudDoc.updatedAt).getTime();
+      if (cloudTime >= localTime) {
+        map.set(cloudDoc.id, cloudDoc);
+      }
+    }
+  });
+
+  const merged = Array.from(map.values());
+  merged.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+  saveAllDocuments(merged);
+  return merged;
+}
+
+/**
  * Save or update a single document by ID
  */
 export function saveDocument(doc: StoredDocument): StoredDocument[] {
