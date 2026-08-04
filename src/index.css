@@ -126,14 +126,24 @@ ol ol, ul ol {
   scrollbar-width: none;
 }
 
+.pdf-export-root {
+  position: fixed;
+  left: -10000px;
+  top: 0;
+  width: 794px;
+  min-width: 794px;
+  overflow: visible;
+  pointer-events: none;
+  background: white;
+}
+
 /* Print Styles for PDF export & System Print */
 @media print {
-  /* Hide header, navigation, sidebar, editor, and modals */
-  header, nav, button, .no-print, [role="dialog"], .file-sidebar, .mdx-editor-container {
+  #root > *:not(.pdf-export-root) {
     display: none !important;
   }
 
-  body, html, main, #root {
+  html, body, #root {
     background: white !important;
     color: #0f172a !important;
     overflow: visible !important;
@@ -142,18 +152,15 @@ ol ol, ul ol {
     position: static !important;
   }
 
-  /* Unhide and expand preview container across all view modes and mobile viewports */
-  .preview-container, #mdx-preview-content {
+  .pdf-export-root {
     display: block !important;
     position: static !important;
-    left: auto !important;
-    top: auto !important;
-    opacity: 1 !important;
-    visibility: visible !important;
     width: 100% !important;
+    min-width: 0 !important;
     max-width: 100% !important;
-    padding: 24px !important;
     margin: 0 !important;
+    overflow: visible !important;
+    pointer-events: auto !important;
     color: #0f172a !important;
     background-color: white !important;
   }

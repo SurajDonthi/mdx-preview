@@ -1,747 +1,856 @@
-import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 
 export type PdfExportEngine = 'html2pdf' | 'canvas';
 
-/**
- * Downloads a raw text string (such as MDX content) as a file.
- * Handles appendChild & Blob URL cleanup to work reliably in sandboxed iframe environments.
- */
 export function downloadMdxFile(content: string, documentTitle: string = 'document'): void {
-  const sanitizedTitle = (documentTitle || 'document')
+  const title = (documentTitle || 'document')
     .trim()
     .toLowerCase()
     .replace(/[^a-z0-9_-]+/g, '_')
     .replace(/^_+|_+$/g, '');
-  const fileName = `${sanitizedTitle || 'document'}.mdx`;
+  const fileName = `${title || 'document'}.mdx`;
 
   try {
     const blob = new Blob([content], { type: 'text/markdown;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
+    downloadBlob(blob, fileName, 1000);
+  } catch (error) {
+    console.warn('Blob URL download failed, trying Data URI fallback:', error);
     const link = document.createElement('a');
-    link.href = url;
-    link.download = fileName;
-    link.style.display = 'none';
-    document.body.appendChild(link);
-    link.click();
-
-    setTimeout(() => {
-      if (document.body.contains(link)) {
-        document.body.removeChild(link);
-      }
-      URL.revokeObjectURL(url);
-    }, 1000);
-  } catch (err) {
-    console.warn('Blob URL download failed, trying Data URI fallback:', err);
-    const dataUrl = 'data:text/markdown;charset=utf-8,' + encodeURIComponent(content);
-    const link = document.createElement('a');
-    link.href = dataUrl;
+    link.href = `data:text/markdown;charset=utf-8,${encodeURIComponent(content)}`;
     link.download = fileName;
     link.target = '_blank';
     link.style.display = 'none';
     document.body.appendChild(link);
-    link.click();
-
-    setTimeout(() => {
-      if (document.body.contains(link)) {
-        document.body.removeChild(link);
-      }
-    }, 1000);
-  }
-}
-
-// Global cached canvas 2D context for fast color resolution
-let sharedCanvasCtx: CanvasRenderingContext2D | null = null;
-function getSharedCanvasCtx(): CanvasRenderingContext2D | null {
-  if (!sharedCanvasCtx && typeof document !== 'undefined') {
     try {
-      const canvas = document.createElement('canvas');
-      canvas.width = 1;
-      canvas.height = 1;
-      sharedCanvasCtx = canvas.getContext('2d');
-    } catch {
-      sharedCanvasCtx = null;
+      link.click();
+    } finally {
+      window.setTimeout(() => link.remove(), 1000);
     }
   }
-  return sharedCanvasCtx;
 }
 
-/**
- * Safely converts any oklab, oklch, or modern CSS color function string
- * into standard hex (#rrggbb) or rgb(...) format that html2canvas can parse without errors.
- */
-export function parseCssColorToRgb(colorStr: string): string {
-  if (!colorStr || colorStr === 'transparent' || colorStr === 'inherit' || colorStr === 'initial' || colorStr === 'none') {
-    return colorStr;
-  }
-  if (!colorStr.includes('oklab') && !colorStr.includes('oklch') && !colorStr.includes('light-dark') && !colorStr.includes('color(') && !colorStr.includes('color-mix')) {
-    return colorStr;
-  }
+const PAPER_WIDTH_PX = 794;
+const MERMAID_TIMEOUT_MS = 10_000;
+const MODERN_COLOR = /(?:oklab|oklch|color-mix|light-dark|color)\s*\(/i;
 
-  const ctx = getSharedCanvasCtx();
-  if (ctx) {
-    try {
-      ctx.fillStyle = '#0f172a'; // Default fallback
-      ctx.fillStyle = colorStr;
-      const resolved = ctx.fillStyle;
-      if (resolved && !resolved.includes('oklab') && !resolved.includes('oklch') && !resolved.includes('color(')) {
-        return resolved;
-      }
-    } catch {
-      // Fall through
-    }
-  }
-
-  if (colorStr.includes('255, 255, 255') || colorStr.includes('fff')) {
-    return '#ffffff';
-  }
-  return '#0f172a';
+/** Compatibility helper. PDF rendering does not rely on application color conversion. */
+export function parseCssColorToRgb(value: string): string {
+  if (!MODERN_COLOR.test(value)) return value;
+  const match = value.match(/okl(?:ch|ab)\(\s*([\d.]+)(%)?/i);
+  if (!match) return 'rgba(255, 255, 255, 0)';
+  const lightness = Number(match[1]) / (match[2] ? 100 : 1);
+  const channel = Math.round(Math.max(0, Math.min(1, lightness)) * 255);
+  return `rgb(${channel}, ${channel}, ${channel})`;
 }
 
-/**
- * Sanitizes a CLONED document object ONLY inside html2canvas onclone callback.
- * NEVER mutates the main document or live DOM elements!
- */
-export function sanitizeClonedDocumentForHtml2Canvas(clonedDoc: Document): void {
-  try {
-    const styleTags = Array.from(clonedDoc.querySelectorAll('style'));
-    styleTags.forEach((style) => {
-      if (style.textContent) {
-        style.textContent = style.textContent
-          .replace(/oklab\([^)]+\)/gi, '#0f172a')
-          .replace(/oklch\([^)]+\)/gi, '#0f172a')
-          .replace(/color-mix\([^)]+\)/gi, '#0f172a')
-          .replace(/light-dark\([^)]+\)/gi, '#0f172a');
-      }
-    });
-
-    const containerEl = clonedDoc.body;
-    if (!containerEl) return;
-
-    const allElements = Array.from(containerEl.querySelectorAll('*')) as HTMLElement[];
-    const defaultView = clonedDoc.defaultView || window;
-
-    allElements.forEach((el) => {
-      try {
-        if (el.style && el.style.cssText) {
-          if (el.style.cssText.includes('oklab') || el.style.cssText.includes('oklch') || el.style.cssText.includes('color(') || el.style.cssText.includes('color-mix')) {
-            el.style.cssText = el.style.cssText
-              .replace(/oklab\([^)]+\)/gi, '#0f172a')
-              .replace(/oklch\([^)]+\)/gi, '#0f172a')
-              .replace(/color-mix\([^)]+\)/gi, '#0f172a')
-              .replace(/light-dark\([^)]+\)/gi, '#0f172a');
-          }
-        }
-
-        const computed = defaultView.getComputedStyle(el);
-        if (computed) {
-          const color = computed.color;
-          const bg = computed.backgroundColor;
-          const border = computed.borderColor;
-
-          if (color && (color.includes('oklab') || color.includes('oklch') || color.includes('color'))) {
-            el.style.color = parseCssColorToRgb(color);
-          }
-          if (bg && (bg.includes('oklab') || bg.includes('oklch') || bg.includes('color'))) {
-            el.style.backgroundColor = parseCssColorToRgb(bg);
-          }
-          if (border && (border.includes('oklab') || border.includes('oklch') || border.includes('color'))) {
-            el.style.borderColor = parseCssColorToRgb(border);
-          }
-
-          if (computed.boxShadow && (computed.boxShadow.includes('oklab') || computed.boxShadow.includes('oklch') || computed.boxShadow.includes('color-mix'))) {
-            el.style.boxShadow = 'none';
-          }
-        }
-      } catch {
-        // Ignore individual element access errors
-      }
-    });
-  } catch (err) {
-    console.warn('Cloned doc sanitization warning:', err);
-  }
+function setStyles(element: HTMLElement, styles: Record<string, string>): void {
+  Object.entries(styles).forEach(([name, value]) => {
+    element.style.setProperty(name, value, 'important');
+  });
 }
 
-/**
- * Renders an SVG diagram element to a high-resolution 3x PNG image wrapper via Canvas.
- * Extracts foreignObject text labels into crisp native SVG text elements and applies light paper styling.
- */
-async function rasterizeSvgToPngElement(
-  origSvg: SVGElement,
-  targetWidth: number = 680
-): Promise<HTMLElement> {
-  try {
-    const svgClone = origSvg.cloneNode(true) as SVGElement;
+function applyLightExportStyles(root: HTMLElement): void {
+  root.querySelectorAll('button, [data-pdf-interactive="true"]').forEach((element) => element.remove());
 
-    // 1. Convert foreignObject elements into standard SVG text elements for universal canvas rendering
-    const foreignObjects = Array.from(svgClone.querySelectorAll('foreignObject'));
-    foreignObjects.forEach((fo) => {
-      const labels = Array.from(fo.querySelectorAll('*'))
-        .map((el) => (el.textContent || '').trim())
-        .filter((txt) => txt.length > 0);
-
-      const labelText = labels.length > 0 ? labels[labels.length - 1] : fo.textContent || '';
-
-      const x = parseFloat(fo.getAttribute('x') || '0');
-      const y = parseFloat(fo.getAttribute('y') || '0');
-      const w = parseFloat(fo.getAttribute('width') || '100');
-      const h = parseFloat(fo.getAttribute('height') || '40');
-
-      const textEl = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-      textEl.setAttribute('x', String(x + w / 2));
-      textEl.setAttribute('y', String(y + h / 2));
-      textEl.setAttribute('text-anchor', 'middle');
-      textEl.setAttribute('dominant-baseline', 'central');
-      textEl.setAttribute('fill', '#0f172a');
-      textEl.setAttribute('font-size', '13px');
-      textEl.setAttribute('font-weight', '600');
-      textEl.setAttribute('font-family', 'ui-sans-serif, system-ui, -apple-system, sans-serif');
-      textEl.textContent = labelText;
-
-      fo.parentNode?.replaceChild(textEl, fo);
+  [root, ...Array.from(root.querySelectorAll<HTMLElement>('*'))].forEach((element) => {
+    setStyles(element, {
+      color: '#0f172a',
+      'background-color': 'transparent',
+      'background-image': 'none',
+      'border-color': '#cbd5e1',
+      'outline-color': '#64748b',
+      'text-decoration-color': '#64748b',
+      'box-shadow': 'none',
+      'text-shadow': 'none',
+      filter: 'none',
+      'backdrop-filter': 'none',
+      '-webkit-backdrop-filter': 'none',
+      animation: 'none',
+      transition: 'none',
+      'color-scheme': 'light',
     });
+  });
 
-    // 2. Override internal vector colors for crisp light-mode paper contrast
-    const allNodes = Array.from(svgClone.querySelectorAll('*'));
-    allNodes.forEach((node) => {
-      const tag = node.tagName.toLowerCase();
-      const cls = (node.getAttribute('class') || '').toLowerCase();
+  setStyles(root, {
+    width: `${PAPER_WIDTH_PX}px`,
+    padding: '32px',
+    'box-sizing': 'border-box',
+    'background-color': '#ffffff',
+    color: '#0f172a',
+    'font-size': '14px',
+    'line-height': '1.6',
+    'font-family': 'ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif',
+  });
 
-      if (tag === 'style') {
-        node.textContent = (node.textContent || '')
-          .replace(/fill:\s*(#0d1117|#161b22|#0f172a|#1e293b|#020617|#1f2937|#111827|#000000|#000|black)/gi, 'fill: #e0e7ff')
-          .replace(/color:\s*(#ffffff|#f9fafc|#fff|white)/gi, 'color: #0f172a')
-          .replace(/fill:\s*(#ffffff|#f9fafc|#fff|white)/gi, 'fill: #0f172a');
-      }
+  const contentRoot = root.firstElementChild as HTMLElement | null;
+  if (contentRoot) {
+    setStyles(contentRoot, {
+      width: '100%',
+      'max-width': '100%',
+      padding: '0',
+      margin: '0',
+      'background-color': '#ffffff',
+      color: '#0f172a',
+    });
+  }
 
-      if (tag === 'text' || tag === 'tspan' || cls.includes('nodelabel') || cls.includes('edgelabel')) {
-        node.setAttribute('fill', '#0f172a');
-        (node as any).style.fill = '#0f172a';
-        (node as any).style.color = '#0f172a';
-        (node as any).style.fontWeight = '600';
-      }
+  root.querySelectorAll<HTMLElement>('a').forEach((element) => {
+    setStyles(element, { color: '#1d4ed8', 'text-decoration-color': '#93c5fd' });
+  });
+  root.querySelectorAll<HTMLElement>('h1, h2, h3, h4, h5, h6').forEach((element) => {
+    setStyles(element, { color: '#0f172a', 'break-inside': 'avoid', 'page-break-inside': 'avoid' });
+  });
+  root.querySelectorAll<HTMLElement>('pre').forEach((element) => {
+    setStyles(element, {
+      'background-color': '#f8fafc',
+      color: '#0f172a',
+      border: '1px solid #cbd5e1',
+      'border-radius': '8px',
+      padding: '12px 14px',
+      'white-space': 'pre-wrap',
+      'overflow-wrap': 'anywhere',
+      'break-inside': 'avoid',
+      'page-break-inside': 'avoid',
+    });
+  });
+  root.querySelectorAll<HTMLElement>('pre .token, pre span').forEach((element) => {
+    const className = element.className || '';
+    let color = '#0f172a';
+    if (/keyword|tag/.test(className)) color = '#0369a1';
+    else if (/string|attr-value/.test(className)) color = '#15803d';
+    else if (/comment|prolog|doctype/.test(className)) color = '#64748b';
+    else if (/function|class-name|title/.test(className)) color = '#6d28d9';
+    else if (/number|boolean|constant/.test(className)) color = '#c2410c';
+    else if (/builtin|attr-name/.test(className)) color = '#0f766e';
+    setStyles(element, { color });
+  });
+  // Shared inline tokens already carry export-safe geometry. Only plain <code>
+  // needs the fallback box, otherwise this padding would break their centring.
+  root.querySelectorAll<HTMLElement>('code:not(pre code):not([data-inline-token])').forEach((element) => {
+    setStyles(element, {
+      'background-color': '#f1f5f9',
+      color: '#0f172a',
+      border: '1px solid #cbd5e1',
+      'border-radius': '4px',
+      padding: '1px 5px',
+    });
+  });
+  root.querySelectorAll<HTMLElement>('[data-inline-token]').forEach((element) => {
+    setStyles(element, {
+      'background-color': '#f1f5f9',
+      color: element.dataset.inlineToken === 'code' ? '#3730a3' : '#334155',
+      'border-color': '#cbd5e1',
+    });
+  });
 
-      if (cls.includes('cluster') || cls.includes('subgraph')) {
-        const rect = node.querySelector('rect') || (tag === 'rect' ? node : null);
-        if (rect) {
-          rect.setAttribute('fill', '#f8fafc');
-          rect.setAttribute('stroke', '#cbd5e1');
-        }
-      } else if (tag === 'rect' || tag === 'circle' || tag === 'polygon' || tag === 'path' || tag === 'ellipse') {
-        const currentFill = (node.getAttribute('fill') || '').toLowerCase();
-        if (!currentFill || currentFill === 'none' || currentFill.includes('0f172a') || currentFill.includes('1e293b') || currentFill.includes('000') || currentFill.includes('161b22')) {
-          if (!cls.includes('edge') && !cls.includes('line') && !cls.includes('link') && !cls.includes('arrow')) {
-            node.setAttribute('fill', '#e0e7ff');
-            (node as any).style.fill = '#e0e7ff';
-          }
-        }
-        if (!cls.includes('edge') && !cls.includes('line') && !cls.includes('link') && !cls.includes('arrow')) {
-          node.setAttribute('stroke', '#6366f1');
-          (node as any).style.stroke = '#6366f1';
-        }
-      }
+  root.querySelectorAll<HTMLElement>('table').forEach((element) => {
+    setStyles(element, {
+      width: '100%',
+      'border-collapse': 'collapse',
+      'background-color': '#ffffff',
+      color: '#0f172a',
+      border: '1px solid #cbd5e1',
+      'break-inside': 'avoid',
+      'page-break-inside': 'avoid',
+    });
+  });
+  root.querySelectorAll<HTMLElement>('th').forEach((element) => {
+    setStyles(element, {
+      'background-color': '#f1f5f9',
+      border: '1px solid #cbd5e1',
+      padding: '8px 12px',
+    });
+  });
+  root.querySelectorAll<HTMLElement>('td').forEach((element) => {
+    setStyles(element, {
+      'background-color': '#ffffff',
+      border: '1px solid #e2e8f0',
+      padding: '8px 12px',
+    });
+  });
+  root.querySelectorAll<HTMLElement>('blockquote, figure').forEach((element) => {
+    setStyles(element, {
+      'background-color': '#f8fafc',
+      'border-color': '#cbd5e1',
+      'break-inside': 'avoid',
+      'page-break-inside': 'avoid',
+    });
+  });
 
-      if (cls.includes('edge') || cls.includes('link') || cls.includes('flowchart-link')) {
-        node.setAttribute('stroke', '#4f46e5');
-        (node as any).style.stroke = '#4f46e5';
-      }
-
-      if (tag === 'marker' || cls.includes('arrowhead') || cls.includes('marker')) {
-        const paths = node.querySelectorAll('path, polygon');
-        paths.forEach((p) => {
-          p.setAttribute('fill', '#4f46e5');
-          p.setAttribute('stroke', '#4f46e5');
+  root.querySelectorAll<HTMLElement>('[data-pdf-frontmatter]').forEach((frontmatter) => {
+    setStyles(frontmatter, {
+      'background-color': '#ffffff',
+      color: '#0f172a',
+      'border-color': '#e2e8f0',
+      'border-radius': '12px',
+      'break-inside': 'avoid',
+      'page-break-inside': 'avoid',
+    });
+    frontmatter
+      .querySelectorAll<HTMLElement>('[data-pdf-frontmatter-field], .grid > div')
+      .forEach((element) => {
+        setStyles(element, {
+          'background-color': '#f8fafc',
+          color: '#0f172a',
+          'border-color': '#e2e8f0',
         });
+      });
+    frontmatter.querySelectorAll<HTMLElement>('span.rounded-full, span.rounded-md').forEach((element) => {
+      setStyles(element, {
+        'background-color': '#eef2ff',
+        color: '#3730a3',
+        'border-color': '#c7d2fe',
+      });
+    });
+  });
+
+  // The blanket pass above clears every background. Small solid swatches (the
+  // status dot, for example) declare the colour they need to keep.
+  root.querySelectorAll<HTMLElement>('[data-pdf-swatch]').forEach((element) => {
+    const color = element.dataset.pdfSwatch;
+    if (color) setStyles(element, { 'background-color': color, 'border-color': color });
+  });
+
+  root.querySelectorAll<HTMLElement>('[data-pdf-mermaid]').forEach((card) => {
+    setStyles(card, {
+      'background-color': '#ffffff',
+      color: '#0f172a',
+      'border-color': '#e2e8f0',
+      'border-radius': '12px',
+      overflow: 'hidden',
+      'break-inside': 'avoid',
+      'page-break-inside': 'avoid',
+    });
+    const header = (card.querySelector('[data-pdf-mermaid-header]') || card.firstElementChild) as HTMLElement | null;
+    if (header) {
+      setStyles(header, {
+        'background-color': '#f8fafc',
+        color: '#334155',
+        'border-color': '#e2e8f0',
+      });
+    }
+    card.querySelectorAll<HTMLElement>('.mermaid-svg-container, [data-pdf-mermaid-canvas]').forEach((element) => {
+      setStyles(element, { 'background-color': '#ffffff', color: '#0f172a' });
+    });
+  });
+
+  root.querySelectorAll<HTMLElement>('img').forEach((element) => {
+    setStyles(element, {
+      'max-width': '100%',
+      'background-color': '#ffffff',
+      'break-inside': 'avoid',
+      'page-break-inside': 'avoid',
+    });
+  });
+}
+
+/** Applies only scoped export styles. It never reads or rewrites document style tags. */
+export function sanitizeClonedDocumentForHtml2Canvas(clonedDocument: Document): void {
+  clonedDocument
+    .querySelectorAll<HTMLElement>('.pdf-export-paper-sheet')
+    .forEach(applyLightExportStyles);
+}
+
+function mermaidName(card: HTMLElement): string {
+  return card.dataset.mermaidId || card.getAttribute('aria-label') || 'unknown';
+}
+
+async function waitForMermaidReady(root: HTMLElement, timeoutMs = MERMAID_TIMEOUT_MS): Promise<void> {
+  const cards = Array.from(root.querySelectorAll<HTMLElement>('[data-pdf-mermaid]'));
+  if (cards.length === 0) return;
+
+  const inspect = (): boolean => {
+    const failed = cards.filter((card) => card.dataset.renderState === 'error');
+    if (failed.length > 0) {
+      const details = failed.map((card) => {
+        const message = card.dataset.errorMessage || card.dataset.renderError || 'render failed';
+        return `${mermaidName(card)}: ${message}`;
+      });
+      throw new Error(`Cannot export PDF. Mermaid diagram error: ${details.join('; ')}`);
+    }
+    return cards.every((card) => card.dataset.renderState === 'ready');
+  };
+
+  if (inspect()) return;
+
+  await new Promise<void>((resolve, reject) => {
+    let settled = false;
+    let observer: MutationObserver;
+    let timer: number;
+    const finish = (error?: Error) => {
+      if (settled) return;
+      settled = true;
+      observer.disconnect();
+      window.clearTimeout(timer);
+      if (error) reject(error);
+      else resolve();
+    };
+    observer = new MutationObserver(() => {
+      try {
+        if (inspect()) finish();
+      } catch (error) {
+        finish(error as Error);
       }
     });
+    timer = window.setTimeout(() => {
+      const pending = cards
+        .filter((card) => card.dataset.renderState !== 'ready')
+        .map((card) => `${mermaidName(card)} (${card.dataset.renderState || 'pending'})`);
+      finish(new Error(`Cannot export PDF. Timed out waiting for Mermaid diagrams: ${pending.join(', ')}`));
+    }, timeoutMs);
+    observer.observe(root, {
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['data-render-state', 'data-render-error', 'data-error-message'],
+    });
+  });
+}
 
-    // 3. Compute dimensions accurately
-    const rect = origSvg.getBoundingClientRect();
-    let width = rect.width || 600;
-    let height = rect.height || 400;
-
-    const viewBoxAttr = origSvg.getAttribute('viewBox') || svgClone.getAttribute('viewBox');
-    if (viewBoxAttr) {
-      const parts = viewBoxAttr.trim().split(/[\s,]+/);
-      if (parts.length === 4) {
-        const vbW = parseFloat(parts[2]);
-        const vbH = parseFloat(parts[3]);
-        if (vbW > 0 && vbH > 0) {
-          width = vbW;
-          height = vbH;
+function prepareMermaidIds(root: HTMLElement): {
+  pairs: Array<{ id: string; source: HTMLElement }>;
+  restore: () => void;
+} {
+  const changed: HTMLElement[] = [];
+  const seen = new Set<string>();
+  try {
+    const pairs = Array.from(root.querySelectorAll<HTMLElement>('[data-pdf-mermaid]')).map(
+      (source, index) => {
+        let id = source.dataset.mermaidId?.trim();
+        if (!id) {
+          id = `pdf-mermaid-${Date.now().toString(36)}-${index}-${Math.random().toString(36).slice(2, 8)}`;
+          source.dataset.mermaidId = id;
+          changed.push(source);
         }
+        if (seen.has(id)) throw new Error(`Cannot export PDF. Duplicate Mermaid id: ${id}`);
+        seen.add(id);
+        return { id, source };
       }
-    }
+    );
+    return {
+      pairs,
+      restore: () => changed.forEach((card) => card.removeAttribute('data-mermaid-id')),
+    };
+  } catch (error) {
+    changed.forEach((card) => card.removeAttribute('data-mermaid-id'));
+    throw error;
+  }
+}
 
-    svgClone.setAttribute('width', String(width));
-    svgClone.setAttribute('height', String(height));
-    svgClone.setAttribute('viewBox', `0 0 ${width} ${height}`);
+function parseViewBox(svg: SVGSVGElement): [number, number, number, number] | null {
+  const values = (svg.getAttribute('viewBox') || '').trim().split(/[\s,]+/).map(Number);
+  return values.length === 4 && values.every(Number.isFinite) && values[2] > 0 && values[3] > 0
+    ? (values as [number, number, number, number])
+    : null;
+}
 
-    // 4. Render to Canvas at 3x resolution for high crispness
-    const xmlString = new XMLSerializer().serializeToString(svgClone);
-    const svgBlob = new Blob([xmlString], { type: 'image/svg+xml;charset=utf-8' });
-    const blobUrl = URL.createObjectURL(svgBlob);
+async function rasterizeMermaidSvg(
+  sourceSvg: SVGSVGElement,
+  diagramId: string,
+  maxWidth = 680
+): Promise<HTMLElement> {
+  const svg = sourceSvg.cloneNode(true) as SVGSVGElement;
+  svg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+  svg.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink');
+  const viewBox = parseViewBox(sourceSvg) || parseViewBox(svg);
+  const rect = sourceSvg.getBoundingClientRect();
+  const intrinsicWidth = viewBox?.[2] || rect.width || 600;
+  const intrinsicHeight = viewBox?.[3] || rect.height || 400;
+  const width = Math.max(1, Math.min(maxWidth, rect.width || intrinsicWidth));
+  const height = Math.max(1, (width * intrinsicHeight) / intrinsicWidth);
 
-    const scale = 3;
+  // The original four-part viewBox, including minX/minY, remains unchanged.
+  svg.setAttribute('width', String(width));
+  svg.setAttribute('height', String(height));
+  const serialized = new XMLSerializer().serializeToString(svg);
+  const url = URL.createObjectURL(new Blob([serialized], { type: 'image/svg+xml;charset=utf-8' }));
+  const image = new Image();
+
+  try {
+    await new Promise<void>((resolve, reject) => {
+      image.onload = () => resolve();
+      image.onerror = () => {
+        reject(new Error(`Cannot export PDF. Mermaid diagram ${diagramId} could not be rasterized.`));
+      };
+      image.src = url;
+    });
+
     const canvas = document.createElement('canvas');
-    canvas.width = Math.round(width * scale);
-    canvas.height = Math.round(height * scale);
-
-    const ctx = canvas.getContext('2d');
-    if (ctx) {
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    canvas.width = Math.max(1, Math.ceil(width * 3));
+    canvas.height = Math.max(1, Math.ceil(height * 3));
+    const context = canvas.getContext('2d');
+    if (!context) {
+      throw new Error(`Cannot export PDF. Canvas is unavailable for Mermaid diagram ${diagramId}.`);
     }
-
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-
-    await new Promise<void>((resolve) => {
-      img.onload = () => {
-        if (ctx) {
-          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        }
-        URL.revokeObjectURL(blobUrl);
-        resolve();
-      };
-      img.onerror = () => {
-        URL.revokeObjectURL(blobUrl);
-        resolve();
-      };
-      img.src = blobUrl;
-    });
-
-    const pngUrl = canvas.toDataURL('image/png', 1.0);
+    context.fillStyle = '#ffffff';
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    context.drawImage(image, 0, 0, canvas.width, canvas.height);
 
     const wrapper = document.createElement('div');
-    wrapper.className = 'pdf-mermaid-raster-wrapper';
-    wrapper.style.display = 'flex';
-    wrapper.style.justifyContent = 'center';
-    wrapper.style.alignItems = 'center';
-    wrapper.style.width = '100%';
-    wrapper.style.margin = '16px 0';
-    wrapper.style.backgroundColor = '#ffffff';
-
-    const pngImg = document.createElement('img');
-    pngImg.src = pngUrl;
-    pngImg.style.maxWidth = '100%';
-    pngImg.style.width = `${Math.min(width, targetWidth)}px`;
-    pngImg.style.height = 'auto';
-    pngImg.style.display = 'block';
-    pngImg.style.margin = '0 auto';
-    pngImg.style.backgroundColor = '#ffffff';
-    pngImg.style.borderRadius = '8px';
-    pngImg.style.border = '1px solid #e2e8f0';
-
-    wrapper.appendChild(pngImg);
+    wrapper.dataset.pdfMermaidRaster = 'true';
+    setStyles(wrapper, {
+      display: 'flex',
+      'justify-content': 'center',
+      'align-items': 'center',
+      width: '100%',
+      'background-color': '#ffffff',
+      'break-inside': 'avoid',
+      'page-break-inside': 'avoid',
+    });
+    const png = document.createElement('img');
+    png.src = canvas.toDataURL('image/png');
+    png.alt = `Mermaid diagram ${diagramId}`;
+    setStyles(png, {
+      display: 'block',
+      width: `${width}px`,
+      height: 'auto',
+      'max-width': '100%',
+      margin: '0 auto',
+      'background-color': '#ffffff',
+    });
+    wrapper.appendChild(png);
     return wrapper;
-  } catch (err) {
-    console.warn('SVG rasterization fallback warning:', err);
-    const fallback = document.createElement('div');
-    fallback.style.margin = '12px 0';
-    fallback.appendChild(origSvg.cloneNode(true));
-    return fallback;
+  } finally {
+    URL.revokeObjectURL(url);
   }
 }
 
-/**
- * Creates a temporary offscreen A4 white paper container.
- * Completely strips dark backgrounds, removes all copy code buttons/headers,
- * and rasterizes Mermaid diagrams to high-res PNGs for flawless A4 printing.
- */
-export async function createWhitePaperContainer(sourceElement: HTMLElement): Promise<HTMLElement> {
-  const clone = sourceElement.cloneNode(true) as HTMLElement;
-
-  // Outer container styled as standard A4 sheet (794px width = 210mm at 96 DPI)
-  const container = document.createElement('div');
-  container.className = 'pdf-export-paper-sheet';
-  container.style.position = 'absolute';
-  container.style.left = '-9999px';
-  container.style.top = '-9999px';
-  container.style.width = '794px';
-  container.style.backgroundColor = '#ffffff';
-  container.style.color = '#0f172a';
-  container.style.padding = '32px';
-  container.style.boxSizing = 'border-box';
-  container.style.fontFamily = 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
-  container.style.fontSize = '14px';
-  container.style.lineHeight = '1.6';
-  container.style.zIndex = '-9999';
-  container.style.pointerEvents = 'none';
-
-  // Apply clean white paper styling to root clone
-  clone.classList.remove('dark');
-  clone.style.backgroundColor = '#ffffff';
-  clone.style.color = '#0f172a';
-  clone.style.width = '100%';
-  clone.style.maxWidth = '100%';
-  clone.style.padding = '0';
-  clone.style.margin = '0';
-  clone.style.boxShadow = 'none';
-
-  // 1. REMOVE ALL INTERACTIVE BUTTONS (Copy, Download, Edit, Toggle)
-  const buttonsToHide = Array.from(clone.querySelectorAll('button')) as HTMLElement[];
-  buttonsToHide.forEach((btn) => {
-    btn.remove();
+/** Creates an isolated, explicitly light A4 export subtree. */
+export async function createWhitePaperContainer(source: HTMLElement): Promise<HTMLElement> {
+  await waitForMermaidReady(source);
+  const prepared = prepareMermaidIds(source);
+  let clone: HTMLElement;
+  try {
+    clone = source.cloneNode(true) as HTMLElement;
+  } finally {
+    prepared.restore();
+  }
+  // The source export root is parked off-screen. Its class must not survive
+  // inside the capture sheet or the cloned content is shifted off the canvas.
+  clone.classList.remove('pdf-export-root');
+  clone.removeAttribute('aria-hidden');
+  setStyles(clone, {
+    position: 'static',
+    left: 'auto',
+    top: 'auto',
+    width: '100%',
+    'min-width': '0',
+    'max-width': '100%',
+    overflow: 'visible',
+    visibility: 'visible',
+    opacity: '1',
   });
 
-  // Remove any elements containing copy text/icons
-  const allCopyEls = Array.from(clone.querySelectorAll('*')).filter((el) => {
-    const text = (el.textContent || '').trim().toLowerCase();
-    return text === 'copy' || text === 'copied' || text === 'copy code' || text === 'copy mermaid code';
-  }) as HTMLElement[];
-  allCopyEls.forEach((el) => el.remove());
+  const cloneCards = new Map<string, HTMLElement>();
+  clone.querySelectorAll<HTMLElement>('[data-pdf-mermaid]').forEach((card) => {
+    const id = card.dataset.mermaidId;
+    if (!id) throw new Error('Cannot export PDF. A cloned Mermaid diagram is missing its stable id.');
+    if (cloneCards.has(id)) throw new Error(`Cannot export PDF. Duplicate cloned Mermaid id: ${id}`);
+    cloneCards.set(id, card);
+  });
 
-  // 2. CONVERT MERMAID DIAGRAM SVGS TO HIGH-DPI PNG IMAGES
-  const origSvgs = Array.from(sourceElement.querySelectorAll('svg'));
-  const clonedSvgs = Array.from(clone.querySelectorAll('svg'));
-
-  for (let i = 0; i < clonedSvgs.length; i++) {
-    const clonedSvg = clonedSvgs[i];
-    const origSvg = origSvgs[i] || clonedSvg;
-
-    const rasterWrapper = await rasterizeSvgToPngElement(origSvg, 680);
-    const parent = clonedSvg.parentElement;
-    if (parent) {
-      parent.replaceChild(rasterWrapper, clonedSvg);
+  for (const { id, source: sourceCard } of prepared.pairs) {
+    const cloneCard = cloneCards.get(id);
+    const sourceSvg = sourceCard.querySelector<SVGSVGElement>('.mermaid-svg-container > svg');
+    const cloneSvg = cloneCard?.querySelector<SVGSVGElement>('.mermaid-svg-container > svg');
+    if (!cloneCard || !sourceSvg || !cloneSvg) {
+      throw new Error(`Cannot export PDF. Mermaid diagram ${id} is marked ready but has no SVG.`);
     }
+    cloneSvg.replaceWith(await rasterizeMermaidSvg(sourceSvg, id));
   }
 
-  // Also sanitize Mermaid containers
-  const mermaidContainers = Array.from(
-    clone.querySelectorAll('.mermaid-svg-container, [class*="Mermaid"], [class*="mermaid"]')
-  ) as HTMLElement[];
-  mermaidContainers.forEach((mc) => {
-    mc.style.backgroundColor = '#ffffff';
-    mc.style.borderColor = '#e2e8f0';
-    mc.style.color = '#0f172a';
-    mc.style.boxShadow = 'none';
-
-    // Remove top header bar inside diagram cards if empty or containing title
-    const headerBar = mc.querySelector('div') as HTMLElement | null;
-    if (headerBar) {
-      headerBar.style.backgroundColor = '#ffffff';
-      headerBar.style.borderColor = '#e2e8f0';
-      headerBar.style.color = '#0f172a';
-    }
+  const paper = document.createElement('div');
+  paper.className = 'pdf-export-paper-sheet';
+  Object.assign(paper.style, {
+    position: 'absolute',
+    left: '-10000px',
+    top: '0',
+    zIndex: '-1',
+    pointerEvents: 'none',
   });
-
-  // 3. CONVERT CODE BLOCKS & PRISM SYNTAX TO CLEAN LIGHT PAPER THEME
-  const preElements = Array.from(clone.querySelectorAll('pre')) as HTMLElement[];
-  preElements.forEach((pre) => {
-    // Format outer block wrapper
-    const parentBlock = pre.closest('.group, [class*="CodeBlock"], .relative, div') as HTMLElement | null;
-    if (parentBlock && parentBlock !== clone && parentBlock !== document.body) {
-      parentBlock.style.backgroundColor = '#f8fafc';
-      parentBlock.style.borderColor = '#cbd5e1';
-      parentBlock.style.borderRadius = '8px';
-      parentBlock.style.boxShadow = 'none';
-      parentBlock.style.overflow = 'hidden';
-
-      // Clean top header bar above code (remove dark background and copy buttons)
-      const headerBar = parentBlock.querySelector('div') as HTMLElement | null;
-      if (headerBar && headerBar !== pre.parentElement) {
-        headerBar.style.backgroundColor = '#f1f5f9';
-        headerBar.style.borderBottom = '1px solid #cbd5e1';
-        headerBar.style.color = '#334155';
-        headerBar.style.padding = '6px 12px';
-
-        const childBtns = Array.from(headerBar.querySelectorAll('button'));
-        childBtns.forEach((b) => b.remove());
-      }
-    }
-
-    if (pre.parentElement && pre.parentElement !== parentBlock) {
-      pre.parentElement.style.backgroundColor = '#f8fafc';
-      pre.parentElement.style.color = '#0f172a';
-    }
-
-    pre.style.backgroundColor = '#f8fafc';
-    pre.style.color = '#0f172a';
-    pre.style.border = '1px solid #cbd5e1';
-    pre.style.borderRadius = '8px';
-    pre.style.padding = '12px 14px';
-    pre.style.whiteSpace = 'pre-wrap';
-    pre.style.wordBreak = 'break-word';
-    pre.style.margin = '0';
-
-    // Format Prism syntax tokens for white paper contrast
-    const tokens = Array.from(pre.querySelectorAll('.token, span')) as HTMLElement[];
-    tokens.forEach((token) => {
-      const cls = token.className || '';
-      if (cls.includes('keyword') || cls.includes('tag')) {
-        token.style.color = '#0284c7'; // Sky Blue
-        token.style.fontWeight = '600';
-      } else if (cls.includes('string') || cls.includes('attr-value')) {
-        token.style.color = '#15803d'; // Emerald Green
-      } else if (cls.includes('comment') || cls.includes('prolog') || cls.includes('doctype')) {
-        token.style.color = '#64748b'; // Slate Gray
-        token.style.fontStyle = 'italic';
-      } else if (cls.includes('function') || cls.includes('class-name') || cls.includes('title')) {
-        token.style.color = '#7c3aed'; // Violet
-        token.style.fontWeight = '600';
-      } else if (cls.includes('number') || cls.includes('boolean') || cls.includes('constant')) {
-        token.style.color = '#c2410c'; // Orange
-      } else if (cls.includes('operator') || cls.includes('punctuation')) {
-        token.style.color = '#334155'; // Dark Slate
-      } else if (cls.includes('builtin') || cls.includes('attr-name')) {
-        token.style.color = '#0d9488'; // Teal
-      } else {
-        token.style.color = '#0f172a';
-      }
-    });
-  });
-
-  const inlineCodes = Array.from(clone.querySelectorAll('code:not(pre code)')) as HTMLElement[];
-  inlineCodes.forEach((ic) => {
-    ic.style.display = 'inline-block';
-    ic.style.backgroundColor = '#f1f5f9';
-    ic.style.color = '#0f172a';
-    ic.style.border = '1px solid #cbd5e1';
-    ic.style.borderRadius = '4px';
-    ic.style.padding = '1px 5px';
-    ic.style.margin = '0 2px';
-    ic.style.fontSize = '0.85em';
-    ic.style.lineHeight = '1.2';
-  });
-
-  // 4. CONVERT FRONTMATTER HEADERS & BADGES
-  const frontmatterBlocks = Array.from(
-    clone.querySelectorAll('[data-pdf-frontmatter="true"], [class*="frontmatter"]')
-  ) as HTMLElement[];
-  frontmatterBlocks.forEach((fm) => {
-    fm.style.backgroundColor = '#ffffff';
-    fm.style.borderColor = '#e2e8f0';
-    fm.style.color = '#0f172a';
-    fm.style.borderRadius = '12px';
-    fm.style.boxShadow = 'none';
-
-    const childTexts = Array.from(fm.querySelectorAll('h1, h2, h3, h4, p, span, div, strong')) as HTMLElement[];
-    childTexts.forEach((ct) => {
-      ct.style.color = '#0f172a';
-    });
-
-    const badges = Array.from(fm.querySelectorAll('span[class*="rounded"]')) as HTMLElement[];
-    badges.forEach((bg) => {
-      bg.style.backgroundColor = '#e0e7ff';
-      bg.style.color = '#3730a3';
-      bg.style.borderColor = '#c7d2fe';
-    });
-  });
-
-  // 5. CONVERT HEADINGS, CALLOUTS, TABLES, CARDS
-  const headings = Array.from(clone.querySelectorAll('h1, h2, h3, h4, h5, h6')) as HTMLElement[];
-  headings.forEach((h) => {
-    h.style.color = '#0f172a';
-    if (h.tagName === 'H1' || h.tagName === 'H2') {
-      h.style.borderBottom = '1px solid #e2e8f0';
-      h.style.paddingBottom = '6px';
-    }
-  });
-
-  const tables = Array.from(clone.querySelectorAll('table')) as HTMLElement[];
-  tables.forEach((tbl) => {
-    tbl.style.backgroundColor = '#ffffff';
-    tbl.style.color = '#0f172a';
-    tbl.style.border = '1px solid #cbd5e1';
-    tbl.style.borderCollapse = 'collapse';
-    tbl.style.width = '100%';
-
-    const ths = Array.from(tbl.querySelectorAll('th')) as HTMLElement[];
-    ths.forEach((th) => {
-      th.style.backgroundColor = '#f1f5f9';
-      th.style.color = '#0f172a';
-      th.style.border = '1px solid #cbd5e1';
-      th.style.padding = '8px 12px';
-      th.style.fontWeight = '600';
-    });
-
-    const tds = Array.from(tbl.querySelectorAll('td')) as HTMLElement[];
-    tds.forEach((td) => {
-      td.style.backgroundColor = '#ffffff';
-      td.style.color = '#1e293b';
-      td.style.border = '1px solid #e2e8f0';
-      td.style.padding = '8px 12px';
-    });
-  });
-
-  // 6. GLOBAL CATCH-ALL FOR REMAINING DARK BACKGROUNDS & TEXT
-  const allElements = Array.from(clone.querySelectorAll('*')) as HTMLElement[];
-  allElements.forEach((el) => {
-    // Remove dark mode Tailwind classes
-    el.classList.remove(
-      'dark',
-      'bg-slate-950',
-      'bg-slate-900',
-      'bg-slate-800',
-      'bg-slate-950/90',
-      'bg-slate-900/50',
-      'bg-slate-950/50',
-      'bg-black',
-      'bg-zinc-900',
-      'bg-neutral-900'
-    );
-
-    const compStyle = window.getComputedStyle(el);
-    const compColor = compStyle.color;
-    if (compColor && (compColor.includes('255, 255, 255') || compColor.includes('248, 250, 252') || compColor.includes('241, 245, 249') || compColor.includes('226, 232, 240'))) {
-      el.style.color = '#0f172a';
-    }
-
-    const compBg = compStyle.backgroundColor;
-    if (
-      compBg &&
-      (compBg.includes('15, 23, 42') ||
-        compBg.includes('30, 41, 59') ||
-        compBg.includes('2, 6, 23') ||
-        compBg.includes('17, 24, 39') ||
-        compBg.includes('24, 24, 27') ||
-        compBg.includes('0, 0, 0'))
-    ) {
-      el.style.backgroundColor = '#f8fafc';
-      el.style.borderColor = '#e2e8f0';
-    }
-
-    el.style.backdropFilter = 'none';
-    (el.style as any).webkitBackdropFilter = 'none';
-
-    // Page break rules
-    if (
-      ['H1', 'H2', 'H3', 'H4', 'PRE', 'TABLE', 'IMG', 'FIGURE', 'BLOCKQUOTE'].includes(el.tagName) ||
-      el.classList.contains('pdf-mermaid-raster-wrapper')
-    ) {
-      el.style.pageBreakInside = 'avoid';
-      (el.style as any).breakInside = 'avoid';
-    }
-  });
-
-  container.appendChild(clone);
-  document.body.appendChild(container);
-
-  return container;
+  paper.appendChild(clone);
+  applyLightExportStyles(paper);
+  document.body.appendChild(paper);
+  return paper;
 }
 
 /**
- * Standard, robust A4 PDF exporter built with html2canvas and jsPDF.
- * Clean, zero DOM-mutation, zero-crash paper rendering.
+ * Rasterisation.
+ *
+ * The capture runs through an SVG <foreignObject>, so the browser's own layout
+ * engine draws the sheet. A JS reimplementation of CSS (html2canvas) placed
+ * every bordered inline token's box and its text by different rules, which left
+ * pill labels sitting below their borders and icons floating above their
+ * labels. This path is plain DOM plus canvas, so it behaves the same on mobile
+ * Chrome as on desktop and never needs the print dialog.
  */
+
+/**
+ * Copying resolved styles onto the clone is not portable: each engine
+ * enumerates a different property set, and whatever it omits silently
+ * disappears from the capture. Shipping the real stylesheets instead lets every
+ * engine run its own cascade over the original markup, exactly as on screen.
+ */
+function collectDocumentCss(): string {
+  let css = '';
+  for (const sheet of Array.from(document.styleSheets)) {
+    let rules: CSSRuleList | null = null;
+    try {
+      rules = sheet.cssRules;
+    } catch {
+      // A cross-origin sheet cannot be read; the export styles do not rely on one.
+      continue;
+    }
+    if (!rules) continue;
+    for (const rule of Array.from(rules)) css += `${rule.cssText}\n`;
+  }
+  return css;
+}
+
+/**
+ * An <img> whose height is `auto` has nothing to resolve against inside a
+ * detached SVG, so WebKit collapses it to zero. Pinning the measured size keeps
+ * every picture the same shape it had on screen.
+ */
+function pinImageSizes(source: HTMLElement, clone: HTMLElement): void {
+  const sourceImages = Array.from(source.querySelectorAll('img'));
+  const cloneImages = Array.from(clone.querySelectorAll('img'));
+  sourceImages.forEach((image, index) => {
+    const target = cloneImages[index];
+    if (!target) return;
+    const rect = image.getBoundingClientRect();
+    if (rect.width < 1 || rect.height < 1) return;
+    setStyles(target, {
+      width: `${rect.width}px`,
+      height: `${rect.height}px`,
+      'max-width': 'none',
+      'min-width': '0',
+    });
+  });
+}
+
+/**
+ * An SVG rendered inside <img> may not fetch anything, so every picture has to
+ * be embedded first. Anything unreachable is dropped rather than left to fail
+ * the whole export.
+ */
+async function inlineImages(root: HTMLElement): Promise<void> {
+  const images = Array.from(root.querySelectorAll('img'));
+  await Promise.all(
+    images.map(async (image) => {
+      const source = image.getAttribute('src') || '';
+      if (!source || source.startsWith('data:')) return;
+      try {
+        const response = await fetch(source, { mode: 'cors', credentials: 'omit' });
+        if (!response.ok) throw new Error(`status ${response.status}`);
+        const blob = await response.blob();
+        const dataUrl = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(String(reader.result));
+          reader.onerror = () => reject(new Error('image could not be read'));
+          reader.readAsDataURL(blob);
+        });
+        image.setAttribute('src', dataUrl);
+      } catch (error) {
+        console.warn('PDF export: dropping image that could not be embedded', source, error);
+        image.remove();
+      }
+    })
+  );
+}
+
+async function rasterize(element: HTMLElement, scale: number): Promise<HTMLCanvasElement> {
+  await inlineImages(element);
+
+  const bounds = element.getBoundingClientRect();
+  const width = Math.max(1, Math.ceil(bounds.width));
+  const height = Math.max(1, Math.ceil(bounds.height));
+
+  const clone = element.cloneNode(true) as HTMLElement;
+  pinImageSizes(element, clone);
+  setStyles(clone, {
+    position: 'static',
+    left: '0',
+    top: '0',
+    margin: '0',
+    width: `${width}px`,
+  });
+
+  const xhtmlHost = document.createElementNS('http://www.w3.org/1999/xhtml', 'div');
+  xhtmlHost.setAttribute('xmlns', 'http://www.w3.org/1999/xhtml');
+  const style = document.createElement('style');
+  style.textContent = collectDocumentCss();
+  xhtmlHost.appendChild(style);
+  xhtmlHost.appendChild(clone);
+
+  const svgNamespace = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(svgNamespace, 'svg');
+  svg.setAttribute('xmlns', svgNamespace);
+  svg.setAttribute('width', String(width));
+  svg.setAttribute('height', String(height));
+  svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+
+  const foreignObject = document.createElementNS(svgNamespace, 'foreignObject');
+  foreignObject.setAttribute('x', '0');
+  foreignObject.setAttribute('y', '0');
+  foreignObject.setAttribute('width', String(width));
+  foreignObject.setAttribute('height', String(height));
+  foreignObject.appendChild(xhtmlHost);
+  svg.appendChild(foreignObject);
+
+  const markup = new XMLSerializer().serializeToString(svg);
+  // Chrome treats an SVG served from a blob: URL as cross-origin, which taints
+  // the canvas and blocks toDataURL. A data: URL stays same-origin.
+  const url = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(markup)}`;
+
+  const image = new Image();
+  await new Promise<void>((resolve, reject) => {
+    image.onload = () => resolve();
+    image.onerror = () => reject(new Error('Cannot export PDF. The page snapshot could not be rendered.'));
+    image.src = url;
+  });
+  if (typeof image.decode === 'function') {
+    await image.decode().catch(() => undefined);
+  }
+
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.max(1, Math.round(width * scale));
+  canvas.height = Math.max(1, Math.round(height * scale));
+  const context = canvas.getContext('2d');
+  if (!context) throw new Error('Cannot export PDF. Canvas is unavailable.');
+  context.fillStyle = '#ffffff';
+  context.fillRect(0, 0, canvas.width, canvas.height);
+  context.drawImage(image, 0, 0, canvas.width, canvas.height);
+  return canvas;
+}
+
+/** Samples a grid of pixels to catch an engine that produced an empty capture. */
+function canvasHasContent(canvas: HTMLCanvasElement): boolean {
+  const context = canvas.getContext('2d');
+  if (!context) return false;
+  const steps = 24;
+  const stepX = Math.max(1, Math.floor(canvas.width / steps));
+  const stepY = Math.max(1, Math.floor(canvas.height / steps));
+  for (let y = 0; y < canvas.height; y += stepY) {
+    for (let x = 0; x < canvas.width; x += stepX) {
+      const [r, g, b] = context.getImageData(x, y, 1, 1).data;
+      if (r < 245 || g < 245 || b < 245) return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Every engine tested draws the sheet correctly through <foreignObject>. If an
+ * untested one refuses, html2canvas still produces a readable document, so the
+ * export never fails outright. It loads only on that path, so the happy path
+ * does not pay for it.
+ */
+async function rasterizeWithFallback(paper: HTMLElement, scale: number): Promise<HTMLCanvasElement> {
+  try {
+    const canvas = await rasterize(paper, scale);
+    if (canvasHasContent(canvas)) return canvas;
+    console.warn('PDF export: native capture came back empty, falling back.');
+  } catch (error) {
+    console.warn('PDF export: native capture failed, falling back.', error);
+  }
+
+  const { default: html2canvas } = await import('html2canvas');
+  return html2canvas(paper, {
+    scale,
+    useCORS: true,
+    allowTaint: false,
+    logging: false,
+    backgroundColor: '#ffffff',
+    windowWidth: PAPER_WIDTH_PX,
+    onclone: sanitizeClonedDocumentForHtml2Canvas,
+  });
+}
+
+function resolveSource(value: HTMLElement | string): HTMLElement {
+  if (typeof value !== 'string') return value;
+  const element = document.getElementById(value);
+  if (!element) throw new Error(`Preview element not found: ${value}`);
+  return element;
+}
+
+async function waitForImages(root: HTMLElement, timeoutMs = 3000): Promise<void> {
+  const pending = Array.from(root.querySelectorAll('img')).filter((image) => !image.complete);
+  if (pending.length === 0) return;
+  await Promise.race([
+    Promise.all(
+      pending.map(
+        (image) =>
+          new Promise<void>((resolve) => {
+            image.addEventListener('load', () => resolve(), { once: true });
+            image.addEventListener('error', () => resolve(), { once: true });
+          })
+      )
+    ),
+    new Promise<void>((resolve) => window.setTimeout(resolve, timeoutMs)),
+  ]);
+}
+
+interface VerticalRange {
+  top: number;
+  bottom: number;
+}
+
+function measureAvoidRanges(root: HTMLElement): VerticalRange[] {
+  const rootTop = root.getBoundingClientRect().top;
+  const selector = [
+    '[data-pdf-frontmatter]',
+    '[data-pdf-mermaid]',
+    '[data-pdf-keep-together]',
+    'h1',
+    'h2',
+    'h3',
+    'h4',
+    'h5',
+    'h6',
+    'pre',
+    'table',
+    'figure',
+    'blockquote',
+  ].join(',');
+  return Array.from(root.querySelectorAll<HTMLElement>(selector))
+    .map((element) => {
+      const rect = element.getBoundingClientRect();
+      return { top: rect.top - rootTop, bottom: rect.bottom - rootTop };
+    })
+    .filter((range) => range.bottom - range.top > 1)
+    .sort((a, b) => a.top - b.top || b.bottom - a.bottom);
+}
+
+function calculateSafeBreaks(
+  totalHeight: number,
+  pageHeight: number,
+  ranges: VerticalRange[]
+): number[] {
+  const result = [0];
+  const minimumFill = Math.min(96, pageHeight * 0.15);
+  let pageStart = 0;
+  while (pageStart + pageHeight < totalHeight - 1) {
+    const desired = pageStart + pageHeight;
+    const protectedTop = ranges
+      .filter((range) => {
+        const height = range.bottom - range.top;
+        return height <= pageHeight && range.top < desired && range.bottom > desired;
+      })
+      .reduce((top, range) => Math.min(top, range.top), desired);
+    const next = protectedTop - pageStart >= minimumFill ? protectedTop : desired;
+    pageStart = Math.max(pageStart + 1, Math.min(totalHeight, next));
+    result.push(pageStart);
+  }
+  if (result[result.length - 1] < totalHeight) result.push(totalHeight);
+  return result;
+}
+
+function downloadBlob(blob: Blob, fileName: string, cleanupDelay = 1500): void {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = fileName;
+  link.style.display = 'none';
+  document.body.appendChild(link);
+  try {
+    link.click();
+  } finally {
+    window.setTimeout(() => {
+      link.remove();
+      URL.revokeObjectURL(url);
+    }, cleanupDelay);
+  }
+}
+
+/** Canvas-backed A4 exporter with measured, block-aware page boundaries. */
 export async function exportHtmlToPdfCanvas(
-  elementId: string,
-  documentTitle: string = 'document'
+  source: HTMLElement | string,
+  documentTitle = 'document'
 ): Promise<void> {
-  const targetElement = document.getElementById(elementId);
-  if (!targetElement) {
-    throw new Error('Preview element not found');
-  }
-
-  const sanitizedTitle = (documentTitle || 'document')
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9_-]+/g, '_')
-    .replace(/^_+|_+$/g, '') || 'document';
-  const fileName = `${sanitizedTitle}.pdf`;
-
-  const paperContainer = await createWhitePaperContainer(targetElement);
-
-  // Small delay for DOM layout & images to settle in cloned paper sheet
-  await new Promise((r) => setTimeout(r, 250));
+  const target = resolveSource(source);
+  const name =
+    (documentTitle || 'document')
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9_-]+/g, '_')
+      .replace(/^_+|_+$/g, '') || 'document';
+  let paper: HTMLElement | null = null;
 
   try {
-    const canvas = await html2canvas(paperContainer, {
-      scale: 2,
-      useCORS: true,
-      allowTaint: true,
-      logging: false,
-      backgroundColor: '#ffffff',
-      windowWidth: 794,
-      onclone: (clonedDoc: Document) => {
-        sanitizeClonedDocumentForHtml2Canvas(clonedDoc);
-      },
-    });
+    paper = await createWhitePaperContainer(target);
+    await waitForImages(paper);
+    const canvas = await rasterizeWithFallback(paper, 2);
+    if (!canvas.width || !canvas.height) {
+      throw new Error('Cannot export PDF. The rendered page is empty.');
+    }
 
     const pdf = new jsPDF('p', 'mm', 'a4');
-    const pdfWidth = pdf.internal.pageSize.getWidth(); // ~210mm
-    const pdfHeight = pdf.internal.pageSize.getHeight(); // ~297mm
-    const margin = 10; // 10mm margins
-    const printWidth = pdfWidth - margin * 2; // 190mm
-    const pageCanvasHeight = (canvas.width * (pdfHeight - margin * 2)) / printWidth;
+    const margin = 10;
+    const printWidth = pdf.internal.pageSize.getWidth() - margin * 2;
+    const printHeight = pdf.internal.pageSize.getHeight() - margin * 2;
+    const maxCanvasPageHeight = (canvas.width * printHeight) / printWidth;
+    const measuredHeight = Math.max(1, paper.getBoundingClientRect().height);
+    const canvasPerCssPixel = canvas.height / measuredHeight;
+    const cssBreaks = calculateSafeBreaks(
+      measuredHeight,
+      maxCanvasPageHeight / canvasPerCssPixel,
+      measureAvoidRanges(paper)
+    );
+    const canvasBreaks = cssBreaks.map((value, index) =>
+      index === cssBreaks.length - 1
+        ? canvas.height
+        : Math.max(0, Math.min(canvas.height, Math.round(value * canvasPerCssPixel)))
+    );
 
-    let heightRemaining = canvas.height;
-    let canvasY = 0;
-    let pageIndex = 0;
-
-    while (heightRemaining > 0) {
-      if (pageIndex > 0) {
-        pdf.addPage();
-      }
-
-      const pageSliceHeight = Math.min(pageCanvasHeight, heightRemaining);
-      const pageCanvas = document.createElement('canvas');
-      pageCanvas.width = canvas.width;
-      pageCanvas.height = pageSliceHeight;
-
-      const ctx = pageCanvas.getContext('2d');
-      if (ctx) {
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
-        ctx.drawImage(
-          canvas,
-          0,
-          canvasY,
-          canvas.width,
-          pageSliceHeight,
-          0,
-          0,
-          canvas.width,
-          pageSliceHeight
-        );
-
-        const pageImgData = pageCanvas.toDataURL('image/jpeg', 0.95);
-        const printHeight = (pageSliceHeight * printWidth) / canvas.width;
-
-        pdf.addImage(pageImgData, 'JPEG', margin, margin, printWidth, printHeight);
-      }
-
-      canvasY += pageSliceHeight;
-      heightRemaining -= pageSliceHeight;
-      pageIndex++;
+    let addedPages = 0;
+    for (let index = 0; index < canvasBreaks.length - 1; index += 1) {
+      const sliceTop = canvasBreaks[index];
+      const sliceHeight = canvasBreaks[index + 1] - sliceTop;
+      if (sliceHeight <= 0) continue;
+      if (addedPages > 0) pdf.addPage();
+      addedPages += 1;
+      const page = document.createElement('canvas');
+      page.width = canvas.width;
+      page.height = sliceHeight;
+      const context = page.getContext('2d');
+      if (!context) throw new Error('Cannot export PDF. A page canvas could not be created.');
+      context.fillStyle = '#ffffff';
+      context.fillRect(0, 0, page.width, page.height);
+      context.drawImage(
+        canvas,
+        0,
+        sliceTop,
+        canvas.width,
+        sliceHeight,
+        0,
+        0,
+        canvas.width,
+        sliceHeight
+      );
+      const renderedHeight = (sliceHeight * printWidth) / canvas.width;
+      pdf.addImage(
+        page.toDataURL('image/jpeg', 0.95),
+        'JPEG',
+        margin,
+        margin,
+        printWidth,
+        renderedHeight
+      );
     }
-
-    const pdfBlob = pdf.output('blob');
-    const blobUrl = URL.createObjectURL(pdfBlob);
-    const link = document.createElement('a');
-    link.href = blobUrl;
-    link.download = fileName;
-    link.style.display = 'none';
-    document.body.appendChild(link);
-    link.click();
-
-    setTimeout(() => {
-      if (document.body.contains(link)) {
-        document.body.removeChild(link);
-      }
-      URL.revokeObjectURL(blobUrl);
-    }, 1500);
+    downloadBlob(pdf.output('blob'), `${name}.pdf`);
   } finally {
-    if (document.body.contains(paperContainer)) {
-      document.body.removeChild(paperContainer);
-    }
+    paper?.remove();
   }
 }
 
-/**
- * Primary PDF exporter alias using html2canvas + jsPDF.
- */
+/** Legacy engine values are retained for caller compatibility. */
 export async function exportToPdf(
-  elementId: string,
-  documentTitle: string = 'document',
+  source: HTMLElement | string,
+  documentTitle = 'document',
   _engine?: PdfExportEngine
 ): Promise<void> {
-  return exportHtmlToPdfCanvas(elementId, documentTitle);
+  return exportHtmlToPdfCanvas(source, documentTitle);
 }
 
-/**
- * Backward compatibility aliases.
- */
 export const exportHtmlToPdfVector = exportHtmlToPdfCanvas;
 export const exportHtmlToPdf = exportHtmlToPdfCanvas;

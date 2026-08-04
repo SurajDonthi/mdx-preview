@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, type RefObject } from 'react';
 import * as Icons from 'lucide-react';
-import { exportToPdf, downloadMdxFile, PdfExportEngine } from '../utils/pdfExporter';
+import { exportToPdf, downloadMdxFile } from '../utils/pdfExporter';
 import { showToast } from '../utils/toast';
 
 interface ExportModalProps {
@@ -8,6 +8,7 @@ interface ExportModalProps {
   onClose: () => void;
   mdxContent: string;
   documentTitle?: string;
+  exportRootRef: RefObject<HTMLElement | null>;
 }
 
 export function ExportModal({
@@ -15,12 +16,12 @@ export function ExportModal({
   onClose,
   mdxContent,
   documentTitle = 'document',
+  exportRootRef,
 }: ExportModalProps) {
   const [copied, setCopied] = useState(false);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [isMdxDownloaded, setIsMdxDownloaded] = useState(false);
   const [isPdfSuccess, setIsPdfSuccess] = useState(false);
-  const [pdfEngine, setPdfEngine] = useState<PdfExportEngine>('html2pdf');
 
   if (!isOpen) return null;
 
@@ -60,12 +61,14 @@ export function ExportModal({
 
       showToast(
         'Generating A4 PDF',
-        'Converting document to clean white A4 paper PDF...',
+        'Capturing the document as a clean white A4 PDF...',
         'info',
         3000
       );
 
-      await exportToPdf('mdx-preview-content', documentTitle, pdfEngine);
+      const exportRoot = exportRootRef.current;
+      if (!exportRoot) throw new Error('PDF export preview is not available');
+      await exportToPdf(exportRoot, documentTitle);
 
       setIsPdfSuccess(true);
       showToast(
@@ -109,7 +112,7 @@ export function ExportModal({
                 Export Document
               </h3>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                A4 Standard Paper Preset with Modular PDF Converters
+                Canvas-based A4 PDF and system printing
               </p>
             </div>
           </div>
@@ -122,45 +125,17 @@ export function ExportModal({
           </button>
         </div>
 
-        {/* Engine Selection & Preset Info */}
-        <div className="px-6 pt-5 pb-2 bg-slate-50/50 dark:bg-slate-950/30 border-b border-slate-200/80 dark:border-slate-800/80 space-y-3">
+        <div className="px-6 py-4 bg-slate-50/50 dark:bg-slate-950/30 border-b border-slate-200/80 dark:border-slate-800/80">
           <div className="flex items-center justify-between text-xs">
             <span className="font-medium text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
               <Icons.Sliders className="w-3.5 h-3.5 text-indigo-500" />
-              PDF Conversion Engine:
+              Canvas-based A4 export
             </span>
             <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
               A4 White Paper Preset Active
             </span>
           </div>
 
-          {/* Engine Selector Tabs */}
-          <div className="grid grid-cols-2 gap-2 p-1 bg-slate-200/70 dark:bg-slate-800/80 rounded-xl text-xs">
-            <button
-              type="button"
-              onClick={() => setPdfEngine('html2pdf')}
-              disabled={isGeneratingPdf}
-              className={`py-1.5 px-3 rounded-lg font-medium transition-all cursor-pointer text-center ${
-                pdfEngine === 'html2pdf'
-                  ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-sm font-semibold'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
-              }`}
-            >
-              HTML-to-PDF Vector Engine
-            </button>
-            <button
-              type="button"
-              onClick={() => setPdfEngine('canvas')}
-              disabled={isGeneratingPdf}
-              className={`py-1.5 px-3 rounded-lg font-medium transition-all cursor-pointer text-center ${
-                pdfEngine === 'canvas'
-                  ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-sm font-semibold'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
-              }`}
-            >
-              Canvas Snapshot Engine
-            </button>
-          </div>
         </div>
 
         {/* Export Options */}
@@ -206,9 +181,7 @@ export function ExportModal({
                 <div className="text-xs text-slate-500 dark:text-slate-400">
                   {isPdfSuccess
                     ? `Saved as ${sanitizedTitle}.pdf`
-                    : `Converts MDX to clean white paper PDF via ${
-                        pdfEngine === 'html2pdf' ? 'Vector HTML' : 'Canvas'
-                      } engine`}
+                    : 'Captures MDX as a clean white, canvas-based A4 PDF'}
                 </div>
               </div>
             </div>
