@@ -1,4 +1,7 @@
+import { useContext } from 'react';
 import { Frontmatter } from '../types';
+import { MdxRenderContext, MdxRenderMode, MdxThemeCategory } from './MermaidDiagram';
+import { InlineToken } from './InlineToken';
 import * as Icons from 'lucide-react';
 
 /** Helper to convert camelCase, snake_case, or kebab-case keys into Title Case labels */
@@ -10,14 +13,48 @@ function formatKeyToLabel(key: string): string {
     .replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase());
 }
 
+function formatValue(value: unknown, seen = new WeakSet<object>()): string {
+  if (value === null || value === undefined) return '';
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime()) ? '' : value.toISOString().slice(0, 10);
+  }
+  if (typeof value !== 'object') return String(value);
+  if (seen.has(value)) return '[Circular]';
+  seen.add(value);
+  if (Array.isArray(value)) {
+    return value.map((item) => formatValue(item, seen)).filter(Boolean).join(', ');
+  }
+  return Object.entries(value as Record<string, unknown>)
+    .map(([key, item]) => `${formatKeyToLabel(key)}: ${formatValue(item, seen)}`)
+    .filter((item) => !item.endsWith(': '))
+    .join('; ');
+}
+
+function normalizeList(value: unknown): string[] {
+  const values = Array.isArray(value)
+    ? value
+    : value === null || value === undefined
+      ? []
+      : [value];
+  return values.map((item) => formatValue(item).trim()).filter(Boolean);
+}
+
 export function FrontmatterHeader({
   frontmatter,
-  themeCategory = 'light',
+  themeCategory,
+  renderMode,
 }: {
   frontmatter: Frontmatter | null;
-  themeCategory?: 'light' | 'dark';
+  themeCategory?: MdxThemeCategory;
+  renderMode?: MdxRenderMode;
 }) {
+  const context = useContext(MdxRenderContext);
   if (!frontmatter) return null;
+
+  const effectiveRenderMode = renderMode ?? context.renderMode;
+  const effectiveThemeCategory = themeCategory ?? context.themeCategory;
+  const isPdf = effectiveRenderMode === 'pdf';
+  const isDark = !isPdf && effectiveThemeCategory === 'dark';
 
   const {
     title,
@@ -38,127 +75,137 @@ export function FrontmatterHeader({
     ...rest
   } = frontmatter;
 
-  // Author(s) formatting
-  const authorList: string[] = [];
-  if (author) authorList.push(String(author));
-  if (Array.isArray(authors)) {
-    authors.forEach((a) => {
-      if (a && !authorList.includes(String(a))) authorList.push(String(a));
-    });
-  } else if (authors && !authorList.includes(String(authors))) {
-    authorList.push(String(authors));
-  }
+  const authorList = [...normalizeList(author), ...normalizeList(authors)]
+    .filter((name, index, list) => list.indexOf(name) === index);
   const displayAuthor = authorList.join(', ');
+  const tagList = normalizeList(tags);
+  const displayDate = formatValue(date);
+  const avatarSrc = typeof authorAvatar === 'string' ? authorAvatar : '';
 
   // Catch-all extra dynamic fields
   const extraFields: { label: string; value: string }[] = [];
 
   // Known secondary keys to format cleanly if present
-  if (publisher) extraFields.push({ label: 'Publisher', value: String(publisher) });
-  if (edition) extraFields.push({ label: 'Edition', value: String(edition) });
-  if (sourcePages) extraFields.push({ label: 'Source Pages', value: `${sourcePages} pages` });
-  if (summaryType) extraFields.push({ label: 'Summary Type', value: String(summaryType) });
+  if (publisher) extraFields.push({ label: 'Publisher', value: formatValue(publisher) });
+  if (edition) extraFields.push({ label: 'Edition', value: formatValue(edition) });
+  if (sourcePages) extraFields.push({ label: 'Source Pages', value: `${formatValue(sourcePages)} pages` });
+  if (summaryType) extraFields.push({ label: 'Summary Type', value: formatValue(summaryType) });
 
   // Add any additional dynamic frontmatter keys
   Object.entries(rest).forEach(([key, val]) => {
-    if (val === undefined || val === null || val === '') return;
-    let displayVal = '';
-    if (Array.isArray(val)) {
-      displayVal = val.map((v) => (typeof v === 'object' ? JSON.stringify(v) : String(v))).join(', ');
-    } else if (typeof val === 'object') {
-      displayVal = JSON.stringify(val);
-    } else {
-      displayVal = String(val);
-    }
+    const displayVal = formatValue(val);
+    if (!displayVal) return;
     extraFields.push({
       label: formatKeyToLabel(key),
       value: displayVal,
     });
   });
 
+  const border = isDark ? 'border-slate-800' : 'border-slate-200';
+  const primaryText = isDark ? 'text-slate-100' : 'text-slate-900';
+  const secondaryText = isDark ? 'text-slate-300' : 'text-slate-700';
+  const mutedText = isDark ? 'text-slate-400' : 'text-slate-600';
+
   return (
     <div
       data-pdf-frontmatter="true"
-      className="mb-8 p-6 sm:p-7 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/80 backdrop-blur-md shadow-sm transition-colors"
+      data-theme-category={effectiveThemeCategory}
+      className={`mb-8 p-6 sm:p-7 rounded-2xl border shadow-sm ${border} ${primaryText} ${
+        isPdf
+          ? 'bg-white'
+          : isDark
+            ? 'bg-slate-900/80 backdrop-blur-md transition-colors'
+            : 'bg-white backdrop-blur-md transition-colors'
+      }`}
     >
       {/* Top Badges & Pills */}
       <div className="flex flex-wrap items-center gap-2 mb-3">
         {category && (
-          <span className="px-3 py-1 text-xs font-semibold rounded-full bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-500/20">
-            {String(category)}
+          <span className={`px-3 py-1 text-xs font-semibold rounded-full border ${isDark ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20' : 'bg-indigo-50 text-indigo-700 border-indigo-200'}`}>
+            {formatValue(category)}
           </span>
         )}
         {status && (
-          <span className="px-3 py-1 text-xs font-semibold rounded-full bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20 flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            {String(status)}
+          <span className={`px-3 py-1 text-xs font-semibold rounded-full border flex items-center gap-1.5 ${isDark ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-emerald-50 text-emerald-700 border-emerald-200'}`}>
+            <span
+              // The export pass clears every background, so the dot carries its
+              // own colour through as an explicit swatch.
+              data-pdf-swatch={isPdf ? '#10b981' : undefined}
+              className={`w-1.5 h-1.5 rounded-full bg-emerald-500 ${isPdf ? '' : 'animate-pulse'}`}
+            />
+            {formatValue(status)}
           </span>
         )}
         {readTime && (
-          <span className="text-xs font-medium text-slate-600 dark:text-slate-400 flex items-center gap-1.5 ml-auto">
+          <span className={`text-xs font-medium flex items-center gap-1.5 ml-auto ${mutedText}`}>
             <Icons.Clock className="w-3.5 h-3.5 text-slate-400" />
-            {String(readTime)}
+            {formatValue(readTime)}
           </span>
         )}
       </div>
 
       {/* Main Title */}
       {title && (
-        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white mb-2 leading-tight">
-          {String(title)}
+        <h1 className={`text-2xl sm:text-3xl font-bold tracking-tight mb-2 leading-tight ${primaryText}`}>
+          {formatValue(title)}
         </h1>
       )}
 
       {/* Subtitle */}
       {subtitle && (
-        <h2 className="text-base sm:text-lg font-medium text-slate-700 dark:text-slate-300 mb-3 leading-snug">
-          {String(subtitle)}
+        <h2 className={`text-base sm:text-lg font-medium mb-3 leading-snug ${secondaryText}`}>
+          {formatValue(subtitle)}
         </h2>
       )}
 
       {/* Main Description */}
       {description && (
-        <p className="text-sm sm:text-base text-slate-600 dark:text-slate-300 leading-relaxed mb-4">
-          {String(description)}
+        <p className={`text-sm sm:text-base leading-relaxed mb-4 ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
+          {formatValue(description)}
         </p>
       )}
 
       {/* Author, Date & Tags Row */}
-      {(displayAuthor || date || (Array.isArray(tags) && tags.length > 0)) && (
-        <div className="flex flex-wrap items-center justify-between gap-4 pt-4 border-t border-slate-200 dark:border-slate-800 text-xs text-slate-700 dark:text-slate-300">
+      {(displayAuthor || displayDate || tagList.length > 0) && (
+        <div className={`flex flex-wrap items-center justify-between gap-4 pt-4 border-t text-xs ${border} ${secondaryText}`}>
           <div className="flex flex-wrap items-center gap-4">
-            {authorAvatar && (
+            {avatarSrc && (
               <img
-                src={String(authorAvatar)}
+                src={avatarSrc}
                 alt={displayAuthor || 'Author'}
-                className="w-8 h-8 rounded-full object-cover border border-slate-200 dark:border-slate-700"
+                className={`w-8 h-8 rounded-full object-cover border ${isDark ? 'border-slate-700' : 'border-slate-200'}`}
               />
             )}
             {displayAuthor && (
-              <div className="flex items-center gap-1.5 font-medium text-slate-800 dark:text-slate-200">
+              <div className={`flex items-center gap-1.5 font-medium ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>
                 <Icons.User className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                 <span>{displayAuthor}</span>
               </div>
             )}
-            {date && (
-              <div className="flex items-center gap-1.5 text-slate-600 dark:text-slate-400">
+            {displayDate && (
+              <div className={`flex items-center gap-1.5 ${mutedText}`}>
                 <Icons.Calendar className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                <span>{String(date)}</span>
+                <span>{displayDate}</span>
               </div>
             )}
           </div>
 
-          {Array.isArray(tags) && tags.length > 0 && (
-            <div className="flex flex-wrap items-center gap-1.5">
-              <Icons.Tag className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-              {tags.map((tag, i) => (
-                <span
-                  key={i}
-                  className="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700/60 font-mono text-[11px]"
-                >
-                  #{tag}
-                </span>
-              ))}
+          {tagList.length > 0 && (
+            <div className="grid min-w-0 max-w-full grid-cols-[auto_minmax(0,1fr)] items-start gap-x-1.5">
+              <span className="inline-flex h-5 items-center" aria-hidden="true">
+                <Icons.Tag className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+              </span>
+              <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+                {tagList.map((tag, i) => (
+                  <InlineToken
+                    key={`${tag}-${i}`}
+                    kind="tag"
+                    tone={isDark ? 'dark' : 'light'}
+                  >
+                    #{tag}
+                  </InlineToken>
+                ))}
+              </div>
             </div>
           )}
         </div>
@@ -166,13 +213,17 @@ export function FrontmatterHeader({
 
       {/* Extensible Extra Frontmatter Fields Grid (NO TRUNCATION) */}
       {extraFields.length > 0 && (
-        <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-800 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 text-xs">
-          {extraFields.map(({ label, value }) => (
-            <div key={label} className="flex flex-col bg-slate-50 dark:bg-slate-800/40 p-2.5 rounded-lg border border-slate-200/80 dark:border-slate-800/40">
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-0.5">
+        <div className={`mt-4 pt-4 border-t grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 text-xs ${border}`}>
+          {extraFields.map(({ label, value }, index) => (
+            <div
+              data-pdf-frontmatter-field="true"
+              key={`${label}-${index}`}
+              className={`flex flex-col p-2.5 rounded-lg border ${isDark ? 'bg-slate-800/40 border-slate-800/40' : 'bg-slate-50 border-slate-200/80'}`}
+            >
+              <span className={`text-[10px] font-semibold uppercase tracking-wider mb-0.5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
                 {label}
               </span>
-              <span className="font-medium text-slate-900 dark:text-slate-200 break-words leading-snug">
+              <span className={`font-medium break-words leading-snug ${isDark ? 'text-slate-200' : 'text-slate-900'}`}>
                 {value}
               </span>
             </div>
@@ -182,4 +233,3 @@ export function FrontmatterHeader({
     </div>
   );
 }
-

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import * as Icons from 'lucide-react';
+import { InlineToken } from './InlineToken';
 import { MermaidDiagram } from './MermaidDiagram';
 import {
   ResponsiveContainer,
@@ -542,9 +543,13 @@ export function Step({
 // 10. Kbd & Badge & InlineCode
 export function InlineCode({ children }: { children?: React.ReactNode }) {
   return (
-    <code className="px-1.5 py-0.5 mx-0.5 rounded-md text-[0.85em] leading-tight font-mono font-medium border border-slate-200 dark:border-slate-700/50 bg-slate-100 dark:bg-slate-800/80 text-indigo-700 dark:text-cyan-300 inline-block align-baseline">
+    <InlineToken
+      as="code"
+      kind="code"
+      appearanceClassName="dark:bg-slate-800/80 dark:text-cyan-300 dark:border-slate-700/50"
+    >
       {children}
-    </code>
+    </InlineToken>
   );
 }
 
