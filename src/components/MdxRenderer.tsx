@@ -18,7 +18,8 @@ import { ThemeConfig, HeaderItem } from '../types';
 import { parseFrontmatter, slugify } from '../utils/mdxParser';
 import { FrontmatterHeader } from './FrontmatterHeader';
 import { mdxComponentsMap } from './CustomComponents';
-import { MermaidDiagram } from './MermaidDiagram';
+import { InlineToken } from './InlineToken';
+import { MermaidDiagram, MdxRenderContext, MdxRenderMode } from './MermaidDiagram';
 import * as Icons from 'lucide-react';
 
 // Error Boundary for compiled MDX elements
@@ -133,12 +134,6 @@ function CodeBlock({
   );
 }
 
-interface MdxRendererProps {
-  content: string;
-  themeConfig: ThemeConfig;
-  showFrontmatterHeader?: boolean;
-}
-
 // Context to track if code element is enclosed in a <pre> block (fenced code block)
 const PreContext = React.createContext(false);
 
@@ -180,12 +175,15 @@ function CustomCodeElement({
 
   // Inline code rendering
   return (
-    <code
-      className={`px-1.5 py-0.5 mx-0.5 rounded-md text-[0.85em] leading-tight font-mono font-medium border border-slate-200 dark:border-slate-700/50 bg-slate-100 dark:bg-slate-800/80 text-indigo-700 dark:text-cyan-300 inline-block align-baseline ${themeConfig.codeBgClass} ${themeConfig.codeTextClass}`}
+    <InlineToken
+      as="code"
+      kind="code"
+      tone={themeConfig.category}
+      appearanceClassName={`${themeConfig.codeBgClass} ${themeConfig.codeTextClass}`}
       {...props}
     >
       {children}
-    </code>
+    </InlineToken>
   );
 }
 
@@ -194,15 +192,23 @@ interface MdxRendererProps {
   themeConfig: ThemeConfig;
   showFrontmatterHeader?: boolean;
   containerId?: string;
+  containerRef?: React.Ref<HTMLDivElement>;
+  renderMode?: MdxRenderMode;
 }
 
 export function MdxRenderer({
   content,
   themeConfig,
   showFrontmatterHeader = true,
-  containerId = 'mdx-preview-content',
+  containerId,
+  containerRef,
+  renderMode = 'live',
 }: MdxRendererProps) {
   const [parseError, setParseError] = useState<string | null>(null);
+  const renderSettings = useMemo(
+    () => ({ renderMode, themeCategory: themeConfig.category }),
+    [renderMode, themeConfig.category]
+  );
 
   // Extract Frontmatter and Body
   const { frontmatter, body } = useMemo(() => parseFrontmatter(content), [content]);
@@ -228,9 +234,10 @@ export function MdxRenderer({
       p: ({ children, ...props }: any) => {
         const hasBlockChild = React.Children.toArray(children).some((child: any) => {
           if (!child) return false;
-          if (React.isValidElement(child)) {
-            const type = child.type;
-            if (typeof type === 'string') {
+            if (React.isValidElement(child)) {
+              const type = child.type;
+              if (type === CustomCodeElement) return false;
+              if (typeof type === 'string') {
               const inlineTags = ['a', 'span', 'strong', 'em', 'b', 'i', 'code', 'small', 'sub', 'sup', 'mark'];
               return !inlineTags.includes(type);
             }
@@ -419,20 +426,30 @@ export function MdxRenderer({
     }
   }, [body, customMdComponents]);
 
+  const isPdf = renderMode === 'pdf';
+
   return (
-    <div
-      id={containerId}
-      className={`min-h-full p-6 sm:p-10 transition-colors duration-200 ${themeConfig.bgClass} ${themeConfig.textClass} ${themeConfig.fontFamily}`}
-      style={{
-        backgroundColor: themeConfig.previewBg,
-        color: themeConfig.previewText,
-      }}
-    >
+    <MdxRenderContext.Provider value={renderSettings}>
+      <div
+        id={containerId}
+        ref={containerRef}
+        data-mdx-render-mode={renderMode}
+        className={
+          isPdf
+            ? `min-h-full p-6 sm:p-10 bg-white text-slate-900 ${themeConfig.fontFamily}`
+            : `min-h-full p-6 sm:p-10 transition-colors duration-200 ${themeConfig.bgClass} ${themeConfig.textClass} ${themeConfig.fontFamily}`
+        }
+        style={{
+          backgroundColor: isPdf ? '#ffffff' : themeConfig.previewBg,
+          color: isPdf ? '#0f172a' : themeConfig.previewText,
+        }}
+      >
       {/* Frontmatter Banner Header */}
       {showFrontmatterHeader && frontmatter && (
         <FrontmatterHeader
           frontmatter={frontmatter}
           themeCategory={themeConfig.category}
+          renderMode={renderMode}
         />
       )}
 
@@ -450,7 +467,7 @@ export function MdxRenderer({
       )}
 
       {/* Main Render Canvas */}
-      <div className="prose dark:prose-invert max-w-none">
+      <div className={isPdf ? 'prose max-w-none' : 'prose dark:prose-invert max-w-none'}>
         {CompiledComponent ? (
           <MdxErrorBoundary onError={(e) => setParseError(e.message)}>
             <CompiledComponent />
@@ -462,93 +479,224 @@ export function MdxRenderer({
           </ReactMarkdown>
         )}
       </div>
-    </div>
+      </div>
+    </MdxRenderContext.Provider>
   );
 }
 
+interface MdxJsxTag {
+  name: string;
+  start: number;
+  end: number;
+  closing: boolean;
+  selfClosing: boolean;
+}
+
+function countRun(source: string, start: number, character: string): number {
+  let end = start;
+  while (source[end] === character) end++;
+  return end - start;
+}
+
+function isEscaped(source: string, index: number): boolean {
+  let slashes = 0;
+  for (let cursor = index - 1; cursor >= 0 && source[cursor] === '\\'; cursor--) slashes++;
+  return slashes % 2 === 1;
+}
+
+/** Returns the end of a Markdown code span/fence starting at `start`, or `start`. */
+function skipMarkdownCode(source: string, start: number): number {
+  const marker = source[start];
+  if (marker !== '`' && marker !== '~') return start;
+
+  const markerLength = countRun(source, start, marker);
+  const lineStart = source.lastIndexOf('\n', start - 1) + 1;
+  const linePrefix = source.slice(lineStart, start);
+  const isFence = markerLength >= 3 && /^[ \t]{0,3}$/.test(linePrefix);
+
+  if (isFence) {
+    let cursor = source.indexOf('\n', start + markerLength);
+    if (cursor === -1) return source.length;
+    cursor++;
+
+    while (cursor < source.length) {
+      const nextLine = source.indexOf('\n', cursor);
+      const lineEnd = nextLine === -1 ? source.length : nextLine;
+      const line = source.slice(cursor, lineEnd);
+      const indentation = /^[ \t]{0,3}/.exec(line)?.[0].length ?? 0;
+      const fenceLength = countRun(line, indentation, marker);
+      if (fenceLength >= markerLength && line.slice(indentation + fenceLength).trim() === '') {
+        return nextLine === -1 ? source.length : nextLine + 1;
+      }
+      cursor = nextLine === -1 ? source.length : nextLine + 1;
+    }
+    return source.length;
+  }
+
+  if (marker !== '`') return start;
+
+  // A code span never contains a blank line, so the search for the closing run
+  // must stop there. Without this bound an unpaired run (for example a literal
+  // ``` written mid-sentence) swallows the next fence opener, which shifts the
+  // fence closer into the opener role and hides the JSX that follows it.
+  const runEnd = start + markerLength;
+  const blankLine = source.slice(runEnd).search(/\n[ \t]*\r?\n/);
+  const limit = blankLine === -1 ? source.length : runEnd + blankLine;
+
+  let cursor = runEnd;
+  while (cursor < limit) {
+    const next = source.indexOf('`', cursor);
+    if (next === -1 || next >= limit) break;
+    const closingLength = countRun(source, next, '`');
+    if (closingLength === markerLength) return next + markerLength;
+    cursor = next + closingLength;
+  }
+
+  // Unpaired run: the backticks are literal text. Consume just the run so the
+  // following runs can still pair with each other.
+  return runEnd;
+}
+
+/** Reads a capitalized MDX JSX tag without treating `>` inside attributes as its end. */
+function readMdxJsxTag(source: string, start: number): MdxJsxTag | null {
+  if (source[start] !== '<' || isEscaped(source, start)) return null;
+  let cursor = start + 1;
+  const closing = source[cursor] === '/';
+  if (closing) cursor++;
+
+  const nameMatch = /^[A-Z][a-zA-Z0-9.]*/.exec(source.slice(cursor));
+  if (!nameMatch) return null;
+  const name = nameMatch[0];
+  cursor += name.length;
+
+  let quote: '"' | "'" | '`' | null = null;
+  let escaped = false;
+  let braceDepth = 0;
+
+  while (cursor < source.length) {
+    const character = source[cursor];
+    if (escaped) {
+      escaped = false;
+      cursor++;
+      continue;
+    }
+    if (character === '\\') {
+      escaped = true;
+      cursor++;
+      continue;
+    }
+    if (quote) {
+      if (character === quote) quote = null;
+      cursor++;
+      continue;
+    }
+    if (character === '"' || character === "'" || character === '`') {
+      quote = character;
+      cursor++;
+      continue;
+    }
+    if (character === '{') {
+      braceDepth++;
+      cursor++;
+      continue;
+    }
+    if (character === '}' && braceDepth > 0) {
+      braceDepth--;
+      cursor++;
+      continue;
+    }
+    if (character === '>' && braceDepth === 0) {
+      const beforeClose = source.slice(start, cursor).trimEnd();
+      return {
+        name,
+        start,
+        end: cursor + 1,
+        closing,
+        selfClosing: !closing && beforeClose.endsWith('/'),
+      };
+    }
+    cursor++;
+  }
+
+  return null;
+}
+
+function findMatchingMdxJsxEnd(source: string, opening: MdxJsxTag): number {
+  let depth = 1;
+  let cursor = opening.end;
+
+  while (cursor < source.length) {
+    const codeEnd = skipMarkdownCode(source, cursor);
+    if (codeEnd > cursor) {
+      cursor = codeEnd;
+      continue;
+    }
+    if (source.startsWith('<!--', cursor)) {
+      const commentEnd = source.indexOf('-->', cursor + 4);
+      cursor = commentEnd === -1 ? source.length : commentEnd + 3;
+      continue;
+    }
+    if (source[cursor] === '<') {
+      const tag = readMdxJsxTag(source, cursor);
+      if (tag?.name === opening.name) {
+        if (tag.closing) depth--;
+        else if (!tag.selfClosing) depth++;
+        if (depth === 0) return tag.end;
+      }
+      if (tag) {
+        cursor = tag.end;
+        continue;
+      }
+    }
+    cursor++;
+  }
+
+  return -1;
+}
+
 /**
- * Parses MDX body into structured blocks of JSX components and Markdown text.
- * Accurately tracks nested JSX tags and self-closing components.
+ * Splits Markdown and executable MDX JSX while respecting fenced/inline code.
+ * Component examples remain text, and `>` inside JSX expressions stays intact.
  */
 function parseMdxBlocks(mdx: string): { type: 'jsx' | 'markdown'; content: string }[] {
   const blocks: { type: 'jsx' | 'markdown'; content: string }[] = [];
-  let index = 0;
-  let markdownBuffer = '';
+  let markdownStart = 0;
+  let cursor = 0;
 
-  // Match opening tag of a capitalized custom component e.g. <Callout or <StatGrid
-  const tagStartRegex = /<([A-Z][a-zA-Z0-9]*)(?:\s+[^>]*|\s*)>/g;
-
-  while (index < mdx.length) {
-    tagStartRegex.lastIndex = index;
-    const match = tagStartRegex.exec(mdx);
-
-    if (!match) {
-      markdownBuffer += mdx.slice(index);
-      break;
+  while (cursor < mdx.length) {
+    const codeEnd = skipMarkdownCode(mdx, cursor);
+    if (codeEnd > cursor) {
+      cursor = codeEnd;
+      continue;
     }
-
-    const matchStart = match.index;
-    const tagName = match[1];
-    const fullOpeningTag = match[0];
-
-    // Check if the component tag is self-closing e.g. <Chart type="bar" />
-    if (fullOpeningTag.endsWith('/>')) {
-      if (matchStart > index) {
-        markdownBuffer += mdx.slice(index, matchStart);
-      }
-      if (markdownBuffer) {
-        blocks.push({ type: 'markdown', content: markdownBuffer });
-        markdownBuffer = '';
-      }
-      blocks.push({ type: 'jsx', content: fullOpeningTag });
-      index = matchStart + fullOpeningTag.length;
+    if (mdx.startsWith('<!--', cursor)) {
+      const commentEnd = mdx.indexOf('-->', cursor + 4);
+      cursor = commentEnd === -1 ? mdx.length : commentEnd + 3;
       continue;
     }
 
-    // Paired tag e.g. <StatGrid ...>. Track nesting depth to locate matching </StatGrid>
-    let depth = 1;
-    let searchPos = matchStart + fullOpeningTag.length;
-    let endPos = -1;
-
-    const tagSearchRegex = new RegExp(`<(/?)${tagName}(?:\\s+[^>]*|\\s*)>`, 'g');
-    tagSearchRegex.lastIndex = searchPos;
-
-    let subMatch;
-    while ((subMatch = tagSearchRegex.exec(mdx)) !== null) {
-      const isClosing = subMatch[1] === '/';
-      const isSelfClosing = subMatch[0].endsWith('/>');
-
-      if (isClosing) {
-        depth--;
-      } else if (!isSelfClosing) {
-        depth++;
-      }
-
-      if (depth === 0) {
-        endPos = subMatch.index + subMatch[0].length;
-        break;
-      }
+    const opening = readMdxJsxTag(mdx, cursor);
+    if (!opening || opening.closing) {
+      cursor++;
+      continue;
     }
 
-    if (endPos !== -1) {
-      if (matchStart > index) {
-        markdownBuffer += mdx.slice(index, matchStart);
-      }
-      if (markdownBuffer) {
-        blocks.push({ type: 'markdown', content: markdownBuffer });
-        markdownBuffer = '';
-      }
-      blocks.push({ type: 'jsx', content: mdx.slice(matchStart, endPos) });
-      index = endPos;
-    } else {
-      // Unclosed tag (typing in progress or raw markdown text). Keep in markdown buffer.
-      markdownBuffer += mdx.slice(index, matchStart + fullOpeningTag.length);
-      index = matchStart + fullOpeningTag.length;
+    const blockEnd = opening.selfClosing ? opening.end : findMatchingMdxJsxEnd(mdx, opening);
+    if (blockEnd === -1) {
+      cursor = opening.end;
+      continue;
     }
+
+    if (cursor > markdownStart) {
+      blocks.push({ type: 'markdown', content: mdx.slice(markdownStart, cursor) });
+    }
+    blocks.push({ type: 'jsx', content: mdx.slice(cursor, blockEnd) });
+    cursor = blockEnd;
+    markdownStart = blockEnd;
   }
 
-  if (markdownBuffer) {
-    blocks.push({ type: 'markdown', content: markdownBuffer });
+  if (markdownStart < mdx.length) {
+    blocks.push({ type: 'markdown', content: mdx.slice(markdownStart) });
   }
 
   return blocks;
