@@ -6,6 +6,7 @@ interface TableOfContentsProps {
   headings: HeaderItem[];
   activeId?: string;
   onSelectHeader: (id: string) => void;
+  variant?: 'desktop' | 'drawer';
   isOpenMobile?: boolean;
   onCloseMobile?: () => void;
   className?: string;
@@ -15,6 +16,7 @@ export function TableOfContents({
   headings,
   activeId,
   onSelectHeader,
+  variant = 'desktop',
   isOpenMobile,
   onCloseMobile,
   className = '',
@@ -102,25 +104,28 @@ export function TableOfContents({
     </div>
   );
 
-  return (
-    <>
-      {/* Desktop view sidebar */}
-      <div className={`hidden lg:block w-64 shrink-0 p-4 border-l border-slate-200/80 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-950/50 h-full ${className}`}>
+  if (variant === 'desktop') {
+    return (
+      <aside
+        className={`hidden lg:block w-64 min-w-0 shrink-0 p-4 border-l border-slate-200/80 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-950/50 h-full ${className}`}
+        data-testid="desktop-toc"
+      >
         {content}
-      </div>
+      </aside>
+    );
+  }
 
-      {/* Mobile drawer slide-over */}
-      {isOpenMobile && (
-        <div className="fixed inset-0 z-50 lg:hidden flex justify-end">
-          <div
-            className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs transition-opacity"
-            onClick={onCloseMobile}
-          />
-          <div className="relative w-80 max-w-[85vw] h-full bg-white dark:bg-slate-900 p-5 shadow-2xl z-10 border-l border-slate-200 dark:border-slate-800 flex flex-col">
-            {content}
-          </div>
-        </div>
-      )}
-    </>
+  if (!isOpenMobile) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 lg:hidden flex justify-end" data-testid="mobile-toc-drawer">
+      <div
+        className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs transition-opacity"
+        onClick={onCloseMobile}
+      />
+      <aside className="relative w-80 max-w-[85vw] h-full min-h-0 bg-white dark:bg-slate-900 p-5 shadow-2xl z-10 border-l border-slate-200 dark:border-slate-800 flex flex-col">
+        {content}
+      </aside>
+    </div>
   );
 }

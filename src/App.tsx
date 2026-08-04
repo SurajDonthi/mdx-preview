@@ -32,6 +32,8 @@ import { GoogleDriveModal } from './components/GoogleDriveModal';
 import { ToastContainer } from './components/ToastContainer';
 
 export default function App() {
+  const exportRootRef = useRef<HTMLDivElement | null>(null);
+
   // Sidebar visibility state (minimized by default)
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
@@ -285,7 +287,8 @@ export default function App() {
   };
 
   return (
-    <div className="flex flex-col h-screen w-screen overflow-hidden bg-slate-950 text-slate-100 font-sans selection:bg-indigo-500 selection:text-white">
+    <>
+    <div className="app-shell flex min-h-0 min-w-0 flex-col h-screen w-screen overflow-hidden bg-slate-950 text-slate-100 font-sans selection:bg-indigo-500 selection:text-white">
       {/* Top Application Navbar */}
       <Navbar
         sidebarOpen={isSidebarOpen}
@@ -302,7 +305,7 @@ export default function App() {
       />
 
       {/* Main Container Area */}
-      <main className="flex-1 flex overflow-hidden relative">
+      <main className="flex-1 min-h-0 min-w-0 flex overflow-hidden relative">
         {/* Left File Explorer Sidebar */}
         <FileSidebar
           isOpen={isSidebarOpen}
@@ -322,7 +325,7 @@ export default function App() {
         {/* Editor View */}
         {(viewMode === 'editor' || viewMode === 'split') && (
           <div
-            className={`h-full ${
+            className={`h-full min-h-0 min-w-0 ${
               viewMode === 'split' ? 'w-full md:w-1/2 lg:w-[45%]' : 'w-full'
             }`}
           >
@@ -335,34 +338,20 @@ export default function App() {
           </div>
         )}
 
-        {/* Offscreen hidden preview container for instant PDF export & system printing when main preview is unmounted or hidden */}
-        {(viewMode === 'editor' || viewMode === 'split') && (
-          <div
-            className="fixed -left-[9999px] top-0 w-[850px] pointer-events-none opacity-0 overflow-hidden print:block print:static print:left-0 print:top-0 print:w-full print:opacity-100 print:pointer-events-auto"
-            aria-hidden="true"
-          >
-            <MdxRenderer
-              content={mdxContent}
-              themeConfig={themeConfig}
-              showFrontmatterHeader={true}
-              containerId="mdx-preview-content"
-            />
-          </div>
-        )}
-
         {/* Live Preview & TOC Canvas Area */}
         {(viewMode === 'preview' || viewMode === 'split') && (
           <div
-            className={`h-full flex flex-1 overflow-hidden ${
+            className={`h-full min-h-0 min-w-0 flex flex-1 overflow-hidden ${
               viewMode === 'split' ? 'hidden md:flex' : 'flex'
             }`}
           >
             {/* Scrollable Preview Container */}
-            <div className="flex-1 h-full overflow-y-auto custom-scrollbar preview-container">
+            <div className="flex-1 min-h-0 min-w-0 h-full overflow-y-auto custom-scrollbar preview-container">
               <MdxRenderer
                 content={mdxContent}
                 themeConfig={themeConfig}
                 showFrontmatterHeader={true}
+                containerId="mdx-live-preview"
               />
             </div>
 
@@ -379,6 +368,7 @@ export default function App() {
       <TableOfContents
         headings={headings}
         onSelectHeader={handleSelectHeader}
+        variant="drawer"
         isOpenMobile={isMobileTocOpen}
         onCloseMobile={() => setIsMobileTocOpen(false)}
       />
@@ -407,10 +397,23 @@ export default function App() {
         onClose={() => setIsExportOpen(false)}
         mdxContent={mdxContent}
         documentTitle={documentTitle}
+        exportRootRef={exportRootRef}
       />
 
       {/* Global Floating Toast Notifications */}
       <ToastContainer />
     </div>
+    {isExportOpen && (
+      <div ref={exportRootRef} className="pdf-export-root" aria-hidden="true">
+        <MdxRenderer
+          content={mdxContent}
+          themeConfig={themeConfig}
+          showFrontmatterHeader={true}
+          containerId="mdx-export-preview"
+          renderMode="pdf"
+        />
+      </div>
+    )}
+    </>
   );
 }
