@@ -5,6 +5,7 @@ import { THEMES } from './data/themes';
 import { extractHeadings, calculateDocumentStats } from './utils/mdxParser';
 import {
   loadAllDocuments,
+  loadAllRecords,
   saveDocument,
   getActiveDocumentId,
   setActiveDocumentId,
@@ -14,12 +15,14 @@ import {
   StoredDocument,
 } from './utils/storage';
 import { initAuth, getAccessToken } from './utils/auth';
-import { saveFileToDrive } from './utils/driveService';
+import { saveFileToDrive, trashDriveFile } from './utils/driveService';
 import {
   subscribeToUserDocuments,
   saveDocumentToFirestore,
   deleteDocumentFromFirestore,
+  migrateLegacyDocuments,
 } from './utils/firestoreService';
+import { showToast } from './utils/toast';
 
 import { Navbar } from './components/Navbar';
 import { FileSidebar } from './components/FileSidebar';
@@ -30,6 +33,19 @@ import { FileUploadModal } from './components/FileUploadModal';
 import { ExportModal } from './components/ExportModal';
 import { GoogleDriveModal } from './components/GoogleDriveModal';
 import { ToastContainer } from './components/ToastContainer';
+
+/**
+ * Identity of the editor state that was last written to storage. Auto-save compares
+ * against it so that opening a document or signing in cannot masquerade as an edit.
+ */
+function docSignature(
+  id: string,
+  title: string,
+  content: string,
+  driveFileId?: string | null
+): string {
+  return JSON.stringify([id, title, content, driveFileId || null]);
+}
 
 export default function App() {
   const exportRootRef = useRef<HTMLDivElement | null>(null);
@@ -76,20 +92,37 @@ export default function App() {
   // Google Auth Connection Status
   const [isDriveConnected, setIsDriveConnected] = useState(false);
 
+  // State already persisted, so a no-op save never bumps updatedAt (see docSignature)
+  const lastSavedRef = useRef<string>(
+    docSignature(currentDoc.id, currentDoc.title, currentDoc.content, currentDoc.driveFileId)
+  );
+
   // Sync local state when active document changes
   useEffect(() => {
     setMdxContent(currentDoc.content);
     setDocumentTitle(currentDoc.title);
     setCurrentDriveFileId(currentDoc.driveFileId || null);
     setActiveDocumentId(currentDoc.id);
+    lastSavedRef.current = docSignature(
+      currentDoc.id,
+      currentDoc.title,
+      currentDoc.content,
+      currentDoc.driveFileId
+    );
+
+    // Keep the selection pointing at a document that actually exists, otherwise the
+    // dirty check below compares against the wrong record.
+    if (currentDoc.id !== activeDocId) setActiveDocId(currentDoc.id);
   }, [currentDoc.id]);
 
   // Firebase Auth & Firestore Subscription Listener
   useEffect(() => {
     const unsubscribeAuth = initAuth(
-      (user) => {
+      (user, token) => {
         setCurrentUser(user);
-        setIsDriveConnected(true);
+        // Firebase auth can be restored from local persistence without a Drive token;
+        // only a usable token means Drive is actually connected.
+        setIsDriveConnected(Boolean(token));
       },
       () => {
         setCurrentUser(null);
@@ -104,21 +137,38 @@ export default function App() {
   useEffect(() => {
     if (!currentUser) return;
 
-    const unsubscribeFirestore = subscribeToUserDocuments(currentUser.uid, (cloudDocs) => {
-      const localDocs = loadAllDocuments();
-      const merged = mergeDocuments(localDocs, cloudDocs);
-      setDocuments(merged);
+    let cancelled = false;
+    let unsubscribeFirestore = () => {};
 
-      if (cloudDocs.length === 0 && localDocs.length > 0) {
-        localDocs.forEach((d) => saveDocumentToFirestore(currentUser.uid, d));
-      }
+    // Migrate before subscribing so the merge below sees the user's existing cloud data
+    // instead of treating the account as empty.
+    migrateLegacyDocuments(currentUser.uid).finally(() => {
+      if (cancelled) return;
+
+      unsubscribeFirestore = subscribeToUserDocuments(currentUser.uid, (cloudDocs, meta) => {
+        const merged = mergeDocuments(loadAllRecords(), cloudDocs);
+        setDocuments(merged);
+
+        // Never upload from a cache-only snapshot: an empty local cache looks exactly
+        // like an empty account and would re-push documents deleted on another device.
+        if (meta.fromCache) return;
+
+        const cloudIds = new Set(cloudDocs.map((d) => d.id));
+        merged
+          .filter((d) => !d.isSample && !cloudIds.has(d.id))
+          .forEach((d) => saveDocumentToFirestore(currentUser.uid, d));
+      });
     });
 
-    return () => unsubscribeFirestore();
+    return () => {
+      cancelled = true;
+      unsubscribeFirestore();
+    };
   }, [currentUser]);
 
   // Debounced Auto-save to LocalStorage, Firestore & Google Drive
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const driveErrorRef = useRef<string | null>(null);
 
   const executeSave = async () => {
     const updatedDoc: StoredDocument = {
@@ -132,10 +182,15 @@ export default function App() {
     // 1. Save to localStorage
     const updatedDocs = saveDocument(updatedDoc);
     setDocuments(updatedDocs);
+    lastSavedRef.current = docSignature(activeDocId, documentTitle, mdxContent, currentDriveFileId);
 
-    // 2. Save to Cloud Firestore if logged in
-    if (currentUser) {
-      saveDocumentToFirestore(currentUser.uid, updatedDoc);
+    // saveDocument() keeps the previous updatedAt when nothing really changed, so mirror
+    // the stored record to the cloud rather than the optimistic object built above.
+    const storedDoc = updatedDocs.find((d) => d.id === activeDocId) || updatedDoc;
+
+    // 2. Save to Cloud Firestore if logged in. Untouched seed samples stay local.
+    if (currentUser && !storedDoc.isSample) {
+      saveDocumentToFirestore(currentUser.uid, storedDoc);
     }
 
     // 3. Auto-save to Google Drive if linked and token exists
@@ -143,8 +198,24 @@ export default function App() {
     if (currentDriveFileId && token) {
       try {
         await saveFileToDrive(token, documentTitle, mdxContent, currentDriveFileId);
+        driveErrorRef.current = null;
       } catch (err: any) {
-        console.warn('Auto-save to Google Drive failed:', err?.message || err);
+        const message: string = err?.message || String(err);
+        const isExpired = message.includes('TOKEN_EXPIRED');
+
+        // Auto-save repeats every few keystrokes; report each distinct failure once.
+        if (driveErrorRef.current !== message) {
+          driveErrorRef.current = message;
+          showToast(
+            isExpired ? 'Google Drive session expired' : 'Google Drive sync failed',
+            isExpired
+              ? 'This document is saved locally. Reconnect Google Drive to resume syncing it.'
+              : `This document is saved locally. ${message}`,
+            'error'
+          );
+        }
+
+        if (isExpired) setIsDriveConnected(false);
       }
     }
 
@@ -152,6 +223,16 @@ export default function App() {
   };
 
   useEffect(() => {
+    const signature = docSignature(activeDocId, documentTitle, mdxContent, currentDriveFileId);
+    const isStored = documents.some((d) => d.id === activeDocId);
+
+    // Document switches and sign-ins re-run this effect; saving then would advance
+    // updatedAt and let a stale copy win the next sync merge.
+    if (signature === lastSavedRef.current && isStored) {
+      setIsSaving(false);
+      return;
+    }
+
     setIsSaving(true);
     if (autoSaveTimeoutRef.current) clearTimeout(autoSaveTimeoutRef.current);
 
@@ -162,7 +243,7 @@ export default function App() {
     return () => {
       if (autoSaveTimeoutRef.current) clearTimeout(autoSaveTimeoutRef.current);
     };
-  }, [mdxContent, documentTitle, activeDocId, currentDriveFileId, currentUser]);
+  }, [mdxContent, documentTitle, activeDocId, currentDriveFileId, currentUser, documents]);
 
   // Active theme configuration
   const themeConfig = THEMES[currentThemeId] || THEMES['github-dark'];
@@ -210,11 +291,33 @@ export default function App() {
 
   // Delete document
   const handleDeleteDocument = (id: string) => {
+    const target = documents.find((d) => d.id === id);
     const updatedDocs = deleteDocument(id);
     setDocuments(updatedDocs);
 
     if (currentUser) {
-      deleteDocumentFromFirestore(currentUser.uid, id);
+      deleteDocumentFromFirestore(currentUser.uid, id).catch((err: any) => {
+        showToast(
+          'Delete did not reach the cloud',
+          `"${target?.title || 'Document'}" may come back on your next sync. ${err?.message || ''}`.trim(),
+          'error'
+        );
+      });
+    }
+
+    // The Drive file belongs to the user, not to this app, so removing it is opt-in.
+    const token = getAccessToken();
+    if (target?.driveFileId && token) {
+      const shouldTrashDriveFile = window.confirm(
+        `Also move the linked Google Drive file for "${target.title}" to the trash?\n\nCancel keeps the file in your Google Drive.`
+      );
+      if (shouldTrashDriveFile) {
+        trashDriveFile(token, target.driveFileId)
+          .then(() => showToast('Moved to Google Drive trash', target.title, 'success'))
+          .catch((err: any) =>
+            showToast('Could not trash the Google Drive file', err?.message || String(err), 'error')
+          );
+      }
     }
 
     if (activeDocId === id && updatedDocs.length > 0) {
@@ -234,7 +337,7 @@ export default function App() {
         setDocuments(updatedDocs);
 
         if (currentUser) {
-          saveDocumentToFirestore(currentUser.uid, updatedDoc);
+          saveDocumentToFirestore(currentUser.uid, updatedDocs.find((d) => d.id === id) || updatedDoc);
         }
       }
     }
@@ -376,7 +479,11 @@ export default function App() {
       {/* Google Drive Persistence Modal */}
       <GoogleDriveModal
         isOpen={isDriveModalOpen}
-        onClose={() => setIsDriveModalOpen(false)}
+        onClose={() => {
+          setIsDriveModalOpen(false);
+          // Sign-in and sign-out happen inside this modal, so re-read the token it left behind.
+          setIsDriveConnected(Boolean(getAccessToken()));
+        }}
         currentDocumentTitle={documentTitle}
         currentMdxContent={mdxContent}
         currentDriveFileId={currentDriveFileId}

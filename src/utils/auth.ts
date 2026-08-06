@@ -24,7 +24,6 @@ setPersistence(auth, browserLocalPersistence).catch((err) => {
 const provider = new GoogleAuthProvider();
 provider.addScope('https://www.googleapis.com/auth/drive.file');
 
-let isSigningIn = false;
 let cachedAccessToken: string | null = localStorage.getItem('google_access_token');
 
 /**
@@ -54,7 +53,6 @@ export const initAuth = (
  */
 export const googleSignIn = async (): Promise<{ user: User; accessToken: string } | null> => {
   try {
-    isSigningIn = true;
     const result = await signInWithPopup(auth, provider);
     const credential = GoogleAuthProvider.credentialFromResult(result);
     if (!credential?.accessToken) {
@@ -74,8 +72,6 @@ export const googleSignIn = async (): Promise<{ user: User; accessToken: string 
       throw new Error('Sign-in popup was closed before completing authentication.');
     }
     throw error;
-  } finally {
-    isSigningIn = false;
   }
 };
 

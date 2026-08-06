@@ -5,9 +5,16 @@ service cloud.firestore {
     // User profile document rules
     match /users/{userId} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
+
+      // Documents live under their owner. Rules do not cascade into subcollections,
+      // so this match is what actually protects them.
+      match /documents/{documentId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
     }
 
-    // User document rules
+    // Legacy flat collection: retained read-only-ish so the one-time migration in
+    // firestoreService.migrateLegacyDocuments() can copy old data forward.
     match /documents/{documentId} {
       allow read, update, delete: if request.auth != null && resource.data.userId == request.auth.uid;
       allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;

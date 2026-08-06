@@ -8,6 +8,24 @@ export interface DriveFile {
 
 const DRIVE_FOLDER_NAME = 'MDX Studio Documents';
 
+const MARKDOWN_EXTENSIONS = ['.mdx', '.md', '.markdown'];
+const MARKDOWN_MIME_TYPES = ['text/markdown', 'text/x-markdown', 'text/mdx'];
+
+// Drive has no reliable server-side filter for "markdown": `name contains` only matches
+// prefixes, and editors write these files under several different mime types. Narrow the
+// query to plausible text types, then match the extension here.
+const TEXT_MIME_QUERY = [...MARKDOWN_MIME_TYPES, 'text/plain', 'application/octet-stream']
+  .map((type) => `mimeType='${type}'`)
+  .join(' or ');
+
+function isMarkdownFile(file: DriveFile): boolean {
+  const name = (file.name || '').toLowerCase();
+  return (
+    MARKDOWN_EXTENSIONS.some((ext) => name.endsWith(ext)) ||
+    MARKDOWN_MIME_TYPES.includes(file.mimeType)
+  );
+}
+
 /**
  * Searches or creates a dedicated app folder in Google Drive
  */
@@ -78,13 +96,15 @@ export async function listDriveFiles(token: string): Promise<DriveFile[]> {
       if (folderRes.ok) {
         const folderData = await folderRes.json();
         if (folderData.files) {
-          folderData.files.forEach((f: DriveFile) => fetchedFilesMap.set(f.id, f));
+          folderData.files
+            .filter(isMarkdownFile)
+            .forEach((f: DriveFile) => fetchedFilesMap.set(f.id, f));
         }
       }
     }
 
-    // 2. Also fetch all non-folder files accessible to this app
-    const generalQuery = "trashed=false and mimeType != 'application/vnd.google-apps.folder'";
+    // 2. Also fetch markdown-ish files accessible to this app outside that folder
+    const generalQuery = `trashed=false and (${TEXT_MIME_QUERY})`;
     const generalUrl = `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(
       generalQuery
     )}&fields=files(id, name, mimeType, modifiedTime, size)&orderBy=modifiedTime desc&pageSize=50`;
@@ -100,7 +120,9 @@ export async function listDriveFiles(token: string): Promise<DriveFile[]> {
     if (generalRes.ok) {
       const generalData = await generalRes.json();
       if (generalData.files) {
-        generalData.files.forEach((f: DriveFile) => fetchedFilesMap.set(f.id, f));
+        generalData.files
+          .filter(isMarkdownFile)
+          .forEach((f: DriveFile) => fetchedFilesMap.set(f.id, f));
       }
     }
 
@@ -136,6 +158,26 @@ export async function downloadDriveFile(token: string, fileId: string): Promise<
   return await response.text();
 }
 
+const MULTIPART_BOUNDARY = '-------314159265358979323846';
+
+/**
+ * Builds a multipart/related body carrying both file metadata and file content
+ */
+function buildMultipartBody(metadata: Record<string, any>, content: string): string {
+  const delimiter = `\r\n--${MULTIPART_BOUNDARY}\r\n`;
+  const closeDelimiter = `\r\n--${MULTIPART_BOUNDARY}--`;
+
+  return (
+    delimiter +
+    'Content-Type: application/json; charset=UTF-8\r\n\r\n' +
+    JSON.stringify(metadata) +
+    delimiter +
+    'Content-Type: text/markdown; charset=UTF-8\r\n\r\n' +
+    content +
+    closeDelimiter
+  );
+}
+
 /**
  * Save or update an MDX file in Google Drive
  */
@@ -148,16 +190,22 @@ export async function saveFileToDrive(
   // Ensure file extension is .mdx
   const cleanName = fileName.endsWith('.mdx') || fileName.endsWith('.md') ? fileName : `${fileName}.mdx`;
 
+  const metadata: Record<string, any> = {
+    name: cleanName,
+    mimeType: 'text/markdown',
+  };
+
   if (existingFileId) {
-    // UPDATE EXISTING FILE CONTENT
-    const uploadUrl = `https://www.googleapis.com/upload/drive/v3/files/${existingFileId}?uploadType=media`;
+    // UPDATE EXISTING FILE. A multipart request carries the metadata alongside the body,
+    // so a rename in the editor actually reaches Drive; uploadType=media never did.
+    const uploadUrl = `https://www.googleapis.com/upload/drive/v3/files/${existingFileId}?uploadType=multipart&fields=id,name,mimeType,modifiedTime,size`;
     const response = await fetch(uploadUrl, {
       method: 'PATCH',
       headers: {
         Authorization: `Bearer ${token}`,
-        'Content-Type': 'text/markdown; charset=UTF-8',
+        'Content-Type': `multipart/related; boundary=${MULTIPART_BOUNDARY}`,
       },
-      body: content,
+      body: buildMultipartBody(metadata, content),
     });
 
     if (!response.ok) {
@@ -167,48 +215,24 @@ export async function saveFileToDrive(
       throw new Error(`Failed to update file in Google Drive (${response.status})`);
     }
 
-    const updatedData = await response.json();
-    return {
-      id: updatedData.id,
-      name: cleanName,
-      mimeType: 'text/markdown',
-      modifiedTime: new Date().toISOString(),
-    };
+    return await response.json();
   } else {
     // CREATE NEW FILE in App Folder
     const folderId = await getOrCreateAppFolder(token);
-
-    const metadata: Record<string, any> = {
-      name: cleanName,
-      mimeType: 'text/markdown',
-    };
 
     if (folderId) {
       metadata.parents = [folderId];
     }
 
-    const boundary = '-------314159265358979323846';
-    const delimiter = `\r\n--${boundary}\r\n`;
-    const closeDelimiter = `\r\n--${boundary}--`;
-
-    const multipartRequestBody =
-      delimiter +
-      'Content-Type: application/json; charset=UTF-8\r\n\r\n' +
-      JSON.stringify(metadata) +
-      delimiter +
-      'Content-Type: text/markdown; charset=UTF-8\r\n\r\n' +
-      content +
-      closeDelimiter;
-
     const response = await fetch(
-      'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,mimeType,modifiedTime',
+      'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,mimeType,modifiedTime,size',
       {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,
-          'Content-Type': `multipart/related; boundary=${boundary}`,
+          'Content-Type': `multipart/related; boundary=${MULTIPART_BOUNDARY}`,
         },
-        body: multipartRequestBody,
+        body: buildMultipartBody(metadata, content),
       }
     );
 
@@ -221,5 +245,27 @@ export async function saveFileToDrive(
     }
 
     return await response.json();
+  }
+}
+
+/**
+ * Moves a Drive file to the user's trash. Trashing rather than deleting keeps the file
+ * recoverable from Drive itself; only call this when the user explicitly asked for it.
+ */
+export async function trashDriveFile(token: string, fileId: string): Promise<void> {
+  const response = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}`, {
+    method: 'PATCH',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ trashed: true }),
+  });
+
+  if (!response.ok) {
+    if (response.status === 401 || response.status === 403) {
+      throw new Error('TOKEN_EXPIRED: Your Google Drive session has expired. Please re-authenticate.');
+    }
+    throw new Error(`Failed to trash file in Google Drive (${response.status})`);
   }
 }
