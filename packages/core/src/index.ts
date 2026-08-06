@@ -6,6 +6,7 @@ export type {
   DocumentStats,
   MdxRenderMode,
   MdxThemeCategory,
+  MdxExpressionMode,
   MdxRenderSettings,
 } from './types';
 
@@ -30,3 +31,22 @@ export {
   extractHeadings,
   calculateDocumentStats,
 } from './mdxParser';
+
+export { parseMdxDocument, formatMdxParseError, countLines } from './mdxAst';
+export type {
+  MdxPoint,
+  MdxParseError,
+  MdxDiagnostic,
+  MdxDocumentAst,
+  MdxExpressionSlot,
+  MdxExpressionSlotKind,
+  ParseMdxOptions,
+} from './mdxAst';
+
+export { evaluateEstreeLiteral, createFullEstreeEvaluator } from './estreeEval';
+export type {
+  EstreeNodeLike,
+  MdxExpressionResult,
+  MdxExpressionEvaluator,
+  FullEstreeEvaluatorOptions,
+} from './estreeEval';

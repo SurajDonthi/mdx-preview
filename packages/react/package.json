@@ -14,12 +14,10 @@
     "src"
   ],
   "dependencies": {
-    "@babel/standalone": "^7.29.8",
     "@mdxkit/core": "*",
+    "hast-util-to-jsx-runtime": "^2.3.6",
     "lucide-react": "^0.546.0",
-    "prismjs": "^1.30.0",
-    "react-markdown": "^10.1.0",
-    "remark-gfm": "^4.0.1"
+    "prismjs": "^1.30.0"
   },
   "peerDependencies": {
     "react": "^19.0.0",

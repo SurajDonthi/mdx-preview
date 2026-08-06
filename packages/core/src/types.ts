@@ -61,6 +61,19 @@ export type MdxRenderMode = 'live' | 'pdf';
 export type MdxThemeCategory = 'light' | 'dark';
 
 /**
+ * How much of an MDX `{...}` expression the renderer will evaluate.
+ *
+ * - `'full'` runs the expression with real JavaScript semantics, so a document
+ *   can map over data, call functions and build components inline. Meant for
+ *   documents the user wrote themselves.
+ * - `'literals'` only builds values the syntax spells out - strings, numbers,
+ *   booleans, arrays, plain objects, substitution-free template literals - and
+ *   omits anything else with a warning. Meant for content the host does not
+ *   trust and is not rendering inside a sandbox.
+ */
+export type MdxExpressionMode = 'full' | 'literals';
+
+/**
  * Ambient render settings every MDX component can read from `MdxRenderContext`
  * instead of receiving them as props through the whole tree.
  */

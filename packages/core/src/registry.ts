@@ -3,10 +3,11 @@ import type { ComponentType } from 'react';
 /**
  * The MDX component registry.
  *
- * A document is rendered against a flat `name -> component` map: the renderer
- * hands that map to `react-markdown` as element overrides and injects it into
- * the scope of the compiled JSX. Anything not in the map is not available to
- * document authors.
+ * A document is rendered against a flat `name -> component` map. The renderer
+ * resolves every JSX tag in the parsed MDX tree through it, and hands the same
+ * map to `{...}` expressions as their scope. Anything not in the map is not
+ * available to document authors - an unknown tag renders as a notice rather
+ * than taking the document down.
  *
  * Rather than hard-coding that map, packages contribute *plugins* and the host
  * application composes them:
