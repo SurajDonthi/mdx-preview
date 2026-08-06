@@ -1,0 +1,508 @@
+---
+title: "Document Lifecycle — Full Trace"
+subtitle: "Creation, auto-save, Firestore sync and Google Drive, end to end"
+description: "Every path a document takes through MDX Studio, traced from the code, with the discrepancies found along the way."
+author: "Architecture Trace"
+date: "2026-08-05"
+category: "Architecture"
+status: "Review"
+tags: ["Lifecycle", "Sync", "Google Drive", "Firestore", "Discrepancies"]
+readTime: "12 min read"
+---
+
+# Document Lifecycle — Full Trace
+
+Every place a document is created, changed, saved, synced or deleted, traced from the
+source. Read the **map** first, then step through the **flows**, then the
+**discrepancies** — that last section is the point of this document.
+
+Each flow below shows the *same* architecture, with only that flow's path coloured.
+Switch tabs to switch the highlighted path.
+
+<Callout type="warning" title="Read this first">
+  Eight of the discrepancies below are behavioural, and two of those can lose or cross
+  contaminate document content. They are ranked by blast radius at the end, with exact
+  file and line references.
+</Callout>
+
+---
+
+## The Map
+
+Four layers. The React tree holds all state; three persistence modules sit behind it;
+each talks to one external system. Nothing talks to an external system directly from a
+component except the Drive modal.
+
+Pick a flow on the right to light up its complete path through the map. Hover or
+keyboard-focus any node for what it actually does. Solid arrows are writes; dashed
+arrows are reads and callbacks coming back the other way.
+
+<FlowGraph
+  title="MDX Studio — document lifecycle map"
+  subtitle="21 nodes, 4 layers, 8 traced flows"
+  data={{
+    groups: [
+      { id: "ui", label: "React components" },
+      { id: "state", label: "App.tsx — single source of truth" },
+      { id: "persist", label: "Persistence modules" },
+      { id: "ext", label: "External systems" }
+    ],
+    nodes: [
+      { id: "Nav", label: "Navbar", group: "ui", kind: "ui", description: "Theme, export and sign-in controls. Holds no document state of its own." },
+      { id: "Side", label: "FileSidebar", group: "ui", kind: "ui", description: "Lists, searches, renames, deletes and applies sample presets. Every action is a callback into App.tsx." },
+      { id: "Ed", label: "MdxEditor", group: "ui", kind: "ui", description: "The textarea. Emits mdxContent on every keystroke, which restarts the 400ms debounce." },
+      { id: "Prev", label: "MdxRenderer", group: "ui", kind: "ui", description: "Compiles the MDX body with Babel standalone and renders it. Read only — it never writes state." },
+      { id: "DriveM", label: "GoogleDriveModal", group: "ui", kind: "ui", description: "The only manual Drive UI. Runs its own auth listener and calls driveService directly." },
+      { id: "UpM", label: "FileUploadModal", group: "ui", kind: "ui", description: "Reads a .md or .mdx file from disk and funnels it into createNewDocument." },
+      { id: "ExpM", label: "ExportModal", group: "ui", kind: "ui", description: "Renders a second, PDF-mode copy of the preview off screen and rasterises it." },
+
+      { id: "Docs", label: "documents[]", group: "state", kind: "state", description: "The whole document list. Every store writes into it, and the Firestore listener pushes into it." },
+      { id: "Active", label: "activeDocId", group: "state", kind: "state", description: "Which document is open. Changing it re-runs the auto-save effect, which is discrepancy D2." },
+      { id: "Content", label: "mdxContent + title", group: "state", kind: "state", description: "Live body and title of the open document. The editor writes here, the preview reads here." },
+      { id: "DriveId", label: "currentDriveFileId", group: "state", kind: "state", description: "Drive file id for the open document, or undefined. Gates the third auto-save branch." },
+      { id: "Usr", label: "currentUser", group: "state", kind: "state", description: "Firebase user, or null. Gates the Firestore branch and, wrongly, the Drive connected badge." },
+      { id: "Timer", label: "autoSave debounce", meta: "400ms", group: "state", kind: "decision", description: "One timer for every write. It fans out to localStorage, then Firestore, then Drive, so a failure in one is invisible to the other two." },
+
+      { id: "Store", label: "storage.ts", group: "persist", kind: "module", description: "localStorage read and write, id generation and the merge policy. Always stamps updatedAt with the current time." },
+      { id: "Fire", label: "firestoreService.ts", group: "persist", kind: "module", description: "Per-document writes and the live subscription. Writes into a global documents collection keyed by document id." },
+      { id: "DriveS", label: "driveService.ts", group: "persist", kind: "module", description: "Folder discovery, list, download, create and update against Drive REST v3. The update branch sends content only, never a name." },
+      { id: "Auth", label: "auth.ts", group: "persist", kind: "module", description: "Firebase auth, the Google popup and the cached Drive access token." },
+
+      { id: "LS", label: "localStorage", meta: "mdx_studio_documents_v1", group: "ext", kind: "store", description: "The only store that is always present. Seeded with four sample documents on a cold start." },
+      { id: "FS", label: "Cloud Firestore", group: "ext", kind: "store", description: "The cloud copy, subscribed live. Ids are global, so the seeded sample ids collide across accounts." },
+      { id: "GD", label: "Google Drive REST", group: "ext", kind: "external", description: "Files under the MDX Studio Documents folder, plus anything else the drive.file scope can reach." },
+      { id: "GI", label: "Firebase + Google Identity", group: "ext", kind: "external", description: "Issues the Firebase session and the Google OAuth access token that Drive calls use." }
+    ],
+    edges: [
+      { from: "Side", to: "Active" },
+      { from: "Side", to: "Docs" },
+      { from: "Ed", to: "Content" },
+      { from: "UpM", to: "Docs" },
+      { from: "ExpM", to: "Prev" },
+      { from: "DriveM", to: "DriveS" },
+      { from: "DriveM", to: "Auth" },
+      { from: "Content", to: "Prev", kind: "dashed" },
+      { from: "Content", to: "Timer" },
+      { from: "Active", to: "Timer" },
+      { from: "DriveId", to: "Timer" },
+      { from: "Usr", to: "Timer" },
+      { from: "Timer", to: "Store" },
+      { from: "Timer", to: "Fire" },
+      { from: "Timer", to: "DriveS" },
+      { from: "Store", to: "LS" },
+      { from: "Fire", to: "FS" },
+      { from: "DriveS", to: "GD" },
+      { from: "Auth", to: "GI" },
+      { from: "LS", to: "Store", kind: "dashed" },
+      { from: "Store", to: "Docs", kind: "dashed" },
+      { from: "Docs", to: "Side", kind: "dashed" },
+      { from: "Docs", to: "Content", kind: "dashed" },
+      { from: "FS", to: "Docs", kind: "dashed", label: "onSnapshot" },
+      { from: "GD", to: "DriveS", kind: "dashed" },
+      { from: "GI", to: "Auth", kind: "dashed" },
+      { from: "Auth", to: "Usr", kind: "dashed" },
+      { from: "DriveS", to: "DriveId", kind: "dashed" }
+    ],
+    flows: [
+      {
+        id: "cold-start",
+        label: "Cold start",
+        tone: "indigo",
+        summary: "First visit. localStorage is seeded with four samples, then hydrated into state and rendered.",
+        path: ["LS", "Store", "Docs", "Content", "Prev"],
+        edges: ["Docs->Side"]
+      },
+      {
+        id: "create",
+        label: "Create",
+        tone: "emerald",
+        summary: "New, sample preset and upload all funnel into one creator, then straight into localStorage.",
+        path: ["Side", "Docs", "Content", "Timer", "Store", "LS"],
+        edges: ["UpM->Docs"]
+      },
+      {
+        id: "edit",
+        label: "Edit + auto-save",
+        tone: "amber",
+        summary: "The hot path. One 400ms timer fans out to all three stores in sequence.",
+        path: ["Ed", "Content", "Timer", "Store", "LS"],
+        edges: ["Timer->Fire", "Fire->FS", "Timer->DriveS", "DriveS->GD"]
+      },
+      {
+        id: "signin",
+        label: "Sign in + merge",
+        tone: "violet",
+        summary: "Auth starts a live listener. Every snapshot merges cloud into local and rewrites localStorage.",
+        path: ["DriveM", "Auth", "GI"],
+        edges: ["Auth->Usr", "Usr->Timer", "Timer->Fire", "Fire->FS", "FS->Docs", "Docs->Content"]
+      },
+      {
+        id: "drive-save",
+        label: "Drive save",
+        tone: "cyan",
+        summary: "Manual only, from the Drive modal. The update branch sends content with no filename.",
+        path: ["DriveM", "DriveS", "GD"],
+        edges: ["DriveS->DriveId", "DriveId->Timer", "Timer->DriveS"]
+      },
+      {
+        id: "drive-load",
+        label: "Drive load",
+        tone: "sky",
+        summary: "Download by file id, then revive the matching local document or create a new one.",
+        path: ["DriveM", "DriveS", "GD"],
+        edges: ["GD->DriveS", "DriveS->DriveId", "Docs->Content", "Content->Prev"]
+      },
+      {
+        id: "rename",
+        label: "Rename",
+        tone: "rose",
+        summary: "Title changes reach localStorage and Firestore. The Drive filename never changes.",
+        path: ["Side", "Docs", "Content", "Timer", "Store", "LS"],
+        edges: ["Timer->Fire", "Fire->FS"]
+      },
+      {
+        id: "delete",
+        label: "Delete",
+        tone: "fuchsia",
+        summary: "Removed here and in Firestore, left in place in Drive, and any other open device can push it back.",
+        path: ["Side", "Docs", "Store", "LS"],
+        edges: ["Fire->FS", "FS->Docs"]
+      }
+    ]
+  }}
+/>
+
+<Callout type="info" title="The one thing to notice in the map">
+  Every write leaves through the same 400ms debounce in `App.tsx`. That single timer
+  fans out to localStorage, Firestore and Google Drive together — so a failure in any
+  one of the three is invisible to the other two, and to you.
+</Callout>
+
+---
+
+## Flows
+
+<Tabs labels={["Cold start", "Create", "Edit + auto-save", "Sign in + merge", "Drive save", "Drive load", "Rename", "Delete"]}>
+  <Tab title="Cold start">
+    <p>First visit, nothing in localStorage. The four sample documents are written in as real, editable documents with fixed ids.</p>
+    <Mermaid chart={`flowchart LR
+    A["App mounts"] --> B["loadAllDocuments()"]
+    B --> C{"STORAGE_KEY present?"}
+    C -- "no" --> D["seed from SAMPLE_DOCUMENTS"]
+    D --> E["write to localStorage"]
+    C -- "yes" --> F["JSON.parse"]
+    E --> G["documents[] in state"]
+    F --> G
+    G --> H["getActiveDocumentId()"]
+    H --> I["render editor + preview"]
+    classDef hot fill:#e0e7ff,stroke:#4f46e5,stroke-width:2px,color:#0f172a
+    class A,B,C,D,E,F,G,H,I hot`} />
+    <p><strong>Note the ids.</strong> Seeded documents keep the sample ids verbatim — <code>mermaid-pdf-test</code>, <code>all-in-one-showcase</code>, <code>developer-docs</code>, <code>blog-post</code>. They are not made unique per install. Discrepancy D1 follows from this.</p>
+  </Tab>
+
+  <Tab title="Create">
+    <p>Four different actions all funnel into one creator. Three of them create a brand new document every time they are used.</p>
+    <Mermaid chart={`flowchart LR
+    N1["Sidebar: New"] --> C["createNewDocument()"]
+    N2["Sidebar: Sample preset"] --> C
+    N3["Upload .md / .mdx"] --> C
+    C --> ID["id = doc-{timestamp}-{random}"]
+    ID --> LS["unshift into localStorage"]
+    LS --> SA["setActiveDocumentId()"]
+    SA --> ST["setDocuments + setActiveDocId"]
+    ST --> FQ{"signed in?"}
+    FQ -- "yes" --> FW["saveDocumentToFirestore()"]
+    FQ -- "no" --> DONE["local only"]
+    classDef hot fill:#e0e7ff,stroke:#4f46e5,stroke-width:2px,color:#0f172a
+    class N1,N2,N3,C,ID,LS,SA,ST,FQ,FW,DONE hot`} />
+    <p>A newly created document has <code>driveFileId: undefined</code>, so it is never pushed to Drive until you open the Drive modal and save it by hand.</p>
+  </Tab>
+
+  <Tab title="Edit + auto-save">
+    <p>The hot path. One effect watches five values; any change restarts a 400ms timer, and the timer fans out to three destinations in sequence.</p>
+    <Mermaid chart={`flowchart LR
+    K["keystroke / title edit / doc switch / login"] --> EF["useEffect deps: mdxContent, documentTitle, activeDocId, currentDriveFileId, currentUser"]
+    EF --> SS["setIsSaving(true)"]
+    SS --> CT["clearTimeout(previous)"]
+    CT --> T["setTimeout 400ms"]
+    T --> EX["executeSave()"]
+    EX --> S1["1. saveDocument() to localStorage"]
+    S1 --> S2{"currentUser?"}
+    S2 -- "yes" --> S3["2. saveDocumentToFirestore()"]
+    S2 -- "no" --> S4
+    S3 --> S4{"driveFileId AND token?"}
+    S4 -- "yes" --> S5["3. saveFileToDrive() — content only"]
+    S4 -- "no" --> S6["setIsSaving(false)"]
+    S5 --> S6
+    classDef hot fill:#e0e7ff,stroke:#4f46e5,stroke-width:2px,color:#0f172a
+    classDef bad fill:#fee2e2,stroke:#dc2626,stroke-width:2px,color:#0f172a
+    class K,EF,SS,CT,T,EX,S1,S2,S3,S4,S6 hot
+    class S5 bad`} />
+    <p>The red step is where Drive failures disappear — see discrepancy D4. Also note the trigger list includes <code>activeDocId</code> and <code>currentUser</code>, so this fires on document switch and on login, not only on edits. That is discrepancy D2.</p>
+  </Tab>
+
+  <Tab title="Sign in + merge">
+    <p>Signing in starts a live Firestore listener. Every snapshot merges cloud into local and rewrites localStorage.</p>
+    <Mermaid chart={`flowchart LR
+    L["Sign in with Google"] --> P["signInWithPopup"]
+    P --> TK["cache accessToken in localStorage"]
+    TK --> AS["onAuthStateChanged fires"]
+    AS --> CU["setCurrentUser + setIsDriveConnected(true)"]
+    CU --> SUB["subscribeToUserDocuments(uid)"]
+    SUB --> SNAP["onSnapshot: where userId == uid"]
+    SNAP --> MG["mergeDocuments(local, cloud)"]
+    MG --> CMP{"per id: cloudTime >= localTime?"}
+    CMP -- "yes" --> TAKEC["cloud wins"]
+    CMP -- "no" --> TAKEL["local wins"]
+    TAKEC --> WR["saveAllDocuments + setDocuments"]
+    TAKEL --> WR
+    SNAP --> EMPTY{"cloud empty AND local non-empty?"}
+    EMPTY -- "yes" --> PUSH["upload every local doc to Firestore"]
+    classDef hot fill:#e0e7ff,stroke:#4f46e5,stroke-width:2px,color:#0f172a
+    classDef bad fill:#fee2e2,stroke:#dc2626,stroke-width:2px,color:#0f172a
+    class L,P,TK,AS,SUB,SNAP,MG,CMP,TAKEC,TAKEL,WR hot
+    class CU,EMPTY,PUSH bad`} />
+    <p>Two red nodes here. <code>setIsDriveConnected(true)</code> fires on Firebase auth alone with no Drive token in hand (D5), and the empty-cloud branch uploads your four sample documents into the cloud on first login (D6).</p>
+  </Tab>
+
+  <Tab title="Drive save">
+    <p>Manual, from the Drive modal only. Creating and updating take completely different code paths.</p>
+    <Mermaid chart={`flowchart LR
+    O["Drive modal: Save"] --> Q{"currentDriveFileId?"}
+    Q -- "no" --> NF["getOrCreateAppFolder()"]
+    NF --> MP["multipart POST: metadata + content"]
+    MP --> RID["returns real file id + name"]
+    Q -- "yes" --> UP["PATCH uploadType=media"]
+    UP --> ONLY["body = content ONLY"]
+    ONLY --> FAKE["returns fabricated name + modifiedTime"]
+    RID --> CB["onSavedToDrive(id, title)"]
+    FAKE --> CB
+    CB --> SD["setCurrentDriveFileId + setDocumentTitle + saveDocument"]
+    classDef hot fill:#e0e7ff,stroke:#4f46e5,stroke-width:2px,color:#0f172a
+    classDef bad fill:#fee2e2,stroke:#dc2626,stroke-width:2px,color:#0f172a
+    class O,Q,NF,MP,RID,UP,CB,SD hot
+    class ONLY,FAKE bad`} />
+    <p>The update branch never sends a filename, yet it returns one as if it had. That is discrepancy D3 — the Drive file keeps its original name forever.</p>
+  </Tab>
+
+  <Tab title="Drive load">
+    <p>Opening a Drive file either revives an existing local document or creates a new one, keyed on <code>driveFileId</code>.</p>
+    <Mermaid chart={`flowchart LR
+    B["Browse Drive files"] --> LST["listDriveFiles()"]
+    LST --> F1["folder query: MDX Studio Documents"]
+    LST --> F2["general query: every non-folder file, pageSize 50"]
+    F1 --> DED["dedupe by id, sort by modifiedTime"]
+    F2 --> DED
+    DED --> PICK["user picks a file"]
+    PICK --> DL["downloadDriveFile(alt=media)"]
+    DL --> TITLE["title = name minus .mdx/.md/.txt"]
+    TITLE --> EX{"local doc with same driveFileId?"}
+    EX -- "yes" --> UPD["update that doc in place"]
+    EX -- "no" --> NEW["createNewDocument + attach driveFileId"]
+    UPD --> ACT["setActiveDocId + setCurrentDriveFileId"]
+    NEW --> ACT
+    classDef hot fill:#e0e7ff,stroke:#4f46e5,stroke-width:2px,color:#0f172a
+    classDef bad fill:#fee2e2,stroke:#dc2626,stroke-width:2px,color:#0f172a
+    class B,LST,F1,DED,PICK,DL,TITLE,EX,UPD,NEW,ACT hot
+    class F2 bad`} />
+    <p>The second query has no MIME filter, so the list is "every file this app can see", not "your MDX files" as the heading claims (D8).</p>
+  </Tab>
+
+  <Tab title="Rename">
+    <p>Renaming splits on whether the document is the active one, and the two branches do different amounts of work.</p>
+    <Mermaid chart={`flowchart LR
+    R["Sidebar: rename"] --> W{"is it the active doc?"}
+    W -- "yes" --> A1["setDocumentTitle only"]
+    A1 --> A2["auto-save effect fires"]
+    A2 --> A3["localStorage + Firestore + Drive content"]
+    A3 --> A4["Drive filename unchanged"]
+    W -- "no" --> B1["saveDocument()"]
+    B1 --> B2{"signed in?"}
+    B2 -- "yes" --> B3["saveDocumentToFirestore()"]
+    B2 -- "no" --> B4["local only"]
+    B3 --> B5["Drive never touched"]
+    classDef hot fill:#e0e7ff,stroke:#4f46e5,stroke-width:2px,color:#0f172a
+    classDef bad fill:#fee2e2,stroke:#dc2626,stroke-width:2px,color:#0f172a
+    class R,W,A1,A2,A3,B1,B2,B3,B4 hot
+    class A4,B5 bad`} />
+    <p>Neither branch renames the file in Drive. A Drive-linked document can carry one name in the app and a different one in Drive indefinitely.</p>
+  </Tab>
+
+  <Tab title="Delete">
+    <p>Delete reaches two of the three stores. The third keeps the file, and other open devices can bring the document back.</p>
+    <Mermaid chart={`flowchart LR
+    D["Sidebar: delete"] --> L1["deleteDocument() — localStorage"]
+    L1 --> Q1{"signed in?"}
+    Q1 -- "yes" --> F1["deleteDocumentFromFirestore()"]
+    Q1 -- "no" --> SKIP["local only"]
+    F1 --> ERR["errors swallowed, console only"]
+    L1 --> GONE["Drive file left in place"]
+    F1 --> OTHER["other open device still holds it locally"]
+    OTHER --> RESUR["its auto-save re-uploads it"]
+    RESUR --> BACK["snapshot returns it to you"]
+    classDef hot fill:#e0e7ff,stroke:#4f46e5,stroke-width:2px,color:#0f172a
+    classDef bad fill:#fee2e2,stroke:#dc2626,stroke-width:2px,color:#0f172a
+    class D,L1,Q1,F1,SKIP hot
+    class ERR,GONE,OTHER,RESUR,BACK bad`} />
+    <p>There is no tombstone anywhere, so "deleted" only means "absent from this device right now".</p>
+  </Tab>
+</Tabs>
+
+---
+
+## Discrepancies
+
+Ranked by blast radius. Every one was read out of the source, not inferred.
+
+<Callout type="success" title="All nine have since been fixed">
+  This section is kept as the as-found audit record, so the reasoning behind each fix
+  stays readable. The file and line references below point at the code as it was when
+  the audit ran, not as it is now. See ARCHITECTURE.md for the current design, and the
+  git history for what each fix changed.
+</Callout>
+
+| # | Severity | What happens | Where |
+|---|---|---|---|
+| D1 | **Critical** | Two different users share one Firestore document | `firestoreService.ts:20` |
+| D2 | **High** | Opening a document makes it "newer" than the cloud copy | `App.tsx:154`, `storage.ts:106` |
+| D3 | **High** | Renaming never renames the Drive file | `driveService.ts:151` |
+| D4 | **Medium** | Drive sync failures are silent, UI still says saved | `App.tsx:143` |
+| D5 | **Medium** | "Drive connected" shows without a Drive token | `App.tsx:88` |
+| D6 | **Medium** | Sample documents get uploaded to every new account | `App.tsx:112` |
+| D7 | **Medium** | Deleted documents can come back | `App.tsx:212` |
+| D8 | **Low** | Drive browser lists more than MDX files | `driveService.ts:87` |
+| D9 | **Low** | Dead code and unused fields | three places |
+
+### D1 · Firestore document ids collide across users
+
+`saveDocumentToFirestore` writes to `doc(db, 'documents', document.id)` — a **global**
+collection keyed by the document's own id. The four seeded samples use fixed ids
+(`mermaid-pdf-test`, `all-in-one-showcase`, `developer-docs`, `blog-post`), and every
+new install seeds those same ids.
+
+So the moment two users sign in, they are both writing to the Firestore document
+literally named `mermaid-pdf-test`. The listener filters by `userId`, so whoever wrote
+last owns the record and the other user's copy silently becomes the other person's
+content — or vanishes from their list when `userId` no longer matches.
+
+<Callout type="warning" title="This is a cross-account data leak, not just a bug">
+  User B can read User A's edits to any sample-derived document, because they are the
+  same Firestore record. Giving each account its own documents subcollection under its
+  own uid record fixes it, as does seeding installs with unique ids.
+</Callout>
+
+### D2 · Merely opening a document rewrites its timestamp
+
+Two things combine:
+
+- `saveDocument()` always overwrites `updatedAt` with `new Date()`, whether or not the
+  content changed — `storage.ts:106`.
+- The auto-save effect lists `activeDocId` and `currentUser` in its dependencies, so it
+  fires on **document switch** and on **login**, not just on edits — `App.tsx:165`.
+
+`mergeDocuments` then compares those timestamps to decide a winner. Because opening a
+document freshens its local timestamp, the local copy nearly always wins.
+
+**Concrete loss:** edit a document on your phone, then merely *open* it on your laptop
+without typing. The laptop's stale copy is now newer, and the next save overwrites your
+phone's edits.
+
+There is a second, quieter effect of the same cause: the sidebar sorts by `updatedAt`,
+so just clicking through documents reshuffles the list.
+
+<Callout type="info" title="Why it isn't worse than it is">
+  Switching documents also re-runs the effect and its cleanup clears the pending timer,
+  so the *previous* document's content is not written under the *new* document's id.
+  That safety depends entirely on a re-render landing inside 400ms — it works, but it is
+  holding a sharp edge.
+</Callout>
+
+### D3 · The Drive update path never sends a filename
+
+`saveFileToDrive` has two branches. Creating a file does a multipart upload with
+`metadata.name`. Updating does `PATCH ...?uploadType=media` with **only the body** — no
+metadata part, so the name is never touched.
+
+It then returns `{ name: cleanName }` anyway, so the caller is told a rename happened.
+Renaming a Drive-linked document therefore changes the title everywhere except Drive,
+permanently, and the app reports success.
+
+### D4 · Drive sync fails silently during auto-save
+
+In `executeSave`, the Drive call is wrapped in `try/catch` that does
+`console.warn` and continues. `setIsSaving(false)` runs regardless, so the UI reports a
+clean save. An expired token — which the Drive modal handles carefully with a
+`TOKEN_EXPIRED` path — is simply swallowed here. You can edit for an hour believing
+Drive is current when nothing has reached it since the token expired.
+
+### D5 · "Drive connected" is derived from the wrong signal
+
+`App.tsx` calls `initAuth((user) => { setCurrentUser(user); setIsDriveConnected(true); })`.
+The callback's second parameter is the Drive access token, and it is ignored. So
+`isDriveConnected` is true whenever Firebase auth is restored, even when
+`localStorage.google_access_token` is absent or expired.
+
+The sidebar then shows Drive as active, and the auto-save Drive branch is gated on a
+token that may not exist — so the badge and the behaviour disagree.
+
+### D6 · First login uploads the sample documents
+
+`if (cloudDocs.length === 0 && localDocs.length > 0) localDocs.forEach(saveDocumentToFirestore)`.
+
+On a first sign-in the local set is the four seeded samples, so every new account gets
+them pushed to the cloud. Worse, the condition is on *any* empty snapshot, so a
+transient empty read re-uploads whatever is local at that moment.
+
+### D7 · Deletion has no tombstone
+
+Delete removes the document from localStorage and from Firestore, and errors from the
+Firestore call are swallowed. Nothing marks the id as deleted. Any other device still
+holding it locally will re-upload it on its next auto-save, and your listener puts it
+straight back in your list. The Drive file is never removed under any path.
+
+### D8 · The Drive browser lists everything it can see
+
+`listDriveFiles` runs two queries and merges. The second is
+`trashed=false and mimeType != 'application/vnd.google-apps.folder'` with no extension
+or MIME filter and `pageSize=50`. The panel is headed "Your Google Drive MDX Files" but
+shows any file the app's `drive.file` scope can reach, newest 50.
+
+### D9 · Dead code and unused fields
+
+- `DocumentManagerModal.tsx` — 10KB component, imported by nothing.
+- `StoredDocument.lastSyncedToDriveAt` — declared at `storage.ts:9`, never written or read. The very field that would fix D2's comparison problem exists but is unused.
+- `auth.ts` — `isSigningIn` is assigned in two places and never read.
+
+---
+
+## Component reference
+
+| Module | Owns | Talks to |
+|---|---|---|
+| `App.tsx` | all document state, the 400ms debounce, every orchestration decision | all three persistence modules |
+| `storage.ts` | localStorage read/write, id generation, merge policy | localStorage |
+| `firestoreService.ts` | per-document writes, live subscription | Cloud Firestore |
+| `driveService.ts` | folder discovery, list, download, create/update | Google Drive REST v3 |
+| `auth.ts` | Firebase auth, Google popup, cached Drive token | Firebase Auth, Google Identity |
+| `GoogleDriveModal.tsx` | the only manual Drive UI; runs its own auth listener | `driveService.ts`, `auth.ts` |
+| `FileSidebar.tsx` | list, search, rename, delete, presets | callbacks into `App.tsx` |
+
+---
+
+## How the map is drawn
+
+The map at the top is a `FlowGraph` — an inline-SVG component registered in
+`CustomComponents.tsx` and driven entirely by the JSON graph in this document. Nodes,
+edges, layer bands and the eight flows are all data; the component owns every piece of
+interaction, because the MDX scope here compiles JSX expressions only and a document
+cannot declare state of its own.
+
+- **Flows panel** sits to the right on a wide preview and stacks underneath below about
+  760px, so the diagram never forces the page sideways.
+- **Selecting a flow** dims everything off the path and numbers the nodes in order.
+- **Hover, tap or keyboard-focus a node** for its description; tab reaches every node.
+- **PDF export** drops the interaction and prints the full graph plus a static list of
+  all eight flows with their complete paths written out.
+
+The per-flow tabs above keep their Mermaid diagrams — they show the internal branching
+of each flow, which the map deliberately does not.

@@ -1,0 +1,126 @@
+---
+title: "Configuration and deployment"
+subtitle: "Firebase, Google Drive, Firestore rules, hosting"
+description: "Everything optional: setting up your own Firebase project, enabling Drive sync, deploying the security rules, and shipping the static build."
+category: "Guide"
+status: "Current"
+tags: ["Firebase", "Google Drive", "Deployment", "Security"]
+readTime: "6 min read"
+---
+
+# Configuration and deployment
+
+<Callout type="success" title="Nothing here is required to use the app">
+  MDX Studio runs with zero configuration. It seeds sample documents into localStorage
+  and works fully offline. Everything below is optional cloud sync.
+</Callout>
+
+This document covers the optional cloud features and how to deploy.
+
+---
+
+## What the config file contains, and why it is committed
+
+`firebase-applet-config.json` at the repo root:
+
+```json
+{
+  "projectId": "...",
+  "appId": "...",
+  "apiKey": "...",
+  "authDomain": "...",
+  "firestoreDatabaseId": "...",
+  "storageBucket": "...",
+  "messagingSenderId": "...",
+  "oAuthClientId": "..."
+}
+```
+
+<Callout type="info" title="None of these are secrets">
+  A Firebase web API key is a project identifier, not an authorisation token. It is
+  compiled into every client-side Firebase app and is visible to anyone who opens
+  devtools — Google documents this explicitly, and the same is true of the OAuth client
+  id. Security comes from Firestore rules and the authorized-domains list, never from
+  hiding these values.
+</Callout>
+
+What you should still do:
+
+- **Restrict the API key by HTTP referrer** in Google Cloud console → *APIs & Services →
+  Credentials*. Unrestricted, it can be used against other APIs enabled on the project
+  and billed to you.
+- **Restrict authorized domains** in Firebase console → *Authentication → Settings*.
+- **Never commit a service account JSON.** Those *are* secrets. `.gitignore` covers
+  `.env*` already; keep it that way.
+
+---
+
+## Setting up your own Firebase project
+
+1. Create a project at [console.firebase.google.com](https://console.firebase.google.com).
+2. Add a **Web app** and copy its config into `firebase-applet-config.json`. The key
+   names in that file are the app's own — map them across rather than pasting the
+   snippet wholesale.
+3. **Authentication → Sign-in method** → enable **Google**.
+4. **Firestore Database** → create one. If you use a named (non-default) database, put
+   its id in `firestoreDatabaseId`.
+5. Deploy the security rules — see below. **This step is not optional.**
+6. **Authentication → Settings → Authorized domains** → add wherever you host it.
+
+### Google Drive
+
+Drive uses the same Google sign-in, requesting the `drive.file` scope — which grants
+access **only to files this app creates**, not your whole Drive. Enable the *Google
+Drive API* on the underlying Google Cloud project. Files are written to a folder named
+`MDX Studio Documents`.
+
+---
+
+## Firestore security rules — required
+
+`firestore.rules` in this repo. Deploy it with the code; the app breaks completely
+without it, because **Firestore rules do not cascade into subcollections**. Documents
+live at `users/{uid}/documents/{docId}`, so a rule matching only `users/{userId}` leaves
+every document read and write denied.
+
+```bash
+npx firebase-tools deploy --only firestore:rules
+```
+
+Or paste the file into Firebase console → *Firestore → Rules*.
+
+The file also keeps a rule for the legacy flat `documents` collection. That is there so
+`migrateLegacyDocuments()` can copy old records forward into each user's subcollection
+on first run. Once every user has migrated, delete both the legacy rule and the legacy
+collection.
+
+---
+
+## Deployment
+
+`npm run build` emits a fully static `dist/`. Serve it from anywhere — Cloud Run,
+Netlify, Vercel, S3, GitHub Pages, nginx. There is no server-side component, no API
+routes and no runtime environment variables.
+
+Two things to get right:
+
+- Add the deployed origin to Firebase **authorized domains**, or Google sign-in fails.
+- Serve it over **HTTPS**. Google OAuth requires it, and so does the clipboard API.
+
+### The lockfile problem
+
+`package-lock.json` was generated on Linux and contains no Windows native binaries for
+rollup and esbuild. `npm ci` on Windows therefore produces a `node_modules` that cannot
+build. Use `npm install` on Windows, or regenerate the lockfile there. `bun.lock` is also
+committed and is stale relative to `package.json`.
+
+---
+
+## Security checklist before publishing
+
+- [ ] API key restricted by HTTP referrer
+- [ ] Authorized domains limited to hosts you control
+- [ ] Firestore rules deployed and tested with a second account
+- [ ] No `.env` file committed — only `.env.example` with placeholders
+- [ ] No service account JSON anywhere in the repo or its history
+- [ ] Legacy flat `documents` collection cleaned up after migration

@@ -1,0 +1,216 @@
+---
+title: "Architecture"
+subtitle: "The render pipeline, persistence and PDF export"
+description: "How MDX Studio actually works internally, for anyone changing it — including the two parser bugs and the rasteriser rewrite that shaped the current design."
+category: "Reference"
+status: "Current"
+tags: ["Architecture", "Renderer", "Persistence", "PDF"]
+readTime: "10 min read"
+---
+
+# Architecture
+
+How the app actually works, for anyone changing it.
+
+<Callout type="info" title="See it traced">
+  For an interactive walkthrough of the document lifecycle, open
+  document-lifecycle-trace.mdx in the app. It has a clickable flow map covering all
+  eight paths a document can take.
+</Callout>
+
+---
+
+## Shape
+
+Four layers. `App.tsx` holds every piece of document state; three persistence modules
+sit behind it; each talks to exactly one external system. No component reaches an
+external system directly except `GoogleDriveModal`.
+
+<FlowGraph
+  title="Layer map"
+  subtitle="Pick a layer to trace how a write reaches it"
+  data={{
+    groups: [
+      { id: "ui", label: "Components" },
+      { id: "state", label: "App.tsx" },
+      { id: "persist", label: "Persistence" },
+      { id: "ext", label: "External" }
+    ],
+    nodes: [
+      { id: "Ed", label: "MdxEditor", group: "ui", kind: "ui", description: "Emits content on every keystroke." },
+      { id: "Side", label: "FileSidebar", group: "ui", kind: "ui", description: "Create, rename, delete, search." },
+      { id: "DriveM", label: "GoogleDriveModal", group: "ui", kind: "ui", description: "The only component that calls an external service directly." },
+      { id: "State", label: "document state", group: "state", kind: "state", description: "documents, activeDocId, content, title, driveFileId, user." },
+      { id: "Timer", label: "400ms debounce", group: "state", kind: "decision", description: "The single write path. Fans out to all three stores in sequence." },
+      { id: "Store", label: "storage.ts", group: "persist", kind: "module", description: "localStorage, id generation, merge policy, tombstones." },
+      { id: "Fire", label: "firestoreService.ts", group: "persist", kind: "module", description: "Per-user document subcollection and the live subscription." },
+      { id: "DriveS", label: "driveService.ts", group: "persist", kind: "module", description: "Drive REST v3: list, download, create, update." },
+      { id: "LS", label: "localStorage", group: "ext", kind: "store", description: "Always present. Seeded on first run." },
+      { id: "FS", label: "Cloud Firestore", group: "ext", kind: "store", description: "Optional. Live subscription pushes changes back." },
+      { id: "GD", label: "Google Drive", group: "ext", kind: "external", description: "Opt-in per document, scoped to files this app created." }
+    ],
+    edges: [
+      { from: "Ed", to: "State" },
+      { from: "Side", to: "State" },
+      { from: "DriveM", to: "DriveS" },
+      { from: "State", to: "Timer" },
+      { from: "Timer", to: "Store" },
+      { from: "Timer", to: "Fire" },
+      { from: "Timer", to: "DriveS" },
+      { from: "Store", to: "LS" },
+      { from: "Fire", to: "FS" },
+      { from: "DriveS", to: "GD" },
+      { from: "FS", to: "State", kind: "dashed", label: "onSnapshot" }
+    ],
+    flows: [
+      { id: "local", label: "Local save", tone: "indigo", summary: "Always runs. The only path that works signed out.", path: ["Ed", "State", "Timer", "Store", "LS"] },
+      { id: "cloud", label: "Cloud sync", tone: "emerald", summary: "Runs when signed in. The snapshot pushes other devices' changes back.", path: ["Ed", "State", "Timer", "Fire", "FS"] },
+      { id: "drive", label: "Drive sync", tone: "amber", summary: "Only for documents already saved to Drive once, by hand.", path: ["Ed", "State", "Timer", "DriveS", "GD"] }
+    ]
+  }}
+/>
+
+---
+
+## The render pipeline
+
+`src/components/MdxRenderer.tsx`, in order:
+
+1. **Frontmatter split** — `parseFrontmatter()` in `utils/mdxParser.ts` peels the YAML
+   header with `js-yaml`.
+2. **Block split** — `parseMdxBlocks()` walks the body character by character and cuts it
+   into `markdown` and `jsx` chunks. It tracks fenced blocks, inline code spans, HTML
+   comments, quoting and brace depth so that a `>` inside a JSX attribute, or a component
+   example inside backticks, is not mistaken for structure.
+3. **Compile** — the JSX chunks are concatenated into a `MdxView()` function body and run
+   through `@babel/standalone` with the `react` preset. The result is evaluated with
+   `new Function(...scopeKeys)`, injecting `React`, `useState`, `useEffect`,
+   `ReactMarkdown`, `remarkGfm`, `customMdComponents`, `CodeBlock` and every entry of
+   `mdxComponentsMap`.
+4. **Render** — markdown chunks go through `react-markdown` + `remark-gfm` with a
+   component override map; JSX chunks render directly. A compile failure sets a warning
+   banner and falls back to rendering the whole body as plain markdown.
+5. **Error boundary** — `MdxErrorBoundary` catches runtime errors from the compiled
+   component so a broken document degrades instead of blanking the app.
+
+### Why the scanner is delicate
+
+Two bugs have already come out of this design, both worth knowing before you touch it:
+
+- An **unpaired backtick run** used to scan forward until it found a matching run, which
+  could be the *next fence opener*. That shifted the cursor inside a fenced block, made
+  its closing fence read as an opening one, and silently swallowed the rest of the
+  document. Fixed by bounding the search at a blank line and treating an unpaired run as
+  literal text — `skipMarkdownCode()`.
+- **Braces in JSX text** compile as expressions and take the whole document down. There
+  is no fix for this at the parser level; it is documented in
+  [AUTHORING.md](AUTHORING.md) instead.
+
+There is no source mapping, so compile errors do not carry a line number. That is the
+single biggest weakness of the approach.
+
+---
+
+## Adding a component
+
+1. Write it in `src/components/CustomComponents.tsx` (or its own file and import it).
+2. Register it in the `mdxComponentsMap` object at the bottom of that file — that map is
+   what gets injected into document scope. Aliases are fine.
+3. If it renders differently in PDF, read `MdxRenderContext` from `MermaidDiagram.tsx`:
+   it gives you `{ renderMode: 'live' | 'pdf', themeCategory: 'light' | 'dark' }`.
+
+Constraints worth designing around:
+
+- **Never throw.** An uncaught error inside a compiled document blows past the boundary
+  in some paths and is hard to diagnose from the UI.
+- **Handle malformed props.** Document authors pass hand-written JSON.
+- **The PDF exporter deletes every `<button>`.** Do not put content inside one.
+- **Mobile matters.** Layouts must survive a 390px viewport.
+
+---
+
+## State and persistence
+
+`App.tsx` owns `documents[]`, `activeDocId`, `mdxContent`, `documentTitle`,
+`currentDriveFileId` and `currentUser`. A single debounced effect (400ms) is the only
+write path; it fans out to localStorage, then Firestore, then Drive.
+
+**Timestamps decide sync conflicts**, so `saveDocument()` only advances `updatedAt` when
+the title or content genuinely changed. Opening a document or signing in must not bump
+it — otherwise a merely-opened stale copy beats a real edit made on another device.
+
+**Deletion writes tombstones**, locally and in Firestore, rather than removing rows.
+Without them another device still holding the document re-uploads it on its next save
+and the subscription hands it straight back. Tombstones self-prune after 30 days.
+
+**Firestore documents live under `users/{uid}/documents/{docId}`.** They used to sit in a
+flat global `documents` collection keyed by document id, which meant the fixed sample
+ids collided across accounts and two users shared one record. Seeded sample ids are now
+suffixed with a per-install id as well. `migrateLegacyDocuments()` copies forward from
+the old path once per account per browser and does not delete the originals.
+
+<Callout type="error" title="Rules do not cascade into subcollections">
+  A rule matching only the user record leaves every document read and write denied. The
+  rule that matches the documents subcollection is what actually protects them, and it
+  must be deployed with the code. See CONFIGURATION.mdx.
+</Callout>
+
+**Google Drive is opt-in and manual.** A document only syncs to Drive once you have
+saved it there from the Drive modal, which sets `driveFileId`. After that the auto-save
+effect patches its content. The `drive.file` scope means the app only ever sees files it
+created.
+
+---
+
+## PDF export
+
+`src/utils/pdfExporter.ts`.
+
+When the export dialog opens, `App.tsx` mounts a second copy of `MdxRenderer` off-screen
+with `renderMode="pdf"` inside `.pdf-export-root`. Export then:
+
+1. waits for every Mermaid diagram to reach `ready`, failing loudly if any errored
+2. clones the tree, rasterises each diagram's SVG to PNG, and applies light-mode styles
+3. captures it by serialising the clone into an SVG `<foreignObject>` and drawing that
+   into a canvas — **the browser's own layout engine draws the page**
+4. slices the canvas into A4 pages at boundaries that avoid splitting protected blocks
+5. writes the pages into a `jsPDF` document and downloads it
+
+### Why `foreignObject` and not html2canvas
+
+html2canvas reimplements CSS layout in JavaScript. It draws a bordered inline box where
+CSS says, but paints that box's *text* about 10px lower — measured constant across flex,
+inline-block, block, float and table-cell, across five font stacks, five font sizes,
+padding sweeps and relative positioning. Every pill label sat below its own border and
+every icon floated above its label, and no styling could correct it.
+
+Rendering through `foreignObject` hands layout back to the browser, so the capture
+matches the screen. Verified on Chromium, WebKit and Gecko.
+
+Three portability details that path requires, each of which was a real failure:
+
+- **Ship the stylesheets, do not copy computed styles.** Every engine enumerates a
+  different property set from `getComputedStyle`, and whatever it omits vanishes from
+  the capture — WebKit lost CSS grid columns that way.
+- **Pin image sizes.** An `<img>` sized `auto` has nothing to resolve against inside a
+  detached SVG; WebKit collapsed every diagram to zero height.
+- **Use a `data:` URL, not a blob.** Chrome treats a blob-URL SVG as cross-origin and
+  taints the canvas, which blocks `toDataURL`.
+
+If the capture fails or comes back blank, `html2canvas` loads dynamically as a fallback
+so the export never hard-fails. It is not in the main bundle.
+
+---
+
+## Known architectural debt
+
+- **`dark:` classes follow the OS, not the theme picker.** Tailwind v4 defaults the
+  `dark` variant to `prefers-color-scheme`; this project declares no custom variant and
+  never sets a `dark` class. Fixing it means declaring `@custom-variant dark` in
+  `index.css` and driving a class from the theme state.
+- **No source maps for compile errors** in documents.
+- **Conflict resolution is last-writer-wins** on client clocks.
+- **A Firestore snapshot carrying a newer version of the currently open document does not
+  refresh the editor** — the sync effect keys on document id, not content.
+- **The preview pane scrolls sideways at phone width** for wide tables and long tab
+  strips.
