@@ -1,8 +1,9 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { User } from 'firebase/auth';
 import { ViewMode, ThemeId } from './types';
-import { THEMES } from './data/themes';
-import { extractHeadings, calculateDocumentStats } from './utils/mdxParser';
+import { extractHeadings, calculateDocumentStats } from '@mdxkit/core';
+import { MdxRenderer, THEMES } from '@mdxkit/react';
+import { studioMdxRegistry } from './mdxRegistry';
 import {
   loadAllDocuments,
   loadAllRecords,
@@ -27,7 +28,6 @@ import { showToast } from './utils/toast';
 import { Navbar } from './components/Navbar';
 import { FileSidebar } from './components/FileSidebar';
 import { MdxEditor } from './components/MdxEditor';
-import { MdxRenderer } from './components/MdxRenderer';
 import { TableOfContents } from './components/TableOfContents';
 import { FileUploadModal } from './components/FileUploadModal';
 import { ExportModal } from './components/ExportModal';
@@ -455,6 +455,7 @@ export default function App() {
                 themeConfig={themeConfig}
                 showFrontmatterHeader={true}
                 containerId="mdx-live-preview"
+                registry={studioMdxRegistry}
               />
             </div>
 
@@ -518,6 +519,7 @@ export default function App() {
           showFrontmatterHeader={true}
           containerId="mdx-export-preview"
           renderMode="pdf"
+          registry={studioMdxRegistry}
         />
       </div>
     )}

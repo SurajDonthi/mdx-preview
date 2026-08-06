@@ -14,12 +14,11 @@ import 'prismjs/components/prism-sql';
 import 'prismjs/components/prism-markdown';
 import * as Babel from '@babel/standalone';
 
-import { ThemeConfig, HeaderItem } from '../types';
-import { parseFrontmatter, slugify } from '../utils/mdxParser';
+import { MdxRenderContext, parseFrontmatter, slugify } from '@mdxkit/core';
+import type { ThemeConfig, MdxRegistry, MdxRenderMode } from '@mdxkit/core';
 import { FrontmatterHeader } from './FrontmatterHeader';
-import { mdxComponentsMap } from './CustomComponents';
+import { baseMdxRegistry } from './plugin';
 import { InlineToken } from './InlineToken';
-import { MermaidDiagram, MdxRenderContext, MdxRenderMode } from './MermaidDiagram';
 import * as Icons from 'lucide-react';
 
 // Error Boundary for compiled MDX elements
@@ -63,17 +62,21 @@ function CodeBlock({
   language,
   value,
   themeConfig,
+  registry = baseMdxRegistry,
 }: {
   language?: string;
   value: string;
   themeConfig: ThemeConfig;
+  registry?: MdxRegistry;
 }) {
   const [copied, setCopied] = useState(false);
 
   const cleanLang = (language || 'text').toLowerCase();
 
-  if (cleanLang === 'mermaid') {
-    return <MermaidDiagram chart={value} />;
+  // A plugin may claim a fence language (```mermaid) and render it itself.
+  const FenceComponent = registry.codeFences[cleanLang];
+  if (FenceComponent) {
+    return <FenceComponent language={cleanLang}>{value}</FenceComponent>;
   }
 
   const highlightedCode = useMemo(() => {
@@ -150,6 +153,7 @@ function CustomCodeElement({
   className,
   children,
   themeConfig,
+  registry = baseMdxRegistry,
   ...props
 }: any) {
   const isInsidePre = React.useContext(PreContext);
@@ -161,14 +165,16 @@ function CustomCodeElement({
   const isBlock = isInsidePre || Boolean(match) || value.includes('\n');
 
   if (isBlock) {
-    if (cleanLang === 'mermaid') {
-      return <MermaidDiagram chart={value} />;
+    const FenceComponent = (registry as MdxRegistry).codeFences[cleanLang];
+    if (FenceComponent) {
+      return <FenceComponent language={cleanLang}>{value}</FenceComponent>;
     }
     return (
       <CodeBlock
         language={cleanLang}
         value={value}
         themeConfig={themeConfig}
+        registry={registry}
       />
     );
   }
@@ -194,6 +200,16 @@ interface MdxRendererProps {
   containerId?: string;
   containerRef?: React.Ref<HTMLDivElement>;
   renderMode?: MdxRenderMode;
+  /**
+   * Components available to the document. Build it with
+   * `createRendererRegistry(...)` so the built-ins stay included. Defaults to
+   * the built-in components only - Mermaid, charts and flow graphs live in
+   * separate packages and must be registered by the host.
+   *
+   * Pass a value that is stable across renders (a module-level constant):
+   * a new registry object re-compiles the document.
+   */
+  registry?: MdxRegistry;
 }
 
 export function MdxRenderer({
@@ -203,6 +219,7 @@ export function MdxRenderer({
   containerId,
   containerRef,
   renderMode = 'live',
+  registry = baseMdxRegistry,
 }: MdxRendererProps) {
   const [parseError, setParseError] = useState<string | null>(null);
   const renderSettings = useMemo(
@@ -301,7 +318,9 @@ export function MdxRenderer({
       },
 
       // Code Block vs Inline Code override
-      code: (props: any) => <CustomCodeElement {...props} themeConfig={themeConfig} />,
+      code: (props: any) => (
+        <CustomCodeElement {...props} themeConfig={themeConfig} registry={registry} />
+      ),
 
       // Table overrides with enhanced styling and borders
       table: ({ children }: any) => (
@@ -371,9 +390,16 @@ export function MdxRenderer({
       ),
 
       // Custom interactive component map
-      ...mdxComponentsMap,
+      ...registry.components,
     }),
-    [themeConfig]
+    [themeConfig, registry]
+  );
+
+  // `CodeBlock` is reachable from author JSX, so the scoped copy carries the
+  // same registry the markdown pipeline uses.
+  const ScopedCodeBlock = useMemo(
+    () => (props: any) => <CodeBlock registry={registry} {...props} />,
+    [registry]
   );
 
   // Attempt Babel live transform of MDX/JSX
@@ -409,8 +435,8 @@ export function MdxRenderer({
         ReactMarkdown,
         remarkGfm,
         customMdComponents,
-        CodeBlock,
-        ...mdxComponentsMap,
+        CodeBlock: ScopedCodeBlock,
+        ...registry.components,
       };
 
       const scopeKeys = Object.keys(scope);
@@ -424,7 +450,7 @@ export function MdxRenderer({
       setParseError(err.message || 'Syntax error while parsing JSX');
       return null;
     }
-  }, [body, customMdComponents]);
+  }, [body, customMdComponents, registry, ScopedCodeBlock]);
 
   const isPdf = renderMode === 'pdf';
 

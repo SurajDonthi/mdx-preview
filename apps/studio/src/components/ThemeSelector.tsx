@@ -1,5 +1,5 @@
 import { ThemeId } from '../types';
-import { THEMES } from '../data/themes';
+import { THEMES } from '@mdxkit/react';
 import * as Icons from 'lucide-react';
 
 interface ThemeSelectorProps {

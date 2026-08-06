@@ -1,5 +1,5 @@
 import { load as parseYaml } from 'js-yaml';
-import { Frontmatter, HeaderItem, DocumentStats } from '../types';
+import { Frontmatter, HeaderItem, DocumentStats } from './types';
 
 /**
  * Extracts YAML frontmatter and markdown body from MDX content string

@@ -1,4 +1,4 @@
-import { ThemeConfig, ThemeId } from '../types';
+import type { ThemeConfig, ThemeId } from '@mdxkit/core';
 
 export const THEMES: Record<ThemeId, ThemeConfig> = {
   'frosted-glass': {

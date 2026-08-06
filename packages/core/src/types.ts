@@ -47,20 +47,24 @@ export interface HeaderItem {
   level: number; // 1, 2, 3, 4
 }
 
-export interface MdxDocSample {
-  id: string;
-  title: string;
-  description: string;
-  category: string;
-  iconName: string;
-  content: string;
-}
-
-export type ViewMode = 'split' | 'preview' | 'editor';
-
 export interface DocumentStats {
   words: number;
   characters: number;
   readingTimeMinutes: number;
   headingsCount: number;
+}
+
+/** Whether the tree is being rendered for the screen or for the PDF export pass. */
+export type MdxRenderMode = 'live' | 'pdf';
+
+/** Light/dark family of the active theme. */
+export type MdxThemeCategory = 'light' | 'dark';
+
+/**
+ * Ambient render settings every MDX component can read from `MdxRenderContext`
+ * instead of receiving them as props through the whole tree.
+ */
+export interface MdxRenderSettings {
+  renderMode: MdxRenderMode;
+  themeCategory: MdxThemeCategory;
 }

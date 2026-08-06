@@ -1,6 +1,6 @@
 import { useState, type RefObject } from 'react';
 import * as Icons from 'lucide-react';
-import { exportToPdf, downloadMdxFile } from '../utils/pdfExporter';
+import { exportToPdf, downloadMdxFile } from '@mdxkit/pdf';
 import { showToast } from '../utils/toast';
 
 interface ExportModalProps {

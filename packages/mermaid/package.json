@@ -1,0 +1,24 @@
+{
+  "name": "@mdxkit/mermaid",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Mermaid diagram component and MDX plugin.",
+  "main": "./src/index.ts",
+  "module": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "files": [
+    "src"
+  ],
+  "dependencies": {
+    "@mdxkit/core": "*",
+    "lucide-react": "^0.546.0",
+    "mermaid": "^11.16.0"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0"
+  }
+}

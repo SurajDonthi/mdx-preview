@@ -1,6 +1,7 @@
 import React, { useContext, useEffect, useMemo, useRef, useState } from 'react';
 import * as Icons from 'lucide-react';
-import { MdxRenderContext, MdxThemeCategory } from './MermaidDiagram';
+import { MdxRenderContext } from '@mdxkit/core';
+import type { MdxThemeCategory } from '@mdxkit/core';
 
 /* ------------------------------------------------------------------ *
  * Public shape

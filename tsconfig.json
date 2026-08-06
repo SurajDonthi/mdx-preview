@@ -14,13 +14,37 @@
     "isolatedModules": true,
     "moduleDetection": "force",
     "allowJs": true,
+    "resolveJsonModule": true,
     "jsx": "react-jsx",
     "paths": {
+      "@mdxkit/core": [
+        "./packages/core/src/index.ts"
+      ],
+      "@mdxkit/react": [
+        "./packages/react/src/index.ts"
+      ],
+      "@mdxkit/mermaid": [
+        "./packages/mermaid/src/index.ts"
+      ],
+      "@mdxkit/charts": [
+        "./packages/charts/src/index.ts"
+      ],
+      "@mdxkit/flow": [
+        "./packages/flow/src/index.ts"
+      ],
+      "@mdxkit/pdf": [
+        "./packages/pdf/src/index.ts"
+      ],
       "@/*": [
-        "./*"
+        "./apps/studio/*"
       ]
     },
     "allowImportingTsExtensions": true,
     "noEmit": true
-  }
+  },
+  "include": [
+    "packages/*/src",
+    "apps/*/src",
+    "apps/*/vite.config.ts"
+  ]
 }

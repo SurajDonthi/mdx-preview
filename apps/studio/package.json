@@ -1,0 +1,32 @@
+{
+  "name": "@mdxkit/studio",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "MDX Studio - the live MDX editor, previewer and exporter.",
+  "scripts": {
+    "dev": "vite --port=3000 --host=0.0.0.0",
+    "build": "vite build",
+    "preview": "vite preview",
+    "clean": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\""
+  },
+  "dependencies": {
+    "@mdxkit/charts": "*",
+    "@mdxkit/core": "*",
+    "@mdxkit/flow": "*",
+    "@mdxkit/mermaid": "*",
+    "@mdxkit/pdf": "*",
+    "@mdxkit/react": "*",
+    "firebase": "^12.17.0",
+    "lucide-react": "^0.546.0",
+    "motion": "^12.23.24",
+    "react": "^19.0.1",
+    "react-dom": "^19.0.1"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.1.14",
+    "@vitejs/plugin-react": "^5.0.4",
+    "tailwindcss": "^4.1.14",
+    "vite": "^6.2.3"
+  }
+}

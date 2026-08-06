@@ -1,6 +1,6 @@
 import { useContext } from 'react';
-import { Frontmatter } from '../types';
-import { MdxRenderContext, MdxRenderMode, MdxThemeCategory } from './MermaidDiagram';
+import { MdxRenderContext } from '@mdxkit/core';
+import type { Frontmatter, MdxRenderMode, MdxThemeCategory } from '@mdxkit/core';
 import { InlineToken } from './InlineToken';
 import * as Icons from 'lucide-react';
 

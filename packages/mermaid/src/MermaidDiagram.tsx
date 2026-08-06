@@ -1,19 +1,8 @@
 import React, { useContext, useEffect, useId, useMemo, useState } from 'react';
 import mermaid from 'mermaid';
 import * as Icons from 'lucide-react';
-
-export type MdxRenderMode = 'live' | 'pdf';
-export type MdxThemeCategory = 'light' | 'dark';
-
-export interface MdxRenderSettings {
-  renderMode: MdxRenderMode;
-  themeCategory: MdxThemeCategory;
-}
-
-export const MdxRenderContext = React.createContext<MdxRenderSettings>({
-  renderMode: 'live',
-  themeCategory: 'light',
-});
+import { MdxRenderContext } from '@mdxkit/core';
+import type { MdxRenderMode, MdxThemeCategory } from '@mdxkit/core';
 
 export interface MermaidDiagramProps {
   chart?: string;
