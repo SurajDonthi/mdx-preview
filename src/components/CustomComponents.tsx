@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import * as Icons from 'lucide-react';
 import { InlineToken } from './InlineToken';
 import { MermaidDiagram } from './MermaidDiagram';
+import { FlowGraph } from './FlowGraph';
 import {
   ResponsiveContainer,
   LineChart,
@@ -711,4 +712,6 @@ export const mdxComponentsMap = {
   Code: InlineCode,
   MermaidDiagram,
   Mermaid: MermaidDiagram,
+  FlowGraph,
+  ArchitectureMap: FlowGraph, // alias
 };
