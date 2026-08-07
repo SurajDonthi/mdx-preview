@@ -1,27 +1,66 @@
 {
   "name": "@mdxkit/react",
-  "version": "0.0.0",
-  "private": true,
+  "version": "0.1.0",
   "type": "module",
-  "description": "MdxRenderer and the built-in MDX components.",
-  "main": "./src/index.ts",
-  "module": "./src/index.ts",
-  "types": "./src/index.ts",
+  "description": "MdxRenderer and the built-in MDX components: callouts, cards, stats, tabs, steps and the rest.",
+  "keywords": [
+    "mdx",
+    "markdown",
+    "react",
+    "renderer",
+    "mdx-components",
+    "syntax-highlighting",
+    "documentation"
+  ],
+  "license": "MIT",
+  "author": "Suraj Donthi",
+  "homepage": "https://github.com/SurajDonthi/mdx-preview/tree/main/packages/react#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SurajDonthi/mdx-preview.git",
+    "directory": "packages/react"
+  },
+  "bugs": {
+    "url": "https://github.com/SurajDonthi/mdx-preview/issues"
+  },
+  "sideEffects": [
+    "**/*.css"
+  ],
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "exports": {
-    ".": "./src/index.ts",
-    "./styles.css": "./src/styles.css"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./styles.css": "./dist/styles.css",
+    "./package.json": "./package.json"
   },
   "files": [
-    "src"
+    "dist"
   ],
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsup",
+    "clean": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\""
+  },
   "dependencies": {
-    "@mdxkit/core": "*",
     "hast-util-to-jsx-runtime": "^2.3.6",
     "lucide-react": "^0.546.0",
     "prismjs": "^1.30.0"
   },
+  "devDependencies": {
+    "@types/hast": "^3.0.5",
+    "@types/prismjs": "^1.26.6"
+  },
   "peerDependencies": {
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "@mdxkit/core": "^0.1.0",
+    "react": "^19.0.0"
   }
 }

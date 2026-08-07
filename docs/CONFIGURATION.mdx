@@ -1,7 +1,7 @@
 ---
 title: "Configuration and deployment"
 subtitle: "Firebase, Google Drive, Firestore rules, hosting"
-description: "Everything optional: setting up your own Firebase project, enabling Drive sync, deploying the security rules, and shipping the static build."
+description: "Everything optional: pointing the Studio at your own Firebase project, enabling Drive sync, deploying the security rules, and shipping the static build."
 category: "Guide"
 status: "Current"
 tags: ["Firebase", "Google Drive", "Deployment", "Security"]
@@ -11,77 +11,93 @@ readTime: "6 min read"
 # Configuration and deployment
 
 <Callout type="success" title="Nothing here is required to use the app">
-  MDX Studio runs with zero configuration. It seeds sample documents into localStorage
-  and works fully offline. Everything below is optional cloud sync.
+  MDX Studio runs with zero configuration. It seeds sample documents into
+  localStorage and works fully offline. Everything below is optional cloud sync,
+  and it applies to `apps/studio` only — the `packages/*` have no configuration
+  at all.
 </Callout>
-
-This document covers the optional cloud features and how to deploy.
 
 ---
 
-## What the config file contains, and why it is committed
+## Where the config lives
 
-`firebase-applet-config.json` at the repo root:
+`apps/studio/.env`, read through `import.meta.env` in
+`apps/studio/src/utils/auth.ts`. Copy `apps/studio/.env.example` and fill in your
+own project's values:
 
-```json
-{
-  "projectId": "...",
-  "appId": "...",
-  "apiKey": "...",
-  "authDomain": "...",
-  "firestoreDatabaseId": "...",
-  "storageBucket": "...",
-  "messagingSenderId": "...",
-  "oAuthClientId": "..."
-}
+```bash
+cp apps/studio/.env.example apps/studio/.env
 ```
 
+```ini
+VITE_FIREBASE_API_KEY=""
+VITE_FIREBASE_AUTH_DOMAIN=""
+VITE_FIREBASE_PROJECT_ID=""
+VITE_FIREBASE_STORAGE_BUCKET=""
+VITE_FIREBASE_MESSAGING_SENDER_ID=""
+VITE_FIREBASE_APP_ID=""
+```
+
+`isFirebaseConfigured` is derived from the API key and project id. With either
+missing, the cloud paths are skipped and the app runs on localStorage alone.
+
 <Callout type="info" title="None of these are secrets">
-  A Firebase web API key is a project identifier, not an authorisation token. It is
-  compiled into every client-side Firebase app and is visible to anyone who opens
-  devtools — Google documents this explicitly, and the same is true of the OAuth client
-  id. Security comes from Firestore rules and the authorized-domains list, never from
-  hiding these values.
+  A Firebase web API key is a project identifier, not an authorisation token. It
+  is compiled into every client-side Firebase app and is visible to anyone who
+  opens devtools — Google documents this explicitly. Security comes from
+  Firestore rules and the authorized-domains list, never from hiding these
+  values. They live in the environment so a fork can point at its own project
+  without editing code, not because they need concealing.
 </Callout>
 
 What you should still do:
 
-- **Restrict the API key by HTTP referrer** in Google Cloud console → *APIs & Services →
-  Credentials*. Unrestricted, it can be used against other APIs enabled on the project
-  and billed to you.
-- **Restrict authorized domains** in Firebase console → *Authentication → Settings*.
-- **Never commit a service account JSON.** Those *are* secrets. `.gitignore` covers
-  `.env*` already; keep it that way.
+- **Restrict the API key by HTTP referrer** in Google Cloud console → *APIs &
+  Services → Credentials*. Unrestricted, it can be used against other APIs
+  enabled on the project and billed to you.
+- **Restrict authorized domains** in Firebase console → *Authentication →
+  Settings*.
+- **Never commit a service account JSON.** Those *are* secrets. `.gitignore`
+  covers `.env*` already; keep it that way.
 
 ---
 
 ## Setting up your own Firebase project
 
 1. Create a project at [console.firebase.google.com](https://console.firebase.google.com).
-2. Add a **Web app** and copy its config into `firebase-applet-config.json`. The key
-   names in that file are the app's own — map them across rather than pasting the
-   snippet wholesale.
+2. Add a **Web app** and copy its config into `apps/studio/.env`.
 3. **Authentication → Sign-in method** → enable **Google**.
-4. **Firestore Database** → create one. If you use a named (non-default) database, put
-   its id in `firestoreDatabaseId`.
+4. **Firestore Database** → create one.
 5. Deploy the security rules — see below. **This step is not optional.**
 6. **Authentication → Settings → Authorized domains** → add wherever you host it.
 
 ### Google Drive
 
-Drive uses the same Google sign-in, requesting the `drive.file` scope — which grants
-access **only to files this app creates**, not your whole Drive. Enable the *Google
-Drive API* on the underlying Google Cloud project. Files are written to a folder named
-`MDX Studio Documents`.
+Drive uses the same Google sign-in, requesting the `drive.file` scope — which
+grants access **only to files this app creates**, not your whole Drive. Enable
+the *Google Drive API* on the underlying Google Cloud project. Files are written
+to a folder named `MDX Studio Documents`.
 
 ---
 
 ## Firestore security rules — required
 
-`firestore.rules` in this repo. Deploy it with the code; the app breaks completely
-without it, because **Firestore rules do not cascade into subcollections**. Documents
-live at `users/{uid}/documents/{docId}`, so a rule matching only `users/{userId}` leaves
-every document read and write denied.
+`apps/studio/firestore.rules`. Deploy it with the code; the app breaks completely
+without it, because **Firestore rules do not cascade into subcollections**.
+Documents live in a `documents` subcollection under each user's own record, so a
+rule matching only the user leaves every document read and write denied.
+
+```
+match /users/{userId} {
+  allow read, write: if request.auth != null && request.auth.uid == userId;
+
+  match /documents/{documentId} {
+    allow read, write: if request.auth != null && request.auth.uid == userId;
+  }
+}
+```
+
+Deploy it with:
 
 ```bash
 npx firebase-tools deploy --only firestore:rules
@@ -89,30 +105,59 @@ npx firebase-tools deploy --only firestore:rules
 
 Or paste the file into Firebase console → *Firestore → Rules*.
 
-The file also keeps a rule for the legacy flat `documents` collection. That is there so
-`migrateLegacyDocuments()` can copy old records forward into each user's subcollection
-on first run. Once every user has migrated, delete both the legacy rule and the legacy
-collection.
+The file also keeps a rule for the legacy flat `documents` collection. That is
+there so `migrateLegacyDocuments()` in
+`apps/studio/src/utils/firestoreService.ts` can copy old records forward into
+each user's subcollection on first run. Once every user has migrated, delete both
+the legacy rule and the legacy collection.
 
 ---
 
 ## Deployment
 
-`npm run build` emits a fully static `dist/`. Serve it from anywhere — Cloud Run,
-Netlify, Vercel, S3, GitHub Pages, nginx. There is no server-side component, no API
-routes and no runtime environment variables.
+`npm run build` emits a fully static `apps/studio/dist`. Serve it from anywhere —
+Cloud Run, Netlify, Vercel, S3, GitHub Pages, nginx. There is no server-side
+component, no API routes and no runtime environment variables: the `VITE_*`
+values are baked into the bundle at build time, so the build has to happen
+somewhere that can see your `.env`.
 
 Two things to get right:
 
-- Add the deployed origin to Firebase **authorized domains**, or Google sign-in fails.
-- Serve it over **HTTPS**. Google OAuth requires it, and so does the clipboard API.
+- Add the deployed origin to Firebase **authorized domains**, or Google sign-in
+  fails.
+- Serve it over **HTTPS**. Google OAuth requires it, and so does the clipboard
+  API.
 
-### The lockfile problem
+---
 
-`package-lock.json` was generated on Linux and contains no Windows native binaries for
-rollup and esbuild. `npm ci` on Windows therefore produces a `node_modules` that cannot
-build. Use `npm install` on Windows, or regenerate the lockfile there. `bun.lock` is also
-committed and is stale relative to `package.json`.
+## Working in the monorepo
+
+npm workspaces, so one install at the root covers everything:
+
+```bash
+npm install           # installs every workspace
+npm run dev           # apps/studio on port 3000
+npm run lint          # tsc --noEmit across packages and apps
+npm run test:run      # vitest, all four projects
+npm run build         # packages first, then the app
+npm run build:app     # apps/studio/dist only
+```
+
+`build:packages` names each workspace explicitly rather than using
+`--workspaces`, because a package's declaration build resolves its `@mdxkit`
+dependencies through their published types entry — which has to exist by the
+time it runs.
+
+`npm ci` works on Windows as well as Linux — the lockfile carries the optional
+native binaries for both, and CI runs the whole matrix on `ubuntu-latest` and
+`windows-latest` precisely so a platform-specific gap cannot hide again.
+
+<Callout type="note" title="Package sources, not build output">
+  `apps/studio/vite.config.ts` and `vitest.config.ts` both alias `@mdxkit/*` to
+  `packages/*/src` and dedupe React. That is what lets you edit a package and see
+  it in the app without a build step — and what keeps hooks working across the
+  package boundary.
+</Callout>
 
 ---
 
@@ -124,3 +169,6 @@ committed and is stale relative to `package.json`.
 - [ ] No `.env` file committed — only `.env.example` with placeholders
 - [ ] No service account JSON anywhere in the repo or its history
 - [ ] Legacy flat `documents` collection cleaned up after migration
+- [ ] If you render documents your users did not write, they go through
+      `@mdxkit/sandbox` or through `expressions="literals"` — never the default
+      in-page renderer

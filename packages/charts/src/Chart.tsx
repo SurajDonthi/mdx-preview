@@ -1,16 +1,7 @@
-import {
-  ResponsiveContainer,
-  LineChart,
-  Line,
-  BarChart,
-  Bar,
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  Tooltip as RechartsTooltip,
-  CartesianGrid,
-} from 'recharts';
+import { useEffect, useState } from 'react';
+import type { ComponentType } from 'react';
+
+import type { ChartCanvasProps } from './ChartCanvas';
 
 // Recharts Chart Component
 export interface ChartProps {
@@ -21,6 +12,21 @@ export interface ChartProps {
   title?: string;
   height?: number;
   color?: string;
+}
+
+/**
+ * Recharts plus its D3 dependencies is ~500 kB - far more than a document that
+ * happens to register `chartsPlugin` should have to download. It is pulled in on
+ * mount instead of at module scope; the wrapper below renders the same box at
+ * the same height either way, so the only visible difference is that the plot
+ * area paints a beat later, the same way `ResponsiveContainer` already waits for
+ * its first measurement.
+ */
+let canvasModule: Promise<ComponentType<ChartCanvasProps>> | null = null;
+
+function loadChartCanvas(): Promise<ComponentType<ChartCanvasProps>> {
+  canvasModule ??= import('./ChartCanvas').then((module) => module.ChartCanvas);
+  return canvasModule;
 }
 
 export function Chart({
@@ -39,77 +45,32 @@ export function Chart({
   height = 240,
   color = '#6366f1',
 }: ChartProps) {
+  const [Canvas, setCanvas] = useState<ComponentType<ChartCanvasProps> | null>(null);
+
+  useEffect(() => {
+    let isActive = true;
+    loadChartCanvas().then(
+      (component) => {
+        // Stored behind a thunk: `setState` calls a bare function argument as an
+        // updater, and a component *is* a function.
+        if (isActive) setCanvas(() => component);
+      },
+      (cause: unknown) => {
+        console.warn('Chart failed to load Recharts:', cause);
+      }
+    );
+    return () => {
+      isActive = false;
+    };
+  }, []);
+
   return (
     <div className="mdxkit-chart">
       {title && <h5 className="mdxkit-chart__title">{title}</h5>}
       <div style={{ width: '100%', height }}>
-        <ResponsiveContainer>
-          {type === 'bar' ? (
-            <BarChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" opacity={0.15} />
-              <XAxis dataKey={nameKey} tick={{ fontSize: 12 }} stroke="#888888" />
-              <YAxis tick={{ fontSize: 12 }} stroke="#888888" />
-              <RechartsTooltip
-                contentStyle={{
-                  backgroundColor: '#1e293b',
-                  borderColor: '#334155',
-                  borderRadius: '8px',
-                  color: '#fff',
-                }}
-              />
-              <Bar dataKey={dataKey} fill={color} radius={[6, 6, 0, 0]} />
-            </BarChart>
-          ) : type === 'area' ? (
-            <AreaChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-              <defs>
-                <linearGradient id="chartGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor={color} stopOpacity={0.8} />
-                  <stop offset="95%" stopColor={color} stopOpacity={0.0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" opacity={0.15} />
-              <XAxis dataKey={nameKey} tick={{ fontSize: 12 }} stroke="#888888" />
-              <YAxis tick={{ fontSize: 12 }} stroke="#888888" />
-              <RechartsTooltip
-                contentStyle={{
-                  backgroundColor: '#1e293b',
-                  borderColor: '#334155',
-                  borderRadius: '8px',
-                  color: '#fff',
-                }}
-              />
-              <Area
-                type="monotone"
-                dataKey={dataKey}
-                stroke={color}
-                fillOpacity={1}
-                fill="url(#chartGrad)"
-                strokeWidth={2}
-              />
-            </AreaChart>
-          ) : (
-            <LineChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" opacity={0.15} />
-              <XAxis dataKey={nameKey} tick={{ fontSize: 12 }} stroke="#888888" />
-              <YAxis tick={{ fontSize: 12 }} stroke="#888888" />
-              <RechartsTooltip
-                contentStyle={{
-                  backgroundColor: '#1e293b',
-                  borderColor: '#334155',
-                  borderRadius: '8px',
-                  color: '#fff',
-                }}
-              />
-              <Line
-                type="monotone"
-                dataKey={dataKey}
-                stroke={color}
-                strokeWidth={3}
-                dot={{ r: 4, fill: color }}
-              />
-            </LineChart>
-          )}
-        </ResponsiveContainer>
+        {Canvas ? (
+          <Canvas type={type} data={data} dataKey={dataKey} nameKey={nameKey} color={color} />
+        ) : null}
       </div>
     </div>
   );

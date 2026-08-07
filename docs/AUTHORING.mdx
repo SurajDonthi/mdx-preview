@@ -1,87 +1,101 @@
 ---
 title: "Authoring documents"
-subtitle: "Every component, and the parser rules you have to work within"
-description: "How to write documents for MDX Studio: frontmatter, the full component catalogue, and the three parser constraints that will otherwise bite you."
+subtitle: "Every component, and the two rules the parser really does enforce"
+description: "How to write documents for mdxkit: frontmatter, the full component catalogue, expression modes, and what actually happens when a document does not parse."
 category: "Guide"
 status: "Current"
 tags: ["Authoring", "Components", "MDX"]
-readTime: "8 min read"
+readTime: "10 min read"
 ---
 
 # Authoring documents
 
-How to write documents for MDX Studio, and the parser rules you have to work within.
+How to write documents for the Studio, and the rules you have to work within.
 
 <Callout type="info" title="Read this in the app">
-  Open this file with the Upload button to see the components below actually render.
-  On GitHub the JSX shows as plain text.
+  Open this file with the Upload button to see the components below actually
+  render. On GitHub the JSX shows as plain text.
 </Callout>
 
 ---
 
-## Read this first: it is not standard MDX
+## This is real MDX now
 
-There is no `@mdx-js` in this project. `MdxRenderer.tsx` splits your document into
-markdown chunks and JSX chunks with a hand-written character scanner, then compiles the
-JSX chunks at runtime with `@babel/standalone` and evaluates them inside a
-`React.Fragment` with a fixed set of names in scope.
+Documents are parsed with `remark-mdx` — the same parser the MDX project ships —
+into a tree that is rendered directly into React elements. Nothing is compiled to
+JavaScript. If you have written MDX before, your instincts transfer.
 
-Three consequences you cannot design around:
+Two things still differ from a build-time MDX setup, and both follow from
+documents being data the app renders rather than modules it compiles.
 
-### 1. A document can only *use* components, never declare anything
+### 1. A document can only use components, never declare them
 
-Your document body becomes the inside of a fragment. There is nowhere to put a
-statement, so this is impossible:
+`import` and `export` are removed before rendering, with a warning in the
+console. There is nowhere to put a statement either. So none of this works:
 
 ```jsx
-const items = [1, 2, 3]        // ✗ not possible
-function MyThing() { ... }     // ✗ not possible
-const [n, setN] = useState(0)  // ✗ not possible
+import Chart from './chart'        // ✗ removed
+export const items = [1, 2, 3]     // ✗ removed
+function MyThing() { }             // ✗ not an expression
 ```
 
-Anything stateful or computed has to live inside a component registered in
-`src/components/CustomComponents.tsx`. Pass data to it as a prop instead:
+What you *can* write is any expression, evaluated against the registry the app
+built. Data goes in as a prop:
 
 ```jsx
 <FlowGraph data={{ nodes: [...], edges: [...] }} />   // ✓
 ```
 
-### 2. Braces in prose will destroy your document
+Everything a document may name comes from that registry. A tag that is not in it
+renders an inline "unknown component" notice with the name spelled out, its own
+children still render, and the rest of the page is unaffected.
 
-Inside a JSX chunk, `{` opens a JavaScript expression. This looks like text but is not:
+### 2. Braces are expressions — everywhere, not just inside components
+
+This is the one that will bite you. In MDX a brace opens a JavaScript expression
+in **prose as well as in component children**. Moving the sentence out of a
+component does not help, because there is no "outside".
 
 ```jsx
-<Callout title="Note">
-  Store documents under users/{uid}/documents/{id}.
-</Callout>
+Documents live under users/{uid}/documents/{id}.
 ```
 
-<Callout type="error" title="This is the single most common way to break a document">
-  A brace pair in JSX text compiles as a variable reference and throws. The entire
-  document then silently falls back to plain markdown — every component stops rendering
-  and all you get is a small Fallback View Active banner. It has happened twice while
-  writing these very docs.
-</Callout>
+That renders as `users//documents/.` — `uid` is not a name in the registry, so
+each expression evaluates to nothing and is dropped, quietly, along with the
+information you were trying to convey.
 
-That compiles as a variable reference, throws `uid is not defined`, and takes the whole
-document down with it.
+<Callout type="error" title="The louder version is worse">
+  If what is between the braces is not a valid JavaScript expression at all —
+  `one of two things`, say — the document does not parse. You get a banner
+  reading MDX, a line and a column, and either the last version that parsed or
+  nothing. It has happened twice while writing these docs.
+</Callout>
 
 Fixes, in order of preference:
 
-- Rephrase to avoid braces: `under each user's uid record`
-- Move the text out of the component into a normal markdown paragraph, where braces are
-  just characters
-- Escape them: `&#123;uid&#125;`
-- Or pass the string as an expression: `{"users/{uid}/documents"}`
+- **Backtick it.** Inline code is never an expression: `{uid}` in backticks is
+  safe, and is usually what you meant anyway.
+- **Fence it.** Braces inside a fenced code block are literal, substitutions and
+  all.
+- **Rephrase.** "under each user's own documents subcollection" says the same
+  thing.
+- **Escape.** `&#123;` and `&#125;` produce the characters.
 
-The same applies to `<` in prose — `<Thing>` inside a JSX chunk is parsed as a tag.
-Backtick it, or keep it in markdown.
+The same applies to `<`. A `<` followed by a letter starts a JSX tag; `5 < 7`
+with spaces around it is fine, and `<Thing>` in backticks is fine.
 
-### 3. Fenced code and inline code are respected — mostly
+### What is no longer a problem
 
-The scanner skips over fenced blocks and inline code spans, so component examples inside
-backticks stay as text rather than executing. A backtick run with no matching partner is
-treated as literal text and does not swallow what follows.
+- **Markdown inside component children works.** Bold, code spans, links
+  and lists are all processed inside a `Callout` or a `Card`, on one line or
+  across blank lines. The old advice to use `p` and `strong` elements instead is
+  obsolete.
+- **Code fences never leak.** A component example in backticks stays text, and a
+  `#` comment inside a fenced block is not a heading — the table of contents is
+  built from the same parsed tree the renderer uses, so it cannot disagree about
+  what a heading is.
+- **A half-typed document does not blank the preview.** The last tree that parsed
+  stays on screen behind the warning banner.
 
 ---
 
@@ -96,7 +110,7 @@ subtitle: "Optional subtitle"
 description: "Longer summary paragraph"
 author: "Name"            # or authors: ["A", "B"]
 authorAvatar: "https://..."
-date: "2026-08-06"
+date: "2026-08-07"
 category: "Architecture"
 status: "Draft"
 tags: ["one", "two"]
@@ -104,28 +118,39 @@ readTime: "12 min read"
 ---
 ```
 
-Any key you add that is not in that list renders as an extra field card at the bottom of
-the header. Nested objects, arrays and dates are flattened to readable strings.
+Any key you add that is not in that list renders as an extra field card at the
+bottom of the header. Nested objects, arrays and dates are flattened to readable
+strings, and a circular reference is printed as such rather than throwing.
 
 ---
 
 ## Components
 
-All of these are available in any document with no import.
+Everything below is available in any Studio document with no import. Which ones
+exist is a property of the *application*, not of MDX: the Studio registers
+`@mdxkit/react` plus the Mermaid, chart and flow packages. A different host may
+register a different set.
 
 ### Layout and emphasis
 
 ```jsx
 <Callout type="info" title="Heading">Body text.</Callout>
 ```
-`type` — `info` · `note` · `warning` · `success` · `error`
+
+`type` — `info` · `note` · `warning` · `success` · `error`. Anything else falls
+back to `info`.
 
 ```jsx
 <CardGrid cols={2}>
-  <Card title="Title" subtitle="Sub" icon="Eye" badge="New">Body.</Card>
+  <Card title="Title" subtitle="Sub" icon="Eye" badge="New" href="https://...">
+    Body.
+  </Card>
 </CardGrid>
 ```
-`icon` takes any [lucide](https://lucide.dev/icons) name.
+
+`cols` snaps to 2, 3 or 4. `icon` takes any [lucide](https://lucide.dev/icons)
+name; an unrecognised name renders a question-mark icon rather than failing.
+`href` makes the whole card a link.
 
 ```jsx
 <StatGrid cols={3}>
@@ -133,10 +158,12 @@ All of these are available in any document with no import.
 </StatGrid>
 ```
 
+`trend` — `up` · `down` · `neutral`.
+
 ```jsx
 <Tabs labels={["One", "Two"]}>
-  <Tab title="One"><p>First panel.</p></Tab>
-  <Tab title="Two"><p>Second panel.</p></Tab>
+  <Tab title="One">First panel.</Tab>
+  <Tab title="Two">Second panel.</Tab>
 </Tabs>
 
 <Accordion items={[{ title: "Question?", content: "Answer." }]} />
@@ -148,15 +175,35 @@ All of these are available in any document with no import.
 </Steps>
 ```
 
-> Inside a JSX chunk, markdown is **not** processed. Use `<p>`, `<strong>`, `<code>`
-> and friends within component children, not `**bold**`.
+Omit `labels` and `Tabs` takes each child's `title` prop instead.
 
 ### Inline
 
 ```jsx
-<Badge>Label</Badge>  <Kbd>Ctrl</Kbd>  <InlineCode>value</InlineCode>
+<Badge variant="emerald" icon="Check">Label</Badge>
+<Kbd>Ctrl</Kbd>
+<InlineCode>value</InlineCode>
 <ProgressBar progress={82} label="Deploying" color="emerald" />
-<InteractiveCounter initial={42} min={0} max={100} step={5} title="Counter" />
+<Counter initial={42} min={0} max={100} step={5} title="Counter" />
+<Button variant="primary" icon="Play">Run</Button>
+```
+
+`Badge` variants — `indigo` · `emerald` · `rose` · `amber` · `slate`.
+`ProgressBar` colours — `indigo` · `emerald` · `amber` · `rose` · `purple` ·
+`cyan`. Both clamp anything else back to the default.
+
+### Tables
+
+Ordinary markdown tables work and scroll inside their own wrapper. For data you
+would rather pass as props:
+
+```jsx
+<Table
+  title="Optional caption"
+  headers={["Name", "Value"]}
+  rows={[["alpha", 1], ["beta", 2]]}
+  striped={true}
+/>
 ```
 
 ### Diagrams
@@ -168,7 +215,11 @@ A fenced `mermaid` block, or the component:
     A["Start"] --> B["End"]`} />
 ```
 
-Invalid diagram syntax renders an inline error card; it does not break the document.
+The fence and the component are the same thing: `@mdxkit/mermaid` claims the
+`mermaid` fence language in its plugin, so the renderer mounts the diagram
+component instead of syntax-highlighting the block. Invalid diagram syntax
+renders an inline error card with the raw source in a details element; it does
+not break the document.
 
 ### Charts
 
@@ -179,47 +230,90 @@ Invalid diagram syntax renders an inline error card; it does not break the docum
   data={[{ name: 'Jan', value: 1200 }, { name: 'Feb', value: 1900 }]}
 />
 ```
-`type` — `area` · `line` · `bar` · `pie`
+
+`type` — `line` (default) · `bar` · `area`. There is no pie chart. `dataKey`
+defaults to `value` and `nameKey` to `name`; `height` defaults to 240. Recharts
+is loaded on mount rather than with the page, so the plot area paints a beat
+after the box does.
 
 ### FlowGraph
 
-An interactive architecture diagram: nodes, edges, and a flows panel that highlights a
-complete path when selected. Hovering or keyboard-focusing a node shows its description.
+An interactive architecture diagram: nodes, edges, and a flows panel that
+highlights a complete path when selected. Hovering or keyboard-focusing a node
+shows its description.
 
 ```jsx
 <FlowGraph
   title="Optional title"
+  subtitle="Optional subtitle"
+  defaultFlow="save"
   data={{
     groups: [{ id: "ui", label: "Components" }],
     nodes: [
-      { id: "A", label: "Editor", group: "ui", kind: "ui", description: "Shown on hover." },
+      { id: "A", label: "Editor", group: "ui", kind: "ui", meta: "MdxEditor.tsx", description: "Shown on hover." },
       { id: "B", label: "Store", kind: "store" }
     ],
-    edges: [{ from: "A", to: "B", label: "writes" }],
-    flows: [{ id: "save", label: "Save", summary: "What happens.", path: ["A", "B"] }]
+    edges: [{ from: "A", to: "B", label: "writes", kind: "solid" }],
+    flows: [{ id: "save", label: "Save", tone: "indigo", summary: "What happens.", path: ["A", "B"] }]
   }}
 />
 ```
 
-- `kind` — `ui` · `state` · `module` · `external` · `store` · `decision` · `risk`
-- `groups` are horizontal bands, drawn top to bottom. Omit them and layers are derived
-  from the edges.
-- Edges also accept `"A->B"` or `["A", "B"]`.
-- Below ~760px of container width, the flows panel stacks under the diagram.
-- In PDF export it renders static, with all flows listed and their paths written out.
+- `kind` — `ui` · `component` · `state` · `module` · `service` · `external` ·
+  `store` · `decision` · `risk`
+- `tone` — `indigo` · `emerald` · `amber` · `violet` · `cyan` · `sky` · `rose` ·
+  `fuchsia` · `slate`. Omit it and flows are assigned tones in order.
+- `groups` are horizontal bands, drawn top to bottom. Omit them and layers are
+  derived from the edges.
+- Edges also accept `"A->B"` or `["A", "B"]`, in `edges` and in a flow's own
+  `edges` list.
+- Malformed input is dropped rather than thrown: an edge naming a node that does
+  not exist simply does not appear.
+- Below about 760px of container width, the flows panel stacks under the diagram.
+- In PDF export it renders static, with every flow listed and its path written
+  out.
+
+`ArchitectureMap` is an alias for the same component.
+
+---
+
+## Expressions
+
+An expression in a document is evaluated against the registry, with real
+JavaScript semantics — so this works:
+
+```jsx
+<StatGrid cols={3}>
+  {[["Requests", "1.2M"], ["Errors", "31"], ["p99", "84ms"]].map(
+    ([title, value]) => <Stat key={title} title={title} value={value} />
+  )}
+</StatGrid>
+```
+
+An expression that throws, or that names something the registry does not have,
+warns in the console and is omitted. The document still renders.
+
+<Callout type="warning" title="A host can turn this down">
+  `MdxRenderer` takes an `expressions` prop. The Studio leaves it at `full`,
+  which is what an author of their own documents expects. An application
+  rendering documents it did not write can set `literals`, which builds only
+  values the syntax spells out — strings, numbers, arrays, plain objects — and
+  refuses calls, member access and JSX. If you are writing for such a host,
+  keep every expression JSON-shaped.
+</Callout>
 
 ---
 
 ## Exporting
 
-**Export → Export to PDF Document** produces A4 with page breaks that avoid splitting
-diagrams, headings, tables and the frontmatter card. It runs entirely in the browser and
-works on mobile.
+**Export → Export to PDF Document** produces A4 with page breaks measured to
+avoid splitting diagrams, headings, tables and the frontmatter card. It runs
+entirely in the browser and works on mobile.
 
 <Callout type="warning" title="Two things to know about the PDF">
-  The output is a raster image, so its text is not selectable or searchable. And the
-  exporter strips every button element, so tab labels and accordion questions do not
-  appear in the PDF — only the open panel's content does.
+  The output is a raster image, so its text is not selectable or searchable. And
+  the exporter strips every button element, so tab labels and accordion questions
+  do not appear — only the open panel's content does.
 </Callout>
 
 ---
@@ -227,20 +321,20 @@ works on mobile.
 ## Quick reference
 
 <CardGrid cols={2}>
-  <Card title="Never declare" subtitle="No statements in a document" icon="Ban" badge="Rule 1">
-    A document is the inside of a fragment. No variables, functions or hooks. Put logic
-    in a component and pass props.
+  <Card title="Never declare" subtitle="Use, do not define" icon="Ban" badge="Rule 1">
+    Imports and exports are stripped and there is nowhere to put a statement. Put
+    logic in a component and pass it props.
   </Card>
-  <Card title="Never brace prose" subtitle="Braces are expressions" icon="AlertTriangle" badge="Rule 2">
-    A brace in JSX text kills the whole document. Rephrase, escape, or keep the text in
-    markdown.
+  <Card title="Never brace prose" subtitle="Braces are expressions everywhere" icon="AlertTriangle" badge="Rule 2">
+    In markdown text as much as in component children. Backtick it, fence it, or
+    rephrase it.
   </Card>
-  <Card title="Markdown stops at JSX" subtitle="Use HTML inside components" icon="Code" badge="Rule 3">
-    Inside component children, asterisks and backticks are literal. Use p, strong and
-    code elements instead.
+  <Card title="Markdown works inside components" subtitle="No more HTML elements" icon="Code" badge="Fixed">
+    Bold, code spans, links and lists are all processed inside component
+    children now.
   </Card>
-  <Card title="Errors are contained" subtitle="Mostly" icon="ShieldCheck" badge="Good news">
-    A bad Mermaid diagram renders an inline error card. A brace mistake does not — it
-    takes everything.
+  <Card title="Errors are contained" subtitle="And located" icon="ShieldCheck" badge="Good news">
+    A bad diagram, an unknown tag and a component that throws are each an inline
+    notice. A parse error names its line and column.
   </Card>
 </CardGrid>

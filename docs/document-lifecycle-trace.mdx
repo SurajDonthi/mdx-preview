@@ -1,11 +1,11 @@
 ---
 title: "Document Lifecycle — Full Trace"
 subtitle: "Creation, auto-save, Firestore sync and Google Drive, end to end"
-description: "Every path a document takes through MDX Studio, traced from the code, with the discrepancies found along the way."
+description: "Every path a document took through MDX Studio when the code was one flat src/ tree, traced from the source, with the discrepancies found along the way. Kept as an audit record; all nine findings are fixed."
 author: "Architecture Trace"
 date: "2026-08-05"
 category: "Architecture"
-status: "Review"
+status: "Historical"
 tags: ["Lifecycle", "Sync", "Google Drive", "Firestore", "Discrepancies"]
 readTime: "12 min read"
 ---
@@ -19,11 +19,38 @@ source. Read the **map** first, then step through the **flows**, then the
 Each flow below shows the *same* architecture, with only that flow's path coloured.
 Switch tabs to switch the highlighted path.
 
+<Callout type="note" title="This is an audit record, not current documentation">
+  It traces the code as it stood on 5 August 2026, when everything lived in one flat
+  `src/` tree and the renderer compiled documents with Babel. All nine findings have
+  since been fixed, and the repository has been split into `packages/*` and
+  `apps/studio`. Every path below is written as it was then; the mapping to where that
+  code lives now is in the next section. For the current design read ARCHITECTURE.mdx.
+</Callout>
+
 <Callout type="warning" title="Read this first">
   Eight of the discrepancies below are behavioural, and two of those can lose or cross
   contaminate document content. They are ranked by blast radius at the end, with exact
   file and line references.
 </Callout>
+
+---
+
+## Where this code lives now
+
+The audit's `src/` paths no longer exist. Everything the app owns moved under
+`apps/studio/src/`, and everything reusable was extracted into packages.
+
+| Then | Now |
+| --- | --- |
+| `src/App.tsx` | `apps/studio/src/App.tsx` |
+| `src/utils/storage.ts` · `firestoreService.ts` · `driveService.ts` · `auth.ts` | `apps/studio/src/utils/` |
+| `src/components/MdxEditor.tsx` · `FileSidebar.tsx` · `TableOfContents.tsx` · `Navbar.tsx` · the modals | `apps/studio/src/components/` |
+| `src/components/MdxRenderer.tsx` | `packages/react/src/MdxRenderer.tsx` — rewritten around `remark-mdx`, no Babel |
+| `src/components/CustomComponents.tsx` | `packages/react/src/CustomComponents.tsx`, with the registry in `packages/core/src/registry.ts` |
+| `src/components/MermaidDiagram.tsx` · `FlowGraph.tsx` | `packages/mermaid/` · `packages/flow/` |
+| `src/utils/mdxParser.ts` | `packages/core/src/mdxParser.ts` and `mdxAst.ts` |
+| `src/utils/pdfExporter.ts` | `packages/pdf/src/pdfExporter.ts` |
+| `src/data/themes.ts` | `packages/react/src/themes.ts` |
 
 ---
 
@@ -51,7 +78,7 @@ arrows are reads and callbacks coming back the other way.
       { id: "Nav", label: "Navbar", group: "ui", kind: "ui", description: "Theme, export and sign-in controls. Holds no document state of its own." },
       { id: "Side", label: "FileSidebar", group: "ui", kind: "ui", description: "Lists, searches, renames, deletes and applies sample presets. Every action is a callback into App.tsx." },
       { id: "Ed", label: "MdxEditor", group: "ui", kind: "ui", description: "The textarea. Emits mdxContent on every keystroke, which restarts the 400ms debounce." },
-      { id: "Prev", label: "MdxRenderer", group: "ui", kind: "ui", description: "Compiles the MDX body with Babel standalone and renders it. Read only — it never writes state." },
+      { id: "Prev", label: "MdxRenderer", group: "ui", kind: "ui", description: "At audit time: compiled the MDX body with Babel standalone and rendered it. Read only - it never writes state." },
       { id: "DriveM", label: "GoogleDriveModal", group: "ui", kind: "ui", description: "The only manual Drive UI. Runs its own auth listener and calls driveService directly." },
       { id: "UpM", label: "FileUploadModal", group: "ui", kind: "ui", description: "Reads a .md or .mdx file from disk and funnels it into createNewDocument." },
       { id: "ExpM", label: "ExportModal", group: "ui", kind: "ui", description: "Renders a second, PDF-mode copy of the preview off screen and rasterises it." },
@@ -356,21 +383,22 @@ Ranked by blast radius. Every one was read out of the source, not inferred.
 
 <Callout type="success" title="All nine have since been fixed">
   This section is kept as the as-found audit record, so the reasoning behind each fix
-  stays readable. The file and line references below point at the code as it was when
-  the audit ran, not as it is now. See ARCHITECTURE.md for the current design, and the
-  git history for what each fix changed.
+  stays readable. Every file and line reference below points at the pre-monorepo tree as
+  it was when the audit ran — the line numbers will not match anything today, and the
+  files now live where the mapping table above says. See ARCHITECTURE.mdx for the
+  current design, and the git history for what each fix changed.
 </Callout>
 
-| # | Severity | What happens | Where |
+| # | Severity | What happened | Where (as of the audit) |
 |---|---|---|---|
-| D1 | **Critical** | Two different users share one Firestore document | `firestoreService.ts:20` |
-| D2 | **High** | Opening a document makes it "newer" than the cloud copy | `App.tsx:154`, `storage.ts:106` |
-| D3 | **High** | Renaming never renames the Drive file | `driveService.ts:151` |
-| D4 | **Medium** | Drive sync failures are silent, UI still says saved | `App.tsx:143` |
-| D5 | **Medium** | "Drive connected" shows without a Drive token | `App.tsx:88` |
-| D6 | **Medium** | Sample documents get uploaded to every new account | `App.tsx:112` |
-| D7 | **Medium** | Deleted documents can come back | `App.tsx:212` |
-| D8 | **Low** | Drive browser lists more than MDX files | `driveService.ts:87` |
+| D1 | **Critical** | Two different users share one Firestore document | `src/utils/firestoreService.ts:20` |
+| D2 | **High** | Opening a document makes it "newer" than the cloud copy | `src/App.tsx:154`, `src/utils/storage.ts:106` |
+| D3 | **High** | Renaming never renames the Drive file | `src/utils/driveService.ts:151` |
+| D4 | **Medium** | Drive sync failures are silent, UI still says saved | `src/App.tsx:143` |
+| D5 | **Medium** | "Drive connected" shows without a Drive token | `src/App.tsx:88` |
+| D6 | **Medium** | Sample documents get uploaded to every new account | `src/App.tsx:112` |
+| D7 | **Medium** | Deleted documents can come back | `src/App.tsx:212` |
+| D8 | **Low** | Drive browser lists more than MDX files | `src/utils/driveService.ts:87` |
 | D9 | **Low** | Dead code and unused fields | three places |
 
 ### D1 · Firestore document ids collide across users
@@ -396,9 +424,9 @@ content — or vanishes from their list when `userId` no longer matches.
 Two things combine:
 
 - `saveDocument()` always overwrites `updatedAt` with `new Date()`, whether or not the
-  content changed — `storage.ts:106`.
+  content changed — `src/utils/storage.ts:106`.
 - The auto-save effect lists `activeDocId` and `currentUser` in its dependencies, so it
-  fires on **document switch** and on **login**, not just on edits — `App.tsx:165`.
+  fires on **document switch** and on **login**, not just on edits — `src/App.tsx:165`.
 
 `mergeDocuments` then compares those timestamps to decide a winner. Because opening a
 document freshens its local timestamp, the local copy nearly always wins.
@@ -469,33 +497,37 @@ shows any file the app's `drive.file` scope can reach, newest 50.
 
 ### D9 · Dead code and unused fields
 
-- `DocumentManagerModal.tsx` — 10KB component, imported by nothing.
-- `StoredDocument.lastSyncedToDriveAt` — declared at `storage.ts:9`, never written or read. The very field that would fix D2's comparison problem exists but is unused.
-- `auth.ts` — `isSigningIn` is assigned in two places and never read.
+- `src/components/DocumentManagerModal.tsx` — 10KB component, imported by nothing.
+- `StoredDocument.lastSyncedToDriveAt` — declared at `src/utils/storage.ts:9`, never written or read. The very field that would fix D2's comparison problem exists but is unused.
+- `src/utils/auth.ts` — `isSigningIn` is assigned in two places and never read.
 
 ---
 
 ## Component reference
 
+The responsibilities below are unchanged; only the paths moved. These are the current
+locations.
+
 | Module | Owns | Talks to |
 |---|---|---|
-| `App.tsx` | all document state, the 400ms debounce, every orchestration decision | all three persistence modules |
-| `storage.ts` | localStorage read/write, id generation, merge policy | localStorage |
-| `firestoreService.ts` | per-document writes, live subscription | Cloud Firestore |
-| `driveService.ts` | folder discovery, list, download, create/update | Google Drive REST v3 |
-| `auth.ts` | Firebase auth, Google popup, cached Drive token | Firebase Auth, Google Identity |
-| `GoogleDriveModal.tsx` | the only manual Drive UI; runs its own auth listener | `driveService.ts`, `auth.ts` |
-| `FileSidebar.tsx` | list, search, rename, delete, presets | callbacks into `App.tsx` |
+| `apps/studio/src/App.tsx` | all document state, the 400ms debounce, every orchestration decision | all three persistence modules |
+| `apps/studio/src/utils/storage.ts` | localStorage read/write, id generation, merge policy, tombstones | localStorage |
+| `apps/studio/src/utils/firestoreService.ts` | per-document writes, live subscription, the legacy migration | Cloud Firestore |
+| `apps/studio/src/utils/driveService.ts` | folder discovery, list, download, create/update | Google Drive REST v3 |
+| `apps/studio/src/utils/auth.ts` | Firebase auth, Google popup, cached Drive token | Firebase Auth, Google Identity |
+| `apps/studio/src/components/GoogleDriveModal.tsx` | the only manual Drive UI; runs its own auth listener | `driveService.ts`, `auth.ts` |
+| `apps/studio/src/components/FileSidebar.tsx` | list, search, rename, delete, presets | callbacks into `App.tsx` |
 
 ---
 
 ## How the map is drawn
 
-The map at the top is a `FlowGraph` — an inline-SVG component registered in
-`CustomComponents.tsx` and driven entirely by the JSON graph in this document. Nodes,
-edges, layer bands and the eight flows are all data; the component owns every piece of
-interaction, because the MDX scope here compiles JSX expressions only and a document
-cannot declare state of its own.
+The map at the top is a `FlowGraph` — an inline-SVG component that now lives in
+`packages/flow/src/FlowGraph.tsx` and reaches this document through `flowPlugin`,
+driven entirely by the JSON graph written above. Nodes, edges, layer bands and the
+eight flows are all data; the component owns every piece of interaction, because a
+document is parsed rather than compiled and can evaluate expressions but never declare
+state of its own.
 
 - **Flows panel** sits to the right on a wide preview and stacks underneath below about
   760px, so the diagram never forces the page sideways.

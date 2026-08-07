@@ -1,212 +1,505 @@
 ---
 title: "Architecture"
-subtitle: "The render pipeline, persistence and PDF export"
-description: "How MDX Studio actually works internally, for anyone changing it — including the two parser bugs and the rasteriser rewrite that shaped the current design."
+subtitle: "The packages, the registry, and the two ways a document gets rendered"
+description: "How mdxkit works internally, for anyone changing it: the workspace layout, the component registry, the parse-and-render pipeline, the sandbox, and the PDF exporter."
 category: "Reference"
 status: "Current"
-tags: ["Architecture", "Renderer", "Persistence", "PDF"]
-readTime: "10 min read"
+tags: ["Architecture", "Renderer", "Registry", "Sandbox", "PDF"]
+readTime: "14 min read"
 ---
 
 # Architecture
 
-How the app actually works, for anyone changing it.
+How the code works, for anyone changing it.
 
-<Callout type="info" title="See it traced">
-  For an interactive walkthrough of the document lifecycle, open
-  document-lifecycle-trace.mdx in the app. It has a clickable flow map covering all
-  eight paths a document can take.
+This repository is a library first and an application second. The parser, the
+renderer, the components and the exporter live in `packages/*` and know nothing
+about the Studio. `apps/studio` is one consumer of them — the one that proves
+the packages compose, and the one you are probably reading this in.
+
+<Callout type="info" title="Two things to understand first">
+  The **registry** decides what a document may name, and the **render mode**
+  decides where the document's code runs. Everything else follows from those two.
 </Callout>
 
 ---
 
-## Shape
+## The workspace
 
-Four layers. `App.tsx` holds every piece of document state; three persistence modules
-sit behind it; each talks to exactly one external system. No component reaches an
-external system directly except `GoogleDriveModal`.
+npm workspaces, declared in the root `package.json` as `packages/*` and `apps/*`.
+Each package is independently consumable and carries only the dependencies it
+actually needs, which is the whole reason for the split: a host that wants
+callouts and code blocks should not download Mermaid, Recharts and jsPDF to get
+them.
+
+| Package | What it is | Costs you |
+| --- | --- | --- |
+| `@mdxkit/core` | Types, the MDX parser, the expression evaluators, the plugin registry, the render context | `unified`, `remark-*`, `js-yaml`, two `estree-util-*` helpers |
+| `@mdxkit/react` | `MdxRenderer`, the built-in components, the theme presets, the base stylesheet | `hast-util-to-jsx-runtime`, `prismjs`, `lucide-react` |
+| `@mdxkit/mermaid` | `MermaidDiagram`, and the plugin that claims the mermaid code fence | `mermaid` |
+| `@mdxkit/charts` | `Chart`, backed by Recharts and loaded on demand | `recharts` |
+| `@mdxkit/flow` | `FlowGraph`, the interactive node/edge diagram | `lucide-react` |
+| `@mdxkit/pdf` | The A4 exporter | `jspdf`, `html2canvas` on the fallback path only |
+| `@mdxkit/sandbox` | Renders a document you do not trust, in an isolated frame | nothing beyond core and react |
+
+`@mdxkit/react` deliberately does **not** depend on Mermaid, Recharts or the
+flow renderer. It cannot: they are what a host opts into.
 
 <FlowGraph
-  title="Layer map"
-  subtitle="Pick a layer to trace how a write reaches it"
+  title="Package graph"
+  subtitle="Pick a consumer to see what it actually pulls in"
   data={{
     groups: [
-      { id: "ui", label: "Components" },
-      { id: "state", label: "App.tsx" },
-      { id: "persist", label: "Persistence" },
-      { id: "ext", label: "External" }
+      { id: "app", label: "Applications" },
+      { id: "render", label: "Renderer" },
+      { id: "opt", label: "Optional components" },
+      { id: "base", label: "Foundation" }
     ],
     nodes: [
-      { id: "Ed", label: "MdxEditor", group: "ui", kind: "ui", description: "Emits content on every keystroke." },
-      { id: "Side", label: "FileSidebar", group: "ui", kind: "ui", description: "Create, rename, delete, search." },
-      { id: "DriveM", label: "GoogleDriveModal", group: "ui", kind: "ui", description: "The only component that calls an external service directly." },
-      { id: "State", label: "document state", group: "state", kind: "state", description: "documents, activeDocId, content, title, driveFileId, user." },
-      { id: "Timer", label: "400ms debounce", group: "state", kind: "decision", description: "The single write path. Fans out to all three stores in sequence." },
-      { id: "Store", label: "storage.ts", group: "persist", kind: "module", description: "localStorage, id generation, merge policy, tombstones." },
-      { id: "Fire", label: "firestoreService.ts", group: "persist", kind: "module", description: "Per-user document subcollection and the live subscription." },
-      { id: "DriveS", label: "driveService.ts", group: "persist", kind: "module", description: "Drive REST v3: list, download, create, update." },
-      { id: "LS", label: "localStorage", group: "ext", kind: "store", description: "Always present. Seeded on first run." },
-      { id: "FS", label: "Cloud Firestore", group: "ext", kind: "store", description: "Optional. Live subscription pushes changes back." },
-      { id: "GD", label: "Google Drive", group: "ext", kind: "external", description: "Opt-in per document, scoped to files this app created." }
+      { id: "Studio", label: "apps/studio", group: "app", kind: "ui", description: "The editor, the file store and the cloud sync. Composes a registry and renders with it." },
+      { id: "Guest", label: "sandbox guest", group: "app", kind: "ui", description: "A second, standalone bundle that runs inside the iframe. Never shares a module graph with the app." },
+      { id: "Sandbox", label: "@mdxkit/sandbox", group: "render", kind: "module", description: "Host component plus wire protocol. Renders untrusted documents in an opaque-origin frame." },
+      { id: "React", label: "@mdxkit/react", group: "render", kind: "module", description: "MdxRenderer, the built-in components, the themes and the stylesheet. No diagram or chart dependency." },
+      { id: "Pdf", label: "@mdxkit/pdf", group: "render", kind: "module", description: "Takes a rendered DOM subtree and produces A4 pages. Independent of the renderer." },
+      { id: "Mermaid", label: "@mdxkit/mermaid", group: "opt", kind: "module", description: "Diagram component, and the plugin that takes over the mermaid fence language." },
+      { id: "Charts", label: "@mdxkit/charts", group: "opt", kind: "module", description: "Recharts wrapper. Recharts itself is imported on mount, not at module scope." },
+      { id: "Flow", label: "@mdxkit/flow", group: "opt", kind: "module", description: "Inline-SVG flow map with a flows panel. Pure React and lucide icons." },
+      { id: "Core", label: "@mdxkit/core", group: "base", kind: "state", description: "Parser, expression evaluators, registry, render context, shared types. Every package depends on this one." }
     ],
     edges: [
-      { from: "Ed", to: "State" },
-      { from: "Side", to: "State" },
-      { from: "DriveM", to: "DriveS" },
-      { from: "State", to: "Timer" },
-      { from: "Timer", to: "Store" },
-      { from: "Timer", to: "Fire" },
-      { from: "Timer", to: "DriveS" },
-      { from: "Store", to: "LS" },
-      { from: "Fire", to: "FS" },
-      { from: "DriveS", to: "GD" },
-      { from: "FS", to: "State", kind: "dashed", label: "onSnapshot" }
+      { from: "Studio", to: "React" },
+      { from: "Studio", to: "Mermaid" },
+      { from: "Studio", to: "Charts" },
+      { from: "Studio", to: "Flow" },
+      { from: "Studio", to: "Pdf" },
+      { from: "Guest", to: "Sandbox" },
+      { from: "Guest", to: "React" },
+      { from: "Sandbox", to: "React" },
+      { from: "React", to: "Core" },
+      { from: "Mermaid", to: "Core" },
+      { from: "Charts", to: "Core" },
+      { from: "Flow", to: "Core" },
+      { from: "Sandbox", to: "Core" }
     ],
     flows: [
-      { id: "local", label: "Local save", tone: "indigo", summary: "Always runs. The only path that works signed out.", path: ["Ed", "State", "Timer", "Store", "LS"] },
-      { id: "cloud", label: "Cloud sync", tone: "emerald", summary: "Runs when signed in. The snapshot pushes other devices' changes back.", path: ["Ed", "State", "Timer", "Fire", "FS"] },
-      { id: "drive", label: "Drive sync", tone: "amber", summary: "Only for documents already saved to Drive once, by hand.", path: ["Ed", "State", "Timer", "DriveS", "GD"] }
+      { id: "minimal", label: "Minimal host", tone: "emerald", summary: "Callouts, cards, tables and code blocks. No diagram engine, no charting library.", path: ["React", "Core"] },
+      { id: "studio", label: "The Studio", tone: "indigo", summary: "Everything registered, plus the exporter. This is the heaviest configuration there is.", path: ["Studio", "React", "Core"], edges: ["Studio->Mermaid", "Studio->Charts", "Studio->Flow", "Studio->Pdf", "Mermaid->Core", "Charts->Core", "Flow->Core"] },
+      { id: "sandboxed", label: "Untrusted content", tone: "amber", summary: "The host mounts SandboxedMdx; the renderer runs in the guest bundle instead of in the page.", path: ["Sandbox", "Core"], edges: ["Guest->Sandbox", "Guest->React", "Sandbox->React"] }
     ]
   }}
 />
+
+The Studio resolves the packages from source rather than from built output:
+`apps/studio/vite.config.ts` and `vitest.config.ts` both alias `@mdxkit/*` to
+`packages/*/src`, and both set `dedupe: ['react', 'react-dom']` so a hook called
+in a package and a hook called in the app belong to the same React.
+
+---
+
+## The registry
+
+`packages/core/src/registry.ts`.
+
+A document is rendered against one flat `name -> component` map. The renderer
+resolves every JSX tag through it and hands the same map to expressions as their
+scope, so **a document can only reach what the host put in the registry**. A tag
+that is not in it renders a small notice naming it, and the surrounding document
+carries on.
+
+Packages do not export that map directly. They export *plugins*, and the
+application composes them:
+
+```ts
+// apps/studio/src/mdxRegistry.ts
+import { createRendererRegistry } from '@mdxkit/react';
+import { mermaidPlugin } from '@mdxkit/mermaid';
+import { chartsPlugin } from '@mdxkit/charts';
+import { flowPlugin } from '@mdxkit/flow';
+
+export const studioMdxRegistry = createRendererRegistry(
+  mermaidPlugin,
+  chartsPlugin,
+  flowPlugin
+);
+```
+
+`createRendererRegistry()` is `createMdxRegistry()` with `reactPlugin` already
+first, so the built-ins are always present.
+
+A plugin is plain data with three optional parts:
+
+```ts
+export const mermaidPlugin = defineMdxPlugin({
+  name: '@mdxkit/mermaid',
+  components: { MermaidDiagram },
+  aliases: { Mermaid: 'MermaidDiagram' },
+  codeFences: { mermaid: 'MermaidDiagram' },
+});
+```
+
+- **`components`** are tag names a document may write.
+- **`aliases`** are extra names for a component *anything* registered, not only
+  something this plugin registered.
+- **`codeFences`** claim a fenced language. When a document contains a mermaid
+  fence, `CodeBlock` in `packages/react/src/MdxRenderer.tsx` looks the language
+  up in `registry.codeFences` and mounts the named component as
+  `<MermaidDiagram language="mermaid">` with the fence body as its children,
+  instead of syntax-highlighting the block. Languages are matched lower-cased.
+
+Three rules in `createMdxRegistry` are worth knowing before you change it, each
+of them load-bearing and each covered by `packages/core/tests/registry.test.ts`:
+
+- **Sources apply in order and the last one wins.** That is how an application
+  replaces a component a package shipped — list your own version last. A bare
+  component map is accepted alongside plugins for exactly this.
+- **Aliases and fences resolve after every source has contributed**, not as each
+  source is applied. A plugin may therefore alias a component another plugin
+  provides, in either listing order.
+- **An alias or fence pointing at nothing throws, naming the plugin.** A silent
+  `undefined` in the map would surface much later as an unrenderable tag.
+
+`defineMdxPlugin` only adds a symbol brand. Without it the object is merged as
+a component map, and `name` and `components` become tag names — which is exactly
+the failure the brand exists to prevent.
 
 ---
 
 ## The render pipeline
 
-`src/components/MdxRenderer.tsx`, in order:
+`packages/react/src/MdxRenderer.tsx`, with the parsing half in
+`packages/core/src/mdxAst.ts`.
 
-1. **Frontmatter split** — `parseFrontmatter()` in `utils/mdxParser.ts` peels the YAML
-   header with `js-yaml`.
-2. **Block split** — `parseMdxBlocks()` walks the body character by character and cuts it
-   into `markdown` and `jsx` chunks. It tracks fenced blocks, inline code spans, HTML
-   comments, quoting and brace depth so that a `>` inside a JSX attribute, or a component
-   example inside backticks, is not mistaken for structure.
-3. **Compile** — the JSX chunks are concatenated into a `MdxView()` function body and run
-   through `@babel/standalone` with the `react` preset. The result is evaluated with
-   `new Function(...scopeKeys)`, injecting `React`, `useState`, `useEffect`,
-   `ReactMarkdown`, `remarkGfm`, `customMdComponents`, `CodeBlock` and every entry of
-   `mdxComponentsMap`.
-4. **Render** — markdown chunks go through `react-markdown` + `remark-gfm` with a
-   component override map; JSX chunks render directly. A compile failure sets a warning
-   banner and falls back to rendering the whole body as plain markdown.
-5. **Error boundary** — `MdxErrorBoundary` catches runtime errors from the compiled
-   component so a broken document degrades instead of blanking the app.
+<Callout type="note" title="No JavaScript is generated for the document">
+  Earlier versions cut the document into markdown and JSX chunks with a
+  hand-written scanner and compiled the JSX chunks with Babel at runtime. That is
+  gone. The document is parsed into a tree and the tree is turned into React
+  elements. Only the expressions written inside it are ever evaluated, and only
+  as far as the `expressions` prop allows.
+</Callout>
 
-### Why the scanner is delicate
+In order:
 
-Two bugs have already come out of this design, both worth knowing before you touch it:
+1. **Frontmatter split.** `parseFrontmatter()` peels the YAML header with
+   `js-yaml`. `countLines()` measures what was removed so every position the
+   parser later reports is shifted back onto the file the author is editing.
+2. **Parse.** `parseMdxDocument()` runs the body through
+   `remark-parse` → `remark-gfm` → `remark-mdx` → `remark-rehype`, with the five
+   MDX node types listed in `passThrough` so `remark-rehype` does not drop them.
+   The result is a hast tree with the MDX nodes still in it. It never throws: a
+   syntax error comes back as a located `MdxParseError`.
+3. **Sanitise and register slots.** The same pass drops what the renderer cannot
+   use — `import`/`export`, empty or comment-only expressions, attributes whose
+   expression carries no ESTree — reporting each as a diagnostic. Every surviving
+   expression is recorded in `ast.slots`, keyed by the identity of its ESTree
+   node.
+4. **Normalise.** `unwrapBlockJsx()` lifts a block-level tag out of the paragraph
+   MDX left it in; `assignHeadingIds()` stamps ids from `collectHeadings()`.
+5. **Render.** `toJsxRuntime()` from `hast-util-to-jsx-runtime` walks the tree
+   with the registry as its component map and a custom `createEvaluater`.
+6. **Contain failures.** `MdxErrorBoundary` catches anything a component throws;
+   `resetKey` clears it as soon as the document changes, so fixing the typo also
+   clears the banner.
 
-- An **unpaired backtick run** used to scan forward until it found a matching run, which
-  could be the *next fence opener*. That shifted the cursor inside a fenced block, made
-  its closing fence read as an opening one, and silently swallowed the rest of the
-  document. Fixed by bounding the search at a blank line and treating an unpaired run as
-  literal text — `skipMarkdownCode()`.
-- **Braces in JSX text** compile as expressions and take the whole document down. There
-  is no fix for this at the parser level; it is documented in
-  [AUTHORING.md](AUTHORING.md) instead.
+### Why the slot map exists
 
-There is no source mapping, so compile errors do not carry a line number. That is the
-single biggest weakness of the approach.
+`hast-util-to-jsx-runtime` calls `evaluateExpression` for two different things:
+the expressions the author wrote, and the synthetic identifier lookups it
+performs to resolve a capitalised tag name. They arrive at the same function and
+look alike.
+
+`ast.slots` is what tells them apart. An expression node present in the map is
+the author's and goes to the evaluator; one that is absent is a tag name and goes
+to `resolveComponent()`, which walks dotted paths against the scope and falls
+back to the unknown-component notice. Get this wrong and either every
+`<Callout>` becomes a scope lookup failure, or every author expression silently
+resolves to a component.
+
+### Parsing is cached, deliberately shared
+
+`parseMdxDocument()` keeps the last four results keyed by body and offset. The
+application asks for the same document twice on every keystroke — once for the
+table of contents, once to render it — and the export pass can ask a third time.
+Handing every caller the same object keeps that to one parse.
+
+The consequence is that the tree is **shared and mutable**. Stamping heading ids
+and unwrapping block JSX are safe only because doing them twice changes nothing.
+Anything you add there must have the same property.
+
+### Expressions
+
+`packages/core/src/estreeEval.ts`. `MdxRenderer` picks an evaluator from its
+`expressions` prop:
+
+- **`'full'`** (the default) serialises the expression's ESTree back to
+  JavaScript — lowering any JSX inside it to `createElement` calls first — and
+  runs it through `new Function` with the registry bound as parameters. Real
+  JavaScript semantics, for one expression at a time. A document can map over
+  data and build elements inline. Compiled functions are cached by source text.
+- **`'literals'`** walks the tree by hand and builds only what the syntax spells
+  out: strings, numbers, booleans, `null`, arrays, plain objects, and template
+  literals with no substitutions. Identifiers, member access, calls, arrow
+  functions, JSX and spreads are all refused with a reason. Nothing executes.
+
+`'literals'` is for a host that renders content it did not write and is *not*
+sandboxing. It is a real reduction in reach, not a security boundary: a document
+still chooses which registered components to mount and what to pass them.
+
+Failures never propagate. An expression that will not evaluate produces a console
+warning naming the attribute and its line, and the value is omitted — the
+document renders without it.
+
+### What a broken document looks like
+
+Three distinct failure modes, none of which blanks the preview:
+
+| Failure | What the reader sees |
+| --- | --- |
+| The body does not parse | A banner reading `MDX: Line 6, Column 17 - ...`, over the last tree that did parse |
+| A tag is not in the registry | An inline notice naming the tag; its children still render |
+| A component throws | The boundary's card with the thrown message; the rest of the page stays |
+
+The last-good-render behaviour matters more than it looks: a document is
+mid-syntax on most keystrokes, so without it the preview would strobe.
+
+---
+
+## In-page or sandboxed
+
+There are two ways to put a document on screen, and the difference is where the
+document's code runs.
+
+**`MdxRenderer` runs it in the page**, with the page's origin. For a document the
+user wrote, that is correct and cheap. For one an LLM generated or a stranger
+pasted, it is fatal: expressions in `'full'` mode are real JavaScript with access
+to `localStorage`, cookies, the session token and the app's own API.
+
+**`SandboxedMdx` runs it in an iframe with an opaque origin.** The approach is
+isolation, not restriction: the document keeps every capability it had — state,
+handlers, inputs, arbitrary components — but it has nowhere to spend them.
+
+<FlowGraph
+  title="Sandbox boundary"
+  subtitle="Follow a capability call across the origin boundary"
+  data={{
+    groups: [
+      { id: "host", label: "Application origin" },
+      { id: "wire", label: "postMessage" },
+      { id: "guest", label: "Opaque origin frame" }
+    ],
+    nodes: [
+      { id: "App", label: "host application", group: "host", kind: "ui", description: "Mounts SandboxedMdx and decides which operations the document may ask for." },
+      { id: "Host", label: "SandboxedMdx", group: "host", kind: "module", description: "Builds the frame document, runs the handshake, brokers capability calls and sizes the frame." },
+      { id: "Caps", label: "capability table", group: "host", kind: "decision", description: "The whole permission set. Only own function-valued keys are callable; each handler is a trust boundary." },
+      { id: "Wire", label: "sealed envelope", group: "wire", kind: "state", description: "Tag, protocol version and a per-instance channel secret. Anything else on the message stream is dropped." },
+      { id: "Guest", label: "guest runtime", group: "guest", kind: "module", description: "startGuest: handshake, capability bridge, height reporting, error forwarding. Exposes window.sandbox." },
+      { id: "Doc", label: "the document", group: "guest", kind: "ui", description: "Rendered by MdxRenderer inside the frame. Fully interactive, and completely walled off." },
+      { id: "Csp", label: "frame CSP", group: "guest", kind: "risk", description: "connect-src none blocks fetch, XHR, WebSocket, EventSource and sendBeacon. img-src is data and blob only." }
+    ],
+    edges: [
+      { from: "App", to: "Host" },
+      { from: "App", to: "Caps" },
+      { from: "Host", to: "Wire" },
+      { from: "Wire", to: "Guest" },
+      { from: "Guest", to: "Doc" },
+      { from: "Csp", to: "Doc", kind: "dashed" },
+      { from: "Guest", to: "Wire", kind: "dashed" },
+      { from: "Wire", to: "Host", kind: "dashed" },
+      { from: "Host", to: "Caps", kind: "dashed" }
+    ],
+    flows: [
+      { id: "boot", label: "Boot", tone: "indigo", summary: "The guest retries guest:ready until acknowledged, because the host listener may attach after the frame has run.", path: ["App", "Host", "Wire", "Guest", "Doc"] },
+      { id: "call", label: "Capability call", tone: "amber", summary: "The only path out of the frame. Unregistered names are refused, and every call times out.", path: ["Doc", "Guest", "Wire", "Host", "Caps"] },
+      { id: "blocked", label: "What is blocked", tone: "rose", summary: "No cookies, no storage, no parent DOM, no network, no popups, no top-level navigation, no forms.", path: ["Doc"], nodes: ["Csp"] }
+    ]
+  }}
+/>
+
+Four pieces make the boundary, and each of them has a reason spelled out in the
+source:
+
+- **`sandbox="allow-scripts"` and nothing else** — `packages/sandbox/src/host/frameDocument.ts`.
+  Omitting `allow-same-origin` is what produces the opaque origin. The two
+  together would hand the frame the app's origin *and* the ability to strip its
+  own sandbox attribute.
+- **A CSP delivered as a `meta` element**, because a `srcdoc` document has no
+  HTTP response to carry a header. `connect-src 'none'` is the important one:
+  it removes fetch, XHR, WebSocket, EventSource and `sendBeacon`. `img-src` is
+  `data: blob:` and not `https:` on purpose — a remote image URL is a GET with a
+  payload, and it works even when `connect-src` is closed. `script-src` does
+  allow `unsafe-eval`, because evaluating an expression means `new Function`;
+  that is affordable precisely because the frame has no origin, no storage and
+  nowhere to send anything.
+- **A sealed envelope**, `packages/sandbox/src/protocol.ts`. Every page shares one
+  `message` stream, and a sandboxed frame's origin serialises as the *string*
+  `"null"` for every such frame on the page — so origin cannot identify ours. The
+  host pins `event.source` identity first and a per-instance channel secret
+  second.
+- **The capability table**, `packages/sandbox/src/host/types.ts`. It is looked up
+  with `hasOwnProperty`, so a document cannot call `constructor` or `toString`
+  and reach the prototype chain. Calls time out, and there is a ceiling on how
+  many may be outstanding.
+
+The guest has to be handed its runtime as source text — it has no origin to fetch
+from — so `packages/sandbox/src/build/` bundles a guest entry into one IIFE with
+esbuild and exposes it as an importable string through a Vite plugin. That bundle
+is a second, independent module graph; nothing from the application's scope can
+reach the frame by accident.
+
+<Callout type="warning" title="Sandbox is not wired into the Studio">
+  `@mdxkit/sandbox` is complete and tested but no application in this repository
+  mounts it — the Studio only ever renders documents its own user wrote. Adding a
+  paste-a-document or share-a-link feature is the point at which it stops being
+  optional.
+</Callout>
 
 ---
 
 ## Adding a component
 
-1. Write it in `src/components/CustomComponents.tsx` (or its own file and import it).
-2. Register it in the `mdxComponentsMap` object at the bottom of that file — that map is
-   what gets injected into document scope. Aliases are fine.
-3. If it renders differently in PDF, read `MdxRenderContext` from `MermaidDiagram.tsx`:
-   it gives you `{ renderMode: 'live' | 'pdf', themeCategory: 'light' | 'dark' }`.
+1. Write it in the package it belongs to. Something that only costs React goes in
+   `packages/react/src/CustomComponents.tsx`; anything that drags a library with
+   it gets its own package.
+2. Register it: add it to `baseMdxComponents` at the bottom of that file, or to
+   your package's `defineMdxPlugin` call.
+3. If it renders differently in the export pass, read `MdxRenderContext` from
+   `@mdxkit/core`. It gives you `renderMode` and `themeCategory`, so nothing has
+   to be threaded through the tree as props.
+4. Style it with `--mdxkit-*` custom properties in your package's `styles.css`.
+   No Tailwind, no build step — see the styling section of the README.
 
 Constraints worth designing around:
 
-- **Never throw.** An uncaught error inside a compiled document blows past the boundary
-  in some paths and is hard to diagnose from the UI.
-- **Handle malformed props.** Document authors pass hand-written JSON.
-- **The PDF exporter deletes every `<button>`.** Do not put content inside one.
-- **Mobile matters.** Layouts must survive a 390px viewport.
+- **Handle malformed props.** Document authors hand-write JSON. Every built-in
+  clamps its own inputs: `ProgressBar` checks its colour against a set,
+  `CardGrid` snaps `cols` to two, three or four, `Accordion` defaults `items` to
+  an empty array.
+- **The PDF exporter deletes every `button` element** and everything marked
+  `data-pdf-interactive`. Do not put content inside one that the reader needs.
+- **Mobile matters.** Anything that can be wider than the pane has to scroll
+  inside itself: `min-width: 0` and `overflow-x: auto` on the wrapper, never on
+  the page.
 
 ---
 
 ## State and persistence
 
+This part belongs to `apps/studio` alone; the packages hold no state.
+
 `App.tsx` owns `documents[]`, `activeDocId`, `mdxContent`, `documentTitle`,
-`currentDriveFileId` and `currentUser`. A single debounced effect (400ms) is the only
-write path; it fans out to localStorage, then Firestore, then Drive.
+`currentDriveFileId` and `currentUser`. One debounced effect (400ms) is the only
+write path, and it fans out to localStorage, then Firestore, then Drive.
 
-**Timestamps decide sync conflicts**, so `saveDocument()` only advances `updatedAt` when
-the title or content genuinely changed. Opening a document or signing in must not bump
-it — otherwise a merely-opened stale copy beats a real edit made on another device.
+**Timestamps decide sync conflicts**, so `saveDocument()` in
+`apps/studio/src/utils/storage.ts` only advances `updatedAt` when the title or
+content genuinely changed. Opening a document or signing in must not bump it —
+otherwise a merely-opened stale copy beats a real edit made on another device.
 
-**Deletion writes tombstones**, locally and in Firestore, rather than removing rows.
-Without them another device still holding the document re-uploads it on its next save
-and the subscription hands it straight back. Tombstones self-prune after 30 days.
+**Deletion writes tombstones**, locally and in Firestore, rather than removing
+rows. Without them another device still holding the document re-uploads it on its
+next save and the subscription hands it straight back. Tombstones self-prune
+after 30 days.
 
-**Firestore documents live under `users/{uid}/documents/{docId}`.** They used to sit in a
-flat global `documents` collection keyed by document id, which meant the fixed sample
-ids collided across accounts and two users shared one record. Seeded sample ids are now
-suffixed with a per-install id as well. `migrateLegacyDocuments()` copies forward from
-the old path once per account per browser and does not delete the originals.
+**Firestore documents live under each user's own `documents` subcollection.**
+They used to sit in a flat global collection keyed by document id, which meant
+the fixed sample ids collided across accounts and two users shared one record.
+Seeded sample ids now carry a per-install suffix as well.
+`migrateLegacyDocuments()` copies forward from the old path once per account per
+browser and does not delete the originals.
+
+**A newer copy arriving while you type does not overwrite the buffer.** The sync
+effect compares three signatures — what is in the editor, what was last
+persisted, and what just arrived — and only adopts the incoming version when
+there is no unsaved work to lose. When there is, it keeps the local text and says
+so once per incoming version rather than once per snapshot.
 
 <Callout type="error" title="Rules do not cascade into subcollections">
-  A rule matching only the user record leaves every document read and write denied. The
-  rule that matches the documents subcollection is what actually protects them, and it
-  must be deployed with the code. See CONFIGURATION.mdx.
+  A Firestore rule matching only the user record leaves every document read and
+  write denied. The rule matching the documents subcollection is what actually
+  protects them, and it must be deployed with the code. See CONFIGURATION.mdx.
 </Callout>
 
-**Google Drive is opt-in and manual.** A document only syncs to Drive once you have
-saved it there from the Drive modal, which sets `driveFileId`. After that the auto-save
-effect patches its content. The `drive.file` scope means the app only ever sees files it
-created.
+**Google Drive is opt-in and manual.** A document only syncs to Drive once you
+have saved it there from the Drive modal, which sets `driveFileId`. After that
+the auto-save effect patches its content. The `drive.file` scope means the app
+only ever sees files it created.
 
 ---
 
 ## PDF export
 
-`src/utils/pdfExporter.ts`.
+`packages/pdf/src/pdfExporter.ts`.
 
-When the export dialog opens, `App.tsx` mounts a second copy of `MdxRenderer` off-screen
-with `renderMode="pdf"` inside `.pdf-export-root`. Export then:
+When the export dialog opens, `App.tsx` mounts a second copy of `MdxRenderer`
+off-screen with `renderMode="pdf"` inside `.pdf-export-root`. Export then:
 
 1. waits for every Mermaid diagram to reach `ready`, failing loudly if any errored
-2. clones the tree, rasterises each diagram's SVG to PNG, and applies light-mode styles
-3. captures it by serialising the clone into an SVG `<foreignObject>` and drawing that
-   into a canvas — **the browser's own layout engine draws the page**
-4. slices the canvas into A4 pages at boundaries that avoid splitting protected blocks
+2. clones the tree, rasterises each diagram's SVG to PNG, and applies light-mode
+   styles with `!important`
+3. captures it by serialising the clone into an SVG `foreignObject` and drawing
+   that into a canvas — **the browser's own layout engine draws the page**
+4. slices the canvas into A4 pages at boundaries measured to avoid splitting
+   protected blocks
 5. writes the pages into a `jsPDF` document and downloads it
 
-### Why `foreignObject` and not html2canvas
+### Why foreignObject and not html2canvas
 
-html2canvas reimplements CSS layout in JavaScript. It draws a bordered inline box where
-CSS says, but paints that box's *text* about 10px lower — measured constant across flex,
-inline-block, block, float and table-cell, across five font stacks, five font sizes,
-padding sweeps and relative positioning. Every pill label sat below its own border and
-every icon floated above its label, and no styling could correct it.
+html2canvas reimplements CSS layout in JavaScript. It draws a bordered inline box
+where CSS says, but paints that box's *text* about 10px lower — measured constant
+across flex, inline-block, block, float and table-cell, across five font stacks,
+five font sizes, padding sweeps and relative positioning. Every pill label sat
+below its own border and every icon floated above its label, and no styling could
+correct it.
 
-Rendering through `foreignObject` hands layout back to the browser, so the capture
-matches the screen. Verified on Chromium, WebKit and Gecko.
+Rendering through `foreignObject` hands layout back to the browser, so the
+capture matches the screen. Verified on Chromium, WebKit and Gecko.
 
 Three portability details that path requires, each of which was a real failure:
 
-- **Ship the stylesheets, do not copy computed styles.** Every engine enumerates a
-  different property set from `getComputedStyle`, and whatever it omits vanishes from
-  the capture — WebKit lost CSS grid columns that way.
-- **Pin image sizes.** An `<img>` sized `auto` has nothing to resolve against inside a
-  detached SVG; WebKit collapsed every diagram to zero height.
-- **Use a `data:` URL, not a blob.** Chrome treats a blob-URL SVG as cross-origin and
-  taints the canvas, which blocks `toDataURL`.
+- **Ship the stylesheets, do not copy computed styles.** Every engine enumerates
+  a different property set from `getComputedStyle`, and whatever it omits
+  vanishes from the capture — WebKit lost CSS grid columns that way.
+- **Pin image sizes.** An `img` sized `auto` has nothing to resolve against
+  inside a detached SVG; WebKit collapsed every diagram to zero height.
+- **Use a `data:` URL, not a blob.** Chrome treats a blob-URL SVG as cross-origin
+  and taints the canvas, which blocks `toDataURL`.
 
-If the capture fails or comes back blank, `html2canvas` loads dynamically as a fallback
-so the export never hard-fails. It is not in the main bundle.
+If the capture fails or comes back blank, `html2canvas` loads dynamically as a
+fallback so the export never hard-fails. It is not in the main bundle.
+
+`exportHtmlToPdfVector` and `exportHtmlToPdf` are aliases of
+`exportHtmlToPdfCanvas`, kept so older callers still resolve. There is no vector
+path; the name is a leftover.
+
+---
+
+## Tests
+
+`vitest.config.ts` defines four projects, each rooted at the workspace it tests:
+`core` in node, and `react`, `sandbox` and `studio` in jsdom — the renderer
+mounts real trees, the sandbox bridges drive the real host and guest code against
+fake windows, and `storage.ts` talks to localStorage. `npm run test:run` runs all
+four; CI runs lint, build and tests on both Ubuntu and Windows.
+
+The Windows leg is deliberate. A lockfile only carries Windows native binaries
+for rollup, esbuild and `@tailwindcss/oxide` if it was generated with every
+platform's optional dependencies resolved, and a Linux-only matrix is exactly
+what hid that being missing.
 
 ---
 
 ## Known architectural debt
 
-- **No source maps for compile errors** in documents.
-- **Conflict resolution is last-writer-wins** on client clocks.
-- **A Firestore snapshot carrying a newer version of the currently open document does not
-  refresh the editor** — the sync effect keys on document id, not content.
-- **The preview pane scrolls sideways at phone width** for wide tables and long tab
-  strips.
+- **Conflict resolution is last-writer-wins** on client clocks. There is no merge
+  UI.
+- **`'full'` expression mode is not a security boundary** and is the default. A
+  host rendering content it did not write has to opt into `'literals'` or into
+  the sandbox; nothing forces the choice on it.
+- **The parse cache assumes idempotent mutation** of a shared tree. It is
+  correct today and there is no assertion protecting it.
+- **The whole guest runtime is inlined into an HTML attribute.** It has to be —
+  the frame has no origin to fetch from — but the frame document is rebuilt from
+  scratch whenever the runtime, the styles or the CSP change, and rebuilding it
+  remounts the document.
+- **The Studio bundle is a single ~4 MB chunk.** Mermaid's diagram types and
+  Recharts already code-split themselves; the renderer, Prism, Firebase and the
+  app do not. `npm run build` prints the current figures.

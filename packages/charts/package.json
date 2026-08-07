@@ -1,24 +1,60 @@
 {
   "name": "@mdxkit/charts",
-  "version": "0.0.0",
-  "private": true,
+  "version": "0.1.0",
   "type": "module",
-  "description": "Recharts-backed Chart component and MDX plugin.",
-  "main": "./src/index.ts",
-  "module": "./src/index.ts",
-  "types": "./src/index.ts",
+  "description": "Recharts-backed Chart component and MDX plugin for mdxkit. Recharts itself is loaded on demand.",
+  "keywords": [
+    "mdx",
+    "chart",
+    "recharts",
+    "react",
+    "markdown",
+    "dataviz",
+    "visualization"
+  ],
+  "license": "MIT",
+  "author": "Suraj Donthi",
+  "homepage": "https://github.com/SurajDonthi/mdx-preview/tree/main/packages/charts#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SurajDonthi/mdx-preview.git",
+    "directory": "packages/charts"
+  },
+  "bugs": {
+    "url": "https://github.com/SurajDonthi/mdx-preview/issues"
+  },
+  "sideEffects": [
+    "**/*.css"
+  ],
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "exports": {
-    ".": "./src/index.ts",
-    "./styles.css": "./src/styles.css"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./styles.css": "./dist/styles.css",
+    "./package.json": "./package.json"
   },
   "files": [
-    "src"
+    "dist"
   ],
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsup",
+    "clean": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\""
+  },
   "dependencies": {
-    "@mdxkit/core": "*",
     "recharts": "^3.10.1"
   },
   "peerDependencies": {
+    "@mdxkit/core": "^0.1.0",
     "react": "^19.0.0"
   }
 }

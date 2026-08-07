@@ -1,0 +1,21 @@
+{
+  "//": "Compiler options for building a publishable package. Mirrors the root tsconfig, minus the `paths` that resolve workspace packages to their sources: a published `.d.ts` has to reference `@mdxkit/core` by name so consumers get one shared set of types, not an inlined copy per package.",
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "jsx": "react-jsx",
+    "experimentalDecorators": true,
+    "useDefineForClassFields": false,
+    "skipLibCheck": true,
+    "isolatedModules": true,
+    "moduleDetection": "force",
+    "allowJs": true,
+    "resolveJsonModule": true,
+    "declaration": true,
+    "declarationMap": true,
+    "emitDeclarationOnly": true,
+    "outDir": "dist"
+  }
+}

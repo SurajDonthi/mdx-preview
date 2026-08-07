@@ -1,31 +1,88 @@
 {
   "name": "@mdxkit/sandbox",
-  "version": "0.0.0",
-  "private": true,
+  "version": "0.1.0",
   "type": "module",
   "description": "Renders untrusted MDX inside an opaque-origin iframe and brokers a capability bridge between it and the host.",
-  "main": "./src/index.ts",
-  "module": "./src/index.ts",
-  "types": "./src/index.ts",
+  "keywords": [
+    "mdx",
+    "sandbox",
+    "iframe",
+    "untrusted",
+    "csp",
+    "react",
+    "security",
+    "postmessage"
+  ],
+  "license": "MIT",
+  "author": "Suraj Donthi",
+  "homepage": "https://github.com/SurajDonthi/mdx-preview/tree/main/packages/sandbox#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SurajDonthi/mdx-preview.git",
+    "directory": "packages/sandbox"
+  },
+  "bugs": {
+    "url": "https://github.com/SurajDonthi/mdx-preview/issues"
+  },
+  "sideEffects": false,
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "exports": {
-    ".": "./src/index.ts",
-    "./guest": "./src/guest/index.ts",
-    "./guest/mdx": "./src/guest/mdxGuest.tsx",
-    "./protocol": "./src/protocol.ts",
-    "./vite": "./src/build/vitePlugin.ts",
-    "./build": "./src/build/bundleGuest.ts"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./guest": {
+      "types": "./dist/guest.d.ts",
+      "default": "./dist/guest.js"
+    },
+    "./guest/mdx": {
+      "types": "./dist/guest/mdx.d.ts",
+      "default": "./dist/guest/mdx.js"
+    },
+    "./protocol": {
+      "types": "./dist/protocol.d.ts",
+      "default": "./dist/protocol.js"
+    },
+    "./vite": {
+      "types": "./dist/vite.d.ts",
+      "default": "./dist/vite.js"
+    },
+    "./build": {
+      "types": "./dist/build.d.ts",
+      "default": "./dist/build.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "typesVersions": {
+    "*": {
+      "guest": ["./dist/guest.d.ts"],
+      "guest/mdx": ["./dist/guest/mdx.d.ts"],
+      "protocol": ["./dist/protocol.d.ts"],
+      "vite": ["./dist/vite.d.ts"],
+      "build": ["./dist/build.d.ts"]
+    }
   },
   "files": [
-    "src"
+    "dist"
   ],
-  "dependencies": {
-    "@mdxkit/core": "*",
-    "@mdxkit/react": "*"
+  "engines": {
+    "node": ">=18"
   },
-  "devDependencies": {
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "npm run clean && tsup",
+    "clean": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\""
+  },
+  "dependencies": {
     "esbuild": "^0.25.0"
   },
   "peerDependencies": {
+    "@mdxkit/core": "^0.1.0",
+    "@mdxkit/react": "^0.1.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   }

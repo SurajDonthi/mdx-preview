@@ -9,9 +9,12 @@
   ],
   "scripts": {
     "dev": "npm run dev --workspace @mdxkit/studio",
-    "build": "npm run build --workspace @mdxkit/studio",
+    "build": "npm run build:packages && npm run build:app",
+    "//build:packages": "Explicit order, not `--workspaces`: npm runs those in config order, and each package's declaration build resolves its @mdxkit dependencies through their published `types` entry - which has to exist by then.",
+    "build:packages": "npm run build -w @mdxkit/core -w @mdxkit/react -w @mdxkit/mermaid -w @mdxkit/charts -w @mdxkit/flow -w @mdxkit/pdf -w @mdxkit/sandbox",
+    "build:app": "npm run build --workspace @mdxkit/studio",
     "preview": "npm run preview --workspace @mdxkit/studio",
-    "clean": "npm run clean --workspace @mdxkit/studio",
+    "clean": "npm run clean --workspaces --if-present",
     "lint": "tsc --noEmit",
     "test": "vitest",
     "test:run": "vitest run"
@@ -29,6 +32,7 @@
     "autoprefixer": "^10.4.21",
     "esbuild": "^0.25.0",
     "jsdom": "^26.1.0",
+    "tsup": "^8.5.1",
     "typescript": "~5.8.2",
     "vitest": "^4.1.10"
   }

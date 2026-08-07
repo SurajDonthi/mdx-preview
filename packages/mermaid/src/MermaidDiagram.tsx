@@ -1,5 +1,4 @@
 import React, { useContext, useEffect, useId, useMemo, useState } from 'react';
-import mermaid from 'mermaid';
 import * as Icons from 'lucide-react';
 import { MdxRenderContext } from '@mdxkit/core';
 import type { MdxRenderMode, MdxThemeCategory } from '@mdxkit/core';
@@ -14,6 +13,22 @@ export interface MermaidDiagramProps {
 
 type MermaidRenderState = 'rendering' | 'ready' | 'error';
 
+type MermaidApi = Awaited<typeof import('mermaid')>['default'];
+
+/**
+ * Mermaid is ~3 MB of parsers, layout engines and fonts - more than the rest of
+ * mdxkit put together. Importing it here rather than at module scope means the
+ * cost lands on the first document that actually contains a diagram; registering
+ * `mermaidPlugin` costs nothing until then. The promise is memoised so N
+ * diagrams on a page share one load.
+ */
+let mermaidModule: Promise<MermaidApi> | null = null;
+
+function loadMermaid(): Promise<MermaidApi> {
+  mermaidModule ??= import('mermaid').then((module) => module.default);
+  return mermaidModule;
+}
+
 // Mermaid configuration is global, so initialize + render must stay serialized.
 let mermaidRenderQueue: Promise<void> = Promise.resolve();
 let mermaidRenderSequence = 0;
@@ -25,6 +40,7 @@ function renderMermaid(
   themeCategory: MdxThemeCategory
 ): Promise<string> {
   const operation = mermaidRenderQueue.then(async () => {
+    const mermaid = await loadMermaid();
     const isDark = renderMode === 'live' && themeCategory === 'dark';
     const renderHost = document.createElement('div');
     renderHost.dataset.mermaidRenderHost = id;

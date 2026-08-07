@@ -1,25 +1,61 @@
 {
   "name": "@mdxkit/mermaid",
-  "version": "0.0.0",
-  "private": true,
+  "version": "0.1.0",
   "type": "module",
-  "description": "Mermaid diagram component and MDX plugin.",
-  "main": "./src/index.ts",
-  "module": "./src/index.ts",
-  "types": "./src/index.ts",
+  "description": "Mermaid diagram component and MDX plugin for mdxkit. Mermaid itself is loaded on demand.",
+  "keywords": [
+    "mdx",
+    "mermaid",
+    "diagram",
+    "react",
+    "markdown",
+    "flowchart",
+    "sequence-diagram"
+  ],
+  "license": "MIT",
+  "author": "Suraj Donthi",
+  "homepage": "https://github.com/SurajDonthi/mdx-preview/tree/main/packages/mermaid#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SurajDonthi/mdx-preview.git",
+    "directory": "packages/mermaid"
+  },
+  "bugs": {
+    "url": "https://github.com/SurajDonthi/mdx-preview/issues"
+  },
+  "sideEffects": [
+    "**/*.css"
+  ],
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "exports": {
-    ".": "./src/index.ts",
-    "./styles.css": "./src/styles.css"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./styles.css": "./dist/styles.css",
+    "./package.json": "./package.json"
   },
   "files": [
-    "src"
+    "dist"
   ],
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsup",
+    "clean": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\""
+  },
   "dependencies": {
-    "@mdxkit/core": "*",
     "lucide-react": "^0.546.0",
     "mermaid": "^11.16.0"
   },
   "peerDependencies": {
+    "@mdxkit/core": "^0.1.0",
     "react": "^19.0.0"
   }
 }
