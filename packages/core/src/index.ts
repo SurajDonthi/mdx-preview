@@ -28,9 +28,11 @@ export type {
 export {
   parseFrontmatter,
   slugify,
+  collectHeadings,
   extractHeadings,
   calculateDocumentStats,
 } from './mdxParser';
+export type { DocumentHeading } from './mdxParser';
 
 export { parseMdxDocument, formatMdxParseError, countLines } from './mdxAst';
 export type {

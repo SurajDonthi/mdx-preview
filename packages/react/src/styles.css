@@ -634,8 +634,16 @@
  * Markdown tables
  * ------------------------------------------------------------------ */
 
+/*
+ * A wide table scrolls inside this wrapper and nowhere else. `min-width: 0`
+ * matters when the table is written inside a grid or flex parent - a card grid
+ * cell, say - where the default `min-width: auto` would otherwise let the
+ * table's own minimum width push the whole column, and the page, sideways.
+ */
 .mdxkit-table-wrap {
   overflow-x: auto;
+  min-width: 0;
+  max-width: 100%;
   margin-block: var(--mdxkit-space-6);
   border-radius: var(--mdxkit-radius-2xl);
   border: 1px solid var(--mdxkit-border);
@@ -875,8 +883,25 @@
   border-color: var(--mdxkit-token-tag-border);
 }
 
+/*
+ * Inline code is the one token whose content the author does not control the
+ * length of - a backtick span can hold a whole line of source. An `inline-flex`
+ * box cannot break across lines, so such a span used to widen every ancestor up
+ * to the preview pane and scroll it sideways. `display: inline` lets it wrap,
+ * `overflow-wrap` breaks a run with no spaces in it rather than let it hang out
+ * of the line, and `box-decoration-break: clone` gives every fragment the full
+ * pill rather than one long pill cut in half.
+ *
+ * `break-word` rather than `anywhere` on purpose: only `anywhere` also shrinks
+ * the minimum width the token reports, and a table column sized from that one
+ * collapses to a character per line.
+ */
 .mdxkit-token--code {
-  min-height: 1.375rem;
+  display: inline;
+  white-space: normal;
+  overflow-wrap: break-word;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
   padding: var(--mdxkit-space-0-5) var(--mdxkit-space-1-5);
   margin-inline: var(--mdxkit-space-0-5);
   font-size: 0.85em;
@@ -895,8 +920,14 @@
 .mdxkit-token--code.mdxkit-token--themed {
   background-color: var(--mdxkit-inline-code-bg);
   color: var(--mdxkit-inline-code-fg);
-  backdrop-filter: var(--mdxkit-inline-code-backdrop-filter, none);
-  -webkit-backdrop-filter: var(--mdxkit-inline-code-backdrop-filter, none);
+  /*
+   * No `backdrop-filter` here, unlike the surfaces around it. Now that a long
+   * span wraps, it is an inline box that can be split across lines, and a
+   * backdrop filter on one of those is painted once over the whole area the
+   * fragments span - which lands a translucent rectangle on top of the words
+   * before it. The pill's own background is nearly opaque, so the blur it used
+   * to ask for was not visible through it anyway.
+   */
 }
 
 /* `tone` pins a token to one side regardless of the surrounding theme. */
@@ -1487,19 +1518,31 @@
   border-radius: var(--mdxkit-radius-2xl);
   border: 1px solid var(--mdxkit-border);
   background-color: var(--mdxkit-sunken-bg);
+  min-width: 0;
+  max-width: 100%;
   overflow: hidden;
 }
 
+/*
+ * A document with many tabs has a strip wider than the pane. It scrolls here,
+ * on its own, and the sizing keeps it that way: `min-width: 0` stops the flex
+ * container from being sized by its widest run of buttons, and `max-width` ties
+ * it to the pane rather than to its content.
+ */
 .mdxkit-tabs__list {
   display: flex;
   border-bottom: 1px solid var(--mdxkit-border);
   background-color: var(--mdxkit-panel-bg-soft);
   padding: var(--mdxkit-space-2) var(--mdxkit-space-2) 0;
   gap: var(--mdxkit-space-1);
+  min-width: 0;
+  max-width: 100%;
   overflow-x: auto;
+  overscroll-behavior-x: contain;
 }
 
 .mdxkit-tabs__tab {
+  flex: 0 0 auto;
   padding: var(--mdxkit-space-2) var(--mdxkit-space-4);
   font-size: var(--mdxkit-text-sm);
   line-height: calc(1.25 / 0.875);

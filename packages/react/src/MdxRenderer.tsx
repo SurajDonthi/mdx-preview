@@ -16,7 +16,7 @@ import 'prismjs/components/prism-markdown';
 import {
   MdxRenderContext,
   parseFrontmatter,
-  slugify,
+  collectHeadings,
   parseMdxDocument,
   formatMdxParseError,
   countLines,
@@ -260,8 +260,6 @@ const INLINE_TAGS = new Set([
   'time', 'u', 'var', 'wbr', 'svg',
 ]);
 
-const HEADING_TAGS = new Set(['h1', 'h2', 'h3', 'h4', 'h5', 'h6']);
-
 // HTML tags that cannot legally sit inside a <p>. MDX classifies a tag written
 // with content on the same line (`<p>text</p>`) as *text*, which leaves it
 // wrapped in the markdown paragraph that line produced.
@@ -277,14 +275,6 @@ const JAVASCRIPT_URL = /^\s*javascript:/i;
 function safeHref(href: unknown): string | undefined {
   if (typeof href !== 'string') return undefined;
   return JAVASCRIPT_URL.test(href) ? undefined : href;
-}
-
-/** Plain text of a hast subtree, used for heading slugs. */
-function hastText(node: any): string {
-  if (!node) return '';
-  if (node.type === 'text') return String(node.value ?? '');
-  if (Array.isArray(node.children)) return node.children.map(hastText).join('');
-  return '';
 }
 
 /**
@@ -319,26 +309,17 @@ function unwrapBlockJsx(node: any): void {
 }
 
 /**
- * Stamps `id` on every heading, in document order, with the same slug and
- * de-duplication scheme `extractHeadings()` uses - the table of contents links
- * to these ids and the scroll-spy reads them back.
+ * Stamps `id` on every heading in the tree.
+ *
+ * The ids come from `collectHeadings()`, which is also what the table of
+ * contents links to and what the scroll-spy reads back, so the two cannot
+ * disagree about what a heading is called.
  */
 function assignHeadingIds(tree: any): void {
-  const counts = new Map<string, number>();
-
-  const visit = (node: any) => {
-    if (node && node.type === 'element' && HEADING_TAGS.has(node.tagName)) {
-      const base = slugify(hastText(node)) || 'heading';
-      const seen = counts.get(base) ?? 0;
-      counts.set(base, seen + 1);
-      node.properties = { ...(node.properties ?? {}), id: seen === 0 ? base : `${base}-${seen}` };
-    }
-    if (node && Array.isArray(node.children)) {
-      for (const child of node.children) visit(child);
-    }
-  };
-
-  visit(tree);
+  for (const heading of collectHeadings(tree)) {
+    const node = heading.node as { properties?: Record<string, unknown> };
+    node.properties = { ...(node.properties ?? {}), id: heading.id };
+  }
 }
 
 /** Resolves `<Name>` / `<Name.Sub>` against the document scope. */
