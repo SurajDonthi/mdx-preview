@@ -34,7 +34,18 @@ const firebaseConfig = {
  */
 export const isFirebaseConfigured = Boolean(firebaseConfig.apiKey && firebaseConfig.projectId);
 
-const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
+// getAuth() throws auth/invalid-api-key on an empty key, at module scope, before
+// any caller can consult isFirebaseConfigured — which blanks the whole page. The
+// placeholder keeps initialisation inert instead: every cloud path is already
+// gated on isFirebaseConfigured, so nothing ever calls out with it.
+const app =
+  getApps().length > 0
+    ? getApp()
+    : initializeApp(
+        isFirebaseConfigured
+          ? firebaseConfig
+          : { apiKey: 'firebase-not-configured', projectId: 'firebase-not-configured' }
+      );
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 
