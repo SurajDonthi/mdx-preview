@@ -26,6 +26,15 @@ export interface ThemeConfig {
   previewBg: string;
   previewText: string;
   headingFont?: string;
+  /**
+   * `--mdxkit-*` custom properties the renderer stamps on its root.
+   *
+   * This is how a preset reaches the stylesheets the packages ship: the
+   * `*Class` fields above are Tailwind utility strings and mean nothing to a
+   * consumer who does not use Tailwind, so every value that actually has to
+   * reach the DOM travels through here as plain CSS.
+   */
+  cssVars?: Record<string, string>;
 }
 
 export interface Frontmatter {

@@ -148,16 +148,6 @@ export function MermaidDiagram({ chart, children, className = '', renderMode, th
 
   if (!chartCode) return null;
 
-  const outerClasses = isPdf
-    ? 'my-6 rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-sm text-slate-900'
-    : 'my-6 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white/90 dark:bg-slate-950/90 backdrop-blur-md overflow-hidden shadow-sm transition-colors';
-  const headerClasses = isPdf
-    ? 'flex items-center justify-between px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs text-slate-600 font-mono'
-    : 'flex items-center justify-between px-4 py-2 bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 text-xs text-slate-600 dark:text-slate-400 font-mono';
-  const canvasClasses = isPdf
-    ? 'p-6 overflow-x-auto flex justify-center items-center min-h-[120px] bg-white'
-    : 'p-6 overflow-x-auto custom-scrollbar flex justify-center items-center min-h-[120px] bg-white/50 dark:bg-slate-950/50';
-
   return (
     <div
       data-pdf-mermaid="true"
@@ -165,57 +155,57 @@ export function MermaidDiagram({ chart, children, className = '', renderMode, th
       data-render-state={renderState}
       data-mermaid-error={renderState === 'error' ? 'true' : undefined}
       data-error-message={error || undefined}
-      className={`${outerClasses} ${className}`}
+      className={`mdxkit-mermaid${isPdf ? ' mdxkit-mermaid--pdf' : ''} ${className}`.trim()}
     >
-      <div className={headerClasses}>
-        <span className={`flex items-center gap-2 font-medium ${isPdf ? 'text-slate-700' : 'text-slate-700 dark:text-slate-300'}`}>
-          <Icons.GitFork className={`w-3.5 h-3.5 ${isPdf ? 'text-indigo-500' : 'text-indigo-500 dark:text-indigo-400'}`} />
+      <div className="mdxkit-mermaid__header">
+        <span className="mdxkit-mermaid__title">
+          <Icons.GitFork className="mdxkit-mermaid__icon-14 mdxkit-mermaid__title-icon" />
           <span>Mermaid Diagram</span>
         </span>
         {!isPdf && <button
           onClick={handleCopy}
-          className="flex items-center gap-1.5 px-2 py-1 rounded bg-slate-200/80 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
+          className="mdxkit-mermaid__copy"
           title="Copy Mermaid Code"
         >
           {copied ? (
             <>
-              <Icons.Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-              <span className="text-emerald-600 dark:text-emerald-400">Copied</span>
+              <Icons.Check className="mdxkit-mermaid__icon-14 mdxkit-mermaid__copied" />
+              <span className="mdxkit-mermaid__copied">Copied</span>
             </>
           ) : (
             <>
-              <Icons.Copy className="w-3.5 h-3.5" />
+              <Icons.Copy className="mdxkit-mermaid__icon-14" />
               <span>Copy Code</span>
             </>
           )}
         </button>}
       </div>
 
-      <div className={canvasClasses}>
+      <div className="mdxkit-mermaid__canvas">
         {error ? (
-          <div
-            data-mermaid-error-message="true"
-            role="alert"
-            className={`w-full p-4 rounded-xl border text-xs font-mono ${isPdf ? 'bg-amber-50 border-amber-200 text-amber-900' : 'bg-amber-500/10 border-amber-500/20 text-amber-800 dark:text-amber-300'}`}
-          >
-            <div className={`flex items-center gap-2 font-semibold mb-1 ${isPdf ? 'text-amber-700' : 'text-amber-600 dark:text-amber-400'}`}>
-              <Icons.AlertTriangle className="w-4 h-4" />
+          <div data-mermaid-error-message="true" role="alert" className="mdxkit-mermaid__error">
+            <div className="mdxkit-mermaid__error-title">
+              <Icons.AlertTriangle className="mdxkit-mermaid__icon-16" />
               <span>Mermaid Diagram Error</span>
             </div>
-            <pre className={`whitespace-pre-wrap text-[11px] mt-2 ${isPdf ? 'text-amber-800' : 'text-amber-700 dark:text-amber-200/80'}`}>{error}</pre>
-            <details className="mt-3 text-[11px] cursor-pointer">
-              <summary className={isPdf ? 'text-amber-700' : 'text-amber-600 dark:text-amber-400 hover:underline'}>View raw syntax</summary>
-              <pre className={`p-2 mt-1 rounded ${isPdf ? 'bg-slate-100 text-slate-800' : 'bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-300'}`}>{chartCode}</pre>
+            <pre className="mdxkit-mermaid__error-detail">{error}</pre>
+            <details className="mdxkit-mermaid__error-more">
+              <summary className="mdxkit-mermaid__error-summary">View raw syntax</summary>
+              <pre className="mdxkit-mermaid__error-raw">{chartCode}</pre>
             </details>
           </div>
         ) : svg ? (
           <div
-            className="mermaid-svg-container w-full flex justify-center [&>svg]:max-w-full [&>svg]:h-auto [&>svg]:mx-auto"
+            className="mermaid-svg-container"
             dangerouslySetInnerHTML={{ __html: svg }}
           />
         ) : (
-          <div className={`flex items-center gap-2 text-xs py-4 ${isPdf ? 'text-slate-500' : 'text-slate-500 dark:text-slate-400'}`}>
-            <Icons.Loader2 className={`w-4 h-4 text-indigo-500 ${isPdf ? '' : 'animate-spin'}`} />
+          <div className="mdxkit-mermaid__pending">
+            <Icons.Loader2
+              className={`mdxkit-mermaid__icon-16 mdxkit-mermaid__spinner${
+                isPdf ? '' : ' mdxkit-mermaid__spinner--busy'
+              }`}
+            />
             <span>Rendering diagram...</span>
           </div>
         )}

@@ -1,16 +1,10 @@
 @import "tailwindcss";
 
 /*
- * Tailwind's automatic source detection stops at this app's root and skips
- * node_modules, so the workspace packages are registered explicitly. Without
- * these the classes used by the renderer and the diagram components are
- * treated as unused and stripped from the bundle.
+ * Tailwind styles this app's own shell only. The workspace packages ship real
+ * CSS of their own (see `main.tsx`), so there is nothing in them for Tailwind
+ * to scan and no `@source` registration to keep in step.
  */
-@source "../../../packages/core/src";
-@source "../../../packages/react/src";
-@source "../../../packages/mermaid/src";
-@source "../../../packages/charts/src";
-@source "../../../packages/flow/src";
 
 /* Universal MDX list styling - guarantees bullets & numbered items are visible */
 ul, .mdx-content ul {

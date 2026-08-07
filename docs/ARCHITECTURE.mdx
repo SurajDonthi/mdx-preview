@@ -204,10 +204,6 @@ so the export never hard-fails. It is not in the main bundle.
 
 ## Known architectural debt
 
-- **`dark:` classes follow the OS, not the theme picker.** Tailwind v4 defaults the
-  `dark` variant to `prefers-color-scheme`; this project declares no custom variant and
-  never sets a `dark` class. Fixing it means declaring `@custom-variant dark` in
-  `index.css` and driving a class from the theme state.
 - **No source maps for compile errors** in documents.
 - **Conflict resolution is last-writer-wins** on client clocks.
 - **A Firestore snapshot carrying a newer version of the currently open document does not

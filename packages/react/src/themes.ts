@@ -1,5 +1,16 @@
 import type { ThemeConfig, ThemeId } from '@mdxkit/core';
 
+/*
+ * Font stacks, spelled out rather than named through a framework's variables.
+ * These are the exact stacks the utility classes resolved to, so a preset looks
+ * the same whether or not the host has Tailwind.
+ */
+const SANS =
+  '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", "Noto Sans", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"';
+const SERIF = 'ui-serif, Georgia, Cambria, "Times New Roman", Times, serif';
+const MONO =
+  'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace';
+
 export const THEMES: Record<ThemeId, ThemeConfig> = {
   'frosted-glass': {
     id: 'frosted-glass',
@@ -18,6 +29,16 @@ export const THEMES: Record<ThemeId, ThemeConfig> = {
     badgeClass: 'bg-indigo-500/20 text-indigo-300 border-indigo-400/30 backdrop-blur-md',
     previewBg: 'rgba(15, 23, 42, 0.85)',
     previewText: '#f8fafc',
+    cssVars: {
+      '--mdxkit-font-body': SANS,
+      '--mdxkit-surface-backdrop-filter': 'blur(24px)',
+      '--mdxkit-heading-fg': '#fff',
+      '--mdxkit-heading-border': 'color-mix(in oklab, #fff 10%, transparent)',
+      '--mdxkit-link-fg': 'oklch(67.3% 0.182 276.935)',
+      '--mdxkit-inline-code-bg': 'color-mix(in oklab, oklch(12.9% 0.042 264.695) 80%, transparent)',
+      '--mdxkit-inline-code-fg': 'oklch(86.5% 0.127 207.078)',
+      '--mdxkit-inline-code-backdrop-filter': 'blur(12px)',
+    },
   },
   'github-light': {
     id: 'github-light',
@@ -36,6 +57,14 @@ export const THEMES: Record<ThemeId, ThemeConfig> = {
     badgeClass: 'bg-blue-100 text-blue-800 border-blue-200',
     previewBg: '#ffffff',
     previewText: '#1e293b',
+    cssVars: {
+      '--mdxkit-font-body': SANS,
+      '--mdxkit-heading-fg': 'oklch(20.8% 0.042 265.755)',
+      '--mdxkit-heading-border': 'oklch(92.9% 0.013 255.508)',
+      '--mdxkit-link-fg': 'oklch(54.6% 0.245 262.881)',
+      '--mdxkit-inline-code-bg': 'oklch(96.8% 0.007 247.896)',
+      '--mdxkit-inline-code-fg': 'oklch(20.8% 0.042 265.755)',
+    },
   },
   'github-dark': {
     id: 'github-dark',
@@ -54,6 +83,14 @@ export const THEMES: Record<ThemeId, ThemeConfig> = {
     badgeClass: 'bg-blue-950 text-blue-300 border-blue-800',
     previewBg: '#020617',
     previewText: '#e2e8f0',
+    cssVars: {
+      '--mdxkit-font-body': SANS,
+      '--mdxkit-heading-fg': '#fff',
+      '--mdxkit-heading-border': 'oklch(27.9% 0.041 260.031)',
+      '--mdxkit-link-fg': 'oklch(70.7% 0.165 254.624)',
+      '--mdxkit-inline-code-bg': 'oklch(20.8% 0.042 265.755)',
+      '--mdxkit-inline-code-fg': 'oklch(76.5% 0.177 163.223)',
+    },
   },
   dracula: {
     id: 'dracula',
@@ -72,6 +109,14 @@ export const THEMES: Record<ThemeId, ThemeConfig> = {
     badgeClass: 'bg-[#44475a] text-[#ff79c6] border-[#bd93f9]/30',
     previewBg: '#282a36',
     previewText: '#f8f8f2',
+    cssVars: {
+      '--mdxkit-font-body': SANS,
+      '--mdxkit-heading-fg': '#ff79c6',
+      '--mdxkit-heading-border': '#44475a',
+      '--mdxkit-link-fg': '#bd93f9',
+      '--mdxkit-inline-code-bg': '#191a21',
+      '--mdxkit-inline-code-fg': '#50fa7b',
+    },
   },
   nord: {
     id: 'nord',
@@ -90,6 +135,14 @@ export const THEMES: Record<ThemeId, ThemeConfig> = {
     badgeClass: 'bg-[#3b4252] text-[#88c0d0] border-[#81a1c1]/30',
     previewBg: '#2e3440',
     previewText: '#eceff4',
+    cssVars: {
+      '--mdxkit-font-body': SANS,
+      '--mdxkit-heading-fg': '#88c0d0',
+      '--mdxkit-heading-border': '#3b4252',
+      '--mdxkit-link-fg': '#81a1c1',
+      '--mdxkit-inline-code-bg': '#242933',
+      '--mdxkit-inline-code-fg': '#a3be8c',
+    },
   },
   editorial: {
     id: 'editorial',
@@ -108,6 +161,15 @@ export const THEMES: Record<ThemeId, ThemeConfig> = {
     badgeClass: 'bg-[#f3ede3] text-[#9a3412] border-[#9a3412]/30',
     previewBg: '#faf7f2',
     previewText: '#2b2621',
+    cssVars: {
+      '--mdxkit-font-body': SERIF,
+      '--mdxkit-heading-fg': '#1a1410',
+      '--mdxkit-heading-border': '#e2dcd3',
+      '--mdxkit-heading-font': SERIF,
+      '--mdxkit-link-fg': '#9a3412',
+      '--mdxkit-inline-code-bg': '#eae3d7',
+      '--mdxkit-inline-code-fg': '#6d28d9',
+    },
   },
   cyberpunk: {
     id: 'cyberpunk',
@@ -126,6 +188,16 @@ export const THEMES: Record<ThemeId, ThemeConfig> = {
     badgeClass: 'bg-[#ff007f]/20 text-[#00ffcc] border-[#ff007f]',
     previewBg: '#090a0f',
     previewText: '#00ffcc',
+    cssVars: {
+      '--mdxkit-font-body': MONO,
+      '--mdxkit-heading-fg': '#ff007f',
+      '--mdxkit-heading-border': 'color-mix(in oklab, #00ffcc 30%, transparent)',
+      '--mdxkit-heading-font': MONO,
+      '--mdxkit-heading-tracking': '0.05em',
+      '--mdxkit-link-fg': '#ff007f',
+      '--mdxkit-inline-code-bg': '#050608',
+      '--mdxkit-inline-code-fg': '#ffee00',
+    },
   },
   forest: {
     id: 'forest',
@@ -144,5 +216,13 @@ export const THEMES: Record<ThemeId, ThemeConfig> = {
     badgeClass: 'bg-[#1b382b] text-[#34d399] border-[#059669]/40',
     previewBg: '#0f1d17',
     previewText: '#d1fae5',
+    cssVars: {
+      '--mdxkit-font-body': SANS,
+      '--mdxkit-heading-fg': '#34d399',
+      '--mdxkit-heading-border': '#1b382b',
+      '--mdxkit-link-fg': '#10b981',
+      '--mdxkit-inline-code-bg': '#0a1410',
+      '--mdxkit-inline-code-fg': '#6ee7b7',
+    },
   },
 };

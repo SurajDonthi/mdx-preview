@@ -3,7 +3,7 @@ import * as Icons from 'lucide-react';
 import { InlineToken } from './InlineToken';
 
 // Helper to render Lucide icon dynamically
-function DynamicIcon({ name, className = 'w-5 h-5' }: { name?: string; className?: string }) {
+function DynamicIcon({ name, className = 'mdxkit-icon-20' }: { name?: string; className?: string }) {
   if (!name) return null;
   const IconComponent = (Icons as Record<string, any>)[name] || Icons.HelpCircle;
   return <IconComponent className={className} />;
@@ -16,45 +16,25 @@ export interface CalloutProps {
   children?: React.ReactNode;
 }
 
-export function Callout({ type = 'info', title, children }: CalloutProps) {
-  const styles = {
-    info: {
-      bg: 'bg-blue-500/10 border-blue-500/30 text-blue-800 dark:text-blue-300',
-      icon: 'Info',
-      iconColor: 'text-blue-500',
-    },
-    warning: {
-      bg: 'bg-amber-500/10 border-amber-500/30 text-amber-800 dark:text-amber-300',
-      icon: 'AlertTriangle',
-      iconColor: 'text-amber-500',
-    },
-    success: {
-      bg: 'bg-emerald-500/10 border-emerald-500/30 text-emerald-800 dark:text-emerald-300',
-      icon: 'CheckCircle2',
-      iconColor: 'text-emerald-500',
-    },
-    error: {
-      bg: 'bg-red-500/10 border-red-500/30 text-red-800 dark:text-red-300',
-      icon: 'OctagonAlert',
-      iconColor: 'text-red-500',
-    },
-    note: {
-      bg: 'bg-purple-500/10 border-purple-500/30 text-purple-800 dark:text-purple-300',
-      icon: 'Sparkles',
-      iconColor: 'text-purple-500',
-    },
-  };
+const CALLOUT_ICONS: Record<string, string> = {
+  info: 'Info',
+  warning: 'AlertTriangle',
+  success: 'CheckCircle2',
+  error: 'OctagonAlert',
+  note: 'Sparkles',
+};
 
-  const style = styles[type] || styles.info;
+export function Callout({ type = 'info', title, children }: CalloutProps) {
+  const variant = CALLOUT_ICONS[type] ? type : 'info';
 
   return (
-    <div className={`my-4 p-4 rounded-xl border backdrop-blur-sm ${style.bg}`}>
-      <div className="flex items-start gap-3">
-        <div className={`mt-0.5 shrink-0 ${style.iconColor}`}>
-          <DynamicIcon name={style.icon} className="w-5 h-5" />
+    <div className={`mdxkit-callout mdxkit-callout--${variant}`}>
+      <div className="mdxkit-callout__row">
+        <div className="mdxkit-callout__icon">
+          <DynamicIcon name={CALLOUT_ICONS[variant]} className="mdxkit-icon-20" />
         </div>
-        <div className="flex-1 text-sm leading-relaxed">
-          {title && <div className="font-semibold text-base mb-1">{title}</div>}
+        <div className="mdxkit-callout__content">
+          {title && <div className="mdxkit-callout__title">{title}</div>}
           <div>{children}</div>
         </div>
       </div>
@@ -75,41 +55,29 @@ export interface CardProps {
 
 export function Card({ title, description, subtitle, icon, badge, children, href }: CardProps) {
   const content = (
-    <div className="group relative p-5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white/60 dark:bg-slate-900/60 backdrop-blur-md shadow-sm hover:shadow-md transition-all duration-200 my-2">
-      <div className="flex items-start justify-between gap-3 mb-2">
-        <div className="flex items-center gap-3">
+    <div className="mdxkit-card">
+      <div className="mdxkit-card__head">
+        <div className="mdxkit-card__identity">
           {icon && (
-            <div className="p-2.5 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
-              <DynamicIcon name={icon} className="w-5 h-5" />
+            <div className="mdxkit-card__icon">
+              <DynamicIcon name={icon} className="mdxkit-icon-20" />
             </div>
           )}
           <div>
-            <h4 className="font-semibold text-slate-900 dark:text-slate-100 text-lg leading-tight">
-              {title}
-            </h4>
-            {subtitle && (
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{subtitle}</p>
-            )}
+            <h4 className="mdxkit-card__title">{title}</h4>
+            {subtitle && <p className="mdxkit-card__subtitle">{subtitle}</p>}
           </div>
         </div>
-        {badge && (
-          <span className="px-2.5 py-1 text-xs font-medium rounded-full bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
-            {badge}
-          </span>
-        )}
+        {badge && <span className="mdxkit-card__badge">{badge}</span>}
       </div>
-      {description && (
-        <p className="text-sm text-slate-600 dark:text-slate-300 my-2 leading-relaxed">
-          {description}
-        </p>
-      )}
-      {children && <div className="mt-3 text-sm">{children}</div>}
+      {description && <p className="mdxkit-card__description">{description}</p>}
+      {children && <div className="mdxkit-card__body">{children}</div>}
     </div>
   );
 
   if (href) {
     return (
-      <a href={href} target="_blank" rel="noopener noreferrer" className="block no-underline">
+      <a href={href} target="_blank" rel="noopener noreferrer" className="mdxkit-card-link">
         {content}
       </a>
     );
@@ -125,14 +93,9 @@ export function CardGrid({
   cols?: number;
   children?: React.ReactNode;
 }) {
-  const gridColsClass =
-    cols === 3
-      ? 'grid-cols-1 md:grid-cols-3'
-      : cols === 4
-      ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4'
-      : 'grid-cols-1 md:grid-cols-2';
+  const columns = cols === 3 ? 3 : cols === 4 ? 4 : 2;
 
-  return <div className={`grid ${gridColsClass} gap-4 my-6`}>{children}</div>;
+  return <div className={`mdxkit-card-grid mdxkit-card-grid--${columns}`}>{children}</div>;
 }
 
 // 3. Stat Card & Grid
@@ -145,27 +108,18 @@ export interface StatProps {
 }
 
 export function Stat({ title, value, change, trend = 'up', icon }: StatProps) {
-  const trendColor =
-    trend === 'up'
-      ? 'text-emerald-500 bg-emerald-500/10'
-      : trend === 'down'
-      ? 'text-rose-500 bg-rose-500/10'
-      : 'text-slate-500 bg-slate-500/10';
+  const direction = trend === 'down' ? 'down' : trend === 'neutral' ? 'neutral' : 'up';
 
   return (
-    <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 backdrop-blur-md">
-      <div className="flex items-center justify-between text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">
+    <div className="mdxkit-stat">
+      <div className="mdxkit-stat__head">
         <span>{title}</span>
-        {icon && <DynamicIcon name={icon} className="w-4 h-4 text-slate-400" />}
+        {icon && <DynamicIcon name={icon} className="mdxkit-icon-16 mdxkit-stat__icon" />}
       </div>
-      <div className="flex items-baseline justify-between mt-2">
-        <span className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
-          {value}
-        </span>
+      <div className="mdxkit-stat__row">
+        <span className="mdxkit-stat__value">{value}</span>
         {change && (
-          <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${trendColor}`}>
-            {change}
-          </span>
+          <span className={`mdxkit-stat__change mdxkit-stat__change--${direction}`}>{change}</span>
         )}
       </div>
     </div>
@@ -179,14 +133,9 @@ export function StatGrid({
   cols?: number;
   children?: React.ReactNode;
 }) {
-  const gridColsClass =
-    cols === 2
-      ? 'grid-cols-1 sm:grid-cols-2'
-      : cols === 4
-      ? 'grid-cols-2 md:grid-cols-4'
-      : 'grid-cols-1 sm:grid-cols-3';
+  const columns = cols === 2 ? 2 : cols === 4 ? 4 : 3;
 
-  return <div className={`grid ${gridColsClass} gap-3 my-4`}>{children}</div>;
+  return <div className={`mdxkit-stat-grid mdxkit-stat-grid--${columns}`}>{children}</div>;
 }
 
 // 4. Tabs & Tab
@@ -206,25 +155,19 @@ export function Tabs({
       : childArray.map((child: any) => child.props?.title || child.props?.label || `Tab`);
 
   return (
-    <div className="my-6 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 overflow-hidden">
-      <div className="flex border-b border-slate-200 dark:border-slate-800 bg-slate-100/70 dark:bg-slate-950/70 px-2 pt-2 gap-1 overflow-x-auto">
+    <div className="mdxkit-tabs">
+      <div className="mdxkit-tabs__list">
         {tabLabels.map((label, idx) => (
           <button
             key={idx}
             onClick={() => setActiveIndex(idx)}
-            className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors whitespace-nowrap ${
-              activeIndex === idx
-                ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-sm border-t border-x border-slate-200 dark:border-slate-800'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
-            }`}
+            className={`mdxkit-tabs__tab${activeIndex === idx ? ' mdxkit-tabs__tab--active' : ''}`}
           >
             {label}
           </button>
         ))}
       </div>
-      <div className="p-5 bg-white dark:bg-slate-900">
-        {childArray[activeIndex] || childArray}
-      </div>
+      <div className="mdxkit-tabs__panel">{childArray[activeIndex] || childArray}</div>
     </div>
   );
 }
@@ -243,27 +186,23 @@ export function Accordion({ items = [] }: { items?: AccordionItem[] }) {
   const [openIndex, setOpenIndex] = useState<number | null>(0);
 
   return (
-    <div className="my-4 divide-y divide-slate-200 dark:divide-slate-800 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden bg-white/50 dark:bg-slate-900/50">
+    <div className="mdxkit-accordion">
       {items.map((item, idx) => {
         const isOpen = openIndex === idx;
         return (
-          <div key={idx} className="transition-colors">
+          <div key={idx} className="mdxkit-accordion__item">
             <button
               onClick={() => setOpenIndex(isOpen ? null : idx)}
-              className="w-full flex items-center justify-between p-4 text-left font-medium text-slate-800 dark:text-slate-200 hover:bg-slate-100/50 dark:hover:bg-slate-800/50 transition-colors"
+              className="mdxkit-accordion__trigger"
             >
               <span>{item.title}</span>
               <Icons.ChevronDown
-                className={`w-4 h-4 transition-transform duration-200 text-slate-400 ${
-                  isOpen ? 'rotate-180 text-indigo-500' : ''
+                className={`mdxkit-icon-16 mdxkit-accordion__chevron${
+                  isOpen ? ' mdxkit-accordion__chevron--open' : ''
                 }`}
               />
             </button>
-            {isOpen && (
-              <div className="p-4 pt-0 text-sm text-slate-600 dark:text-slate-300 leading-relaxed border-t border-slate-100 dark:border-slate-800/50 bg-slate-50/50 dark:bg-slate-950/30">
-                {item.content}
-              </div>
-            )}
+            {isOpen && <div className="mdxkit-accordion__panel">{item.content}</div>}
           </div>
         );
       })}
@@ -288,37 +227,31 @@ export function InteractiveCounter({
   const [count, setCount] = useState(initial);
 
   return (
-    <div className="my-4 p-5 rounded-2xl border border-indigo-200 dark:border-indigo-900 bg-indigo-50/30 dark:bg-indigo-950/30 flex flex-col sm:flex-row items-center justify-between gap-4">
+    <div className="mdxkit-counter">
       <div>
-        <h5 className="font-semibold text-slate-900 dark:text-slate-100 text-base">{title}</h5>
-        <p className="text-xs text-slate-500 dark:text-slate-400">
+        <h5 className="mdxkit-counter__title">{title}</h5>
+        <p className="mdxkit-counter__range">
           Range: {min} to {max} | Step: {step}
         </p>
       </div>
-      <div className="flex items-center gap-3 bg-white dark:bg-slate-900 p-1.5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+      <div className="mdxkit-counter__controls">
         <button
           onClick={() => setCount(Math.max(min, count - step))}
           disabled={count <= min}
-          className="p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40 transition-colors"
+          className="mdxkit-counter__button"
         >
-          <Icons.Minus className="w-4 h-4" />
+          <Icons.Minus className="mdxkit-icon-16" />
         </button>
-        <span className="w-12 text-center font-mono font-bold text-lg text-indigo-600 dark:text-indigo-400">
-          {count}
-        </span>
+        <span className="mdxkit-counter__value">{count}</span>
         <button
           onClick={() => setCount(Math.min(max, count + step))}
           disabled={count >= max}
-          className="p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40 transition-colors"
+          className="mdxkit-counter__button"
         >
-          <Icons.Plus className="w-4 h-4" />
+          <Icons.Plus className="mdxkit-icon-16" />
         </button>
-        <button
-          onClick={() => setCount(initial)}
-          title="Reset"
-          className="p-2 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors ml-1 border-l border-slate-200 dark:border-slate-800"
-        >
-          <Icons.RotateCcw className="w-3.5 h-3.5" />
+        <button onClick={() => setCount(initial)} title="Reset" className="mdxkit-counter__reset">
+          <Icons.RotateCcw className="mdxkit-icon-14" />
         </button>
       </div>
     </div>
@@ -326,6 +259,8 @@ export function InteractiveCounter({
 }
 
 // 7. Progress Bar
+const PROGRESS_COLORS = new Set(['indigo', 'emerald', 'amber', 'rose', 'purple', 'cyan']);
+
 export function ProgressBar({
   progress = 50,
   label,
@@ -335,28 +270,19 @@ export function ProgressBar({
   label?: string;
   color?: string;
 }) {
-  const colorMap: Record<string, string> = {
-    indigo: 'bg-indigo-600',
-    emerald: 'bg-emerald-500',
-    amber: 'bg-amber-500',
-    rose: 'bg-rose-500',
-    purple: 'bg-purple-600',
-    cyan: 'bg-cyan-500',
-  };
-
-  const bg = colorMap[color] || 'bg-indigo-600';
+  const tone = PROGRESS_COLORS.has(color) ? color : 'indigo';
 
   return (
-    <div className="my-4">
+    <div className="mdxkit-progress">
       {(label || progress !== undefined) && (
-        <div className="flex justify-between text-xs font-semibold mb-1.5 text-slate-700 dark:text-slate-300">
+        <div className="mdxkit-progress__labels">
           <span>{label}</span>
           <span>{progress}%</span>
         </div>
       )}
-      <div className="w-full h-2.5 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
+      <div className="mdxkit-progress__track">
         <div
-          className={`h-full ${bg} transition-all duration-500 rounded-full`}
+          className={`mdxkit-progress__fill mdxkit-progress__fill--${tone}`}
           style={{ width: `${Math.min(100, Math.max(0, progress))}%` }}
         />
       </div>
@@ -374,19 +300,15 @@ export interface TimelineItem {
 
 export function Timeline({ items = [] }: { items?: TimelineItem[] }) {
   return (
-    <div className="my-6 relative pl-6 border-l-2 border-indigo-500/30 space-y-6">
+    <div className="mdxkit-timeline">
       {items.map((item, idx) => (
-        <div key={idx} className="relative group">
-          <div className="absolute -left-[31px] top-1 p-1.5 rounded-full bg-white dark:bg-slate-900 border-2 border-indigo-500 text-indigo-500">
-            <DynamicIcon name={item.icon || 'CircleDot'} className="w-3.5 h-3.5" />
+        <div key={idx} className="mdxkit-timeline__item">
+          <div className="mdxkit-timeline__marker">
+            <DynamicIcon name={item.icon || 'CircleDot'} className="mdxkit-icon-14" />
           </div>
-          <div className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 mb-0.5">
-            {item.date}
-          </div>
-          <h5 className="font-semibold text-slate-900 dark:text-slate-100 text-base">
-            {item.title}
-          </h5>
-          <p className="text-sm text-slate-600 dark:text-slate-300 mt-1">{item.description}</p>
+          <div className="mdxkit-timeline__date">{item.date}</div>
+          <h5 className="mdxkit-timeline__title">{item.title}</h5>
+          <p className="mdxkit-timeline__description">{item.description}</p>
         </div>
       ))}
     </div>
@@ -394,7 +316,7 @@ export function Timeline({ items = [] }: { items?: TimelineItem[] }) {
 }
 
 export function Steps({ children }: { children?: React.ReactNode }) {
-  return <div className="my-6 space-y-4">{children}</div>;
+  return <div className="mdxkit-steps">{children}</div>;
 }
 
 export function Step({
@@ -407,15 +329,11 @@ export function Step({
   children?: React.ReactNode;
 }) {
   return (
-    <div className="flex gap-4 p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white/40 dark:bg-slate-900/40">
-      <div className="w-8 h-8 rounded-full bg-indigo-600 text-white font-bold flex items-center justify-center shrink-0 text-sm">
-        {number}
-      </div>
+    <div className="mdxkit-step">
+      <div className="mdxkit-step__number">{number}</div>
       <div>
-        <h5 className="font-semibold text-slate-900 dark:text-slate-100 text-base">{title}</h5>
-        <div className="text-sm text-slate-600 dark:text-slate-300 mt-1 leading-relaxed">
-          {children}
-        </div>
+        <h5 className="mdxkit-step__title">{title}</h5>
+        <div className="mdxkit-step__body">{children}</div>
       </div>
     </div>
   );
@@ -424,23 +342,17 @@ export function Step({
 // 10. Kbd & Badge & InlineCode
 export function InlineCode({ children }: { children?: React.ReactNode }) {
   return (
-    <InlineToken
-      as="code"
-      kind="code"
-      appearanceClassName="dark:bg-slate-800/80 dark:text-cyan-300 dark:border-slate-700/50"
-    >
+    <InlineToken as="code" kind="code">
       {children}
     </InlineToken>
   );
 }
 
 export function Kbd({ children }: { children?: React.ReactNode }) {
-  return (
-    <kbd className="px-2 py-1 text-xs font-mono font-semibold text-slate-800 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md shadow-xs">
-      {children}
-    </kbd>
-  );
+  return <kbd className="mdxkit-kbd">{children}</kbd>;
 }
+
+const BADGE_VARIANTS = new Set(['indigo', 'emerald', 'rose', 'amber', 'slate']);
 
 export function Badge({
   variant = 'indigo',
@@ -451,21 +363,11 @@ export function Badge({
   icon?: string;
   children?: React.ReactNode;
 }) {
-  const styles: Record<string, string> = {
-    indigo: 'bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800',
-    emerald: 'bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800',
-    rose: 'bg-rose-100 dark:bg-rose-950 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800',
-    amber: 'bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800',
-    slate: 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700',
-  };
-
-  const style = styles[variant] || styles.indigo;
+  const tone = BADGE_VARIANTS.has(variant) ? variant : 'indigo';
 
   return (
-    <span
-      className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 text-xs font-semibold rounded-full border ${style} mx-1`}
-    >
-      {icon && <DynamicIcon name={icon} className="w-3.5 h-3.5" />}
+    <span className={`mdxkit-badge mdxkit-badge--${tone}`}>
+      {icon && <DynamicIcon name={icon} className="mdxkit-icon-14" />}
       {children}
     </span>
   );
@@ -490,20 +392,13 @@ export function Button({
     if (onClick) onClick();
   };
 
-  const styles = {
-    primary: 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm',
-    secondary: 'bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-900 dark:text-slate-100',
-    outline: 'border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200',
-  };
+  const tone = variant === 'secondary' || variant === 'outline' ? variant : 'primary';
 
   return (
-    <button
-      onClick={handleClick}
-      className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-150 ${styles[variant]} active:scale-95 my-2`}
-    >
-      {icon && <DynamicIcon name={icon} className="w-4 h-4" />}
+    <button onClick={handleClick} className={`mdxkit-button mdxkit-button--${tone}`}>
+      {icon && <DynamicIcon name={icon} className="mdxkit-icon-16" />}
       {children}
-      {clicked && <Icons.Check className="w-4 h-4 text-emerald-400 ml-1" />}
+      {clicked && <Icons.Check className="mdxkit-icon-16 mdxkit-button__done" />}
     </button>
   );
 }
@@ -524,36 +419,36 @@ export function TableComponent({
   const effectiveRows: any[][] = rows.length > 0 ? rows : (Array.isArray(data) && Array.isArray(data[0]) ? data : []);
 
   return (
-    <div className="my-6 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 shadow-xs overflow-hidden backdrop-blur-md">
+    <div className="mdxkit-datatable">
       {title && (
-        <div className="px-5 py-3.5 border-b border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-950/80 font-semibold text-slate-900 dark:text-slate-100 text-sm flex items-center gap-2">
-          <Icons.Table className="w-4 h-4 text-indigo-500" />
+        <div className="mdxkit-datatable__caption">
+          <Icons.Table className="mdxkit-icon-16 mdxkit-datatable__caption-icon" />
           <span>{title}</span>
         </div>
       )}
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm text-left border-collapse">
+      <div className="mdxkit-datatable__scroll">
+        <table className="mdxkit-table">
           {headers.length > 0 && (
-            <thead className="bg-slate-100/90 dark:bg-slate-800/90 text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 border-b border-slate-200 dark:border-slate-700">
+            <thead className="mdxkit-thead">
               <tr>
                 {headers.map((h, i) => (
-                  <th key={i} className="px-5 py-3.5 font-bold border-r last:border-r-0 border-slate-200/70 dark:border-slate-700/70 whitespace-nowrap">
+                  <th key={i} className="mdxkit-datatable__th">
                     {h}
                   </th>
                 ))}
               </tr>
             </thead>
           )}
-          <tbody className="divide-y divide-slate-200/80 dark:divide-slate-800/80 text-slate-700 dark:text-slate-300">
+          <tbody className="mdxkit-tbody">
             {effectiveRows.map((row, rIdx) => (
               <tr
                 key={rIdx}
-                className={`hover:bg-indigo-50/50 dark:hover:bg-indigo-950/30 transition-colors ${
-                  striped && rIdx % 2 === 1 ? 'bg-slate-50/40 dark:bg-slate-900/30' : ''
+                className={`mdxkit-tr${
+                  striped && rIdx % 2 === 1 ? ' mdxkit-datatable__row--striped' : ''
                 }`}
               >
                 {row.map((cell: any, cIdx: number) => (
-                  <td key={cIdx} className="px-5 py-3.5 border-r last:border-r-0 border-slate-200/50 dark:border-slate-800/50">
+                  <td key={cIdx} className="mdxkit-datatable__td">
                     {cell}
                   </td>
                 ))}

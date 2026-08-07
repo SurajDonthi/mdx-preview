@@ -1,0 +1,426 @@
+/*
+ * @mdxkit/flow — the architecture map's chrome and SVG palette.
+ *
+ *   import '@mdxkit/flow/styles.css';
+ *
+ * The drawing is an inline SVG, so its fills and strokes are CSS properties
+ * (`fill`, `stroke`) driven by the same custom properties as the surrounding
+ * card. That is what makes the diagram follow the application's theme instead
+ * of the operating system's: `data-mdxkit-theme` on an ancestor is the only
+ * signal, and `prefers-color-scheme` is never consulted.
+ *
+ * Anything that varies per node - a flow's tone, a node kind's accent - stays
+ * an inline value, because it comes from the document, not from the theme.
+ *
+ * The token defaults repeat the ones in `@mdxkit/react/styles.css` so this
+ * sheet also stands alone. Loading both is harmless: the values are identical.
+ */
+/* Pins the reset layer's position; see @mdxkit/react/styles.css. */
+@layer mdxkit-reset;
+
+
+:where(:root),
+:where([data-mdxkit-theme='light']) {
+  --mdxkit-flow-bg: color-mix(in oklab, #fff 90%, transparent);
+  --mdxkit-flow-border: oklch(92.9% 0.013 255.508); /* slate-200 */
+  --mdxkit-flow-header-bg: oklch(98.4% 0.003 247.858); /* slate-50 */
+  --mdxkit-flow-title-fg: oklch(37.2% 0.044 257.287); /* slate-700 */
+  --mdxkit-flow-subtitle-fg: oklch(55.4% 0.046 257.417); /* slate-500 */
+  --mdxkit-flow-icon: oklch(58.5% 0.233 277.117); /* indigo-500 */
+  --mdxkit-flow-label-fg: oklch(55.4% 0.046 257.417); /* slate-500 */
+  --mdxkit-flow-hint-fg: oklch(70.4% 0.04 256.788); /* slate-400 */
+  --mdxkit-flow-action-fg: oklch(51.1% 0.262 276.966); /* indigo-600 */
+  --mdxkit-flow-chip-fg: oklch(44.6% 0.043 257.281); /* slate-600 */
+  --mdxkit-flow-chip-bg-hover: color-mix(in oklab, oklch(98.4% 0.003 247.858) 100%, transparent);
+  --mdxkit-flow-chip-on-bg: oklch(96.8% 0.007 247.896); /* slate-100 */
+  --mdxkit-flow-chip-on-fg: oklch(20.8% 0.042 265.755); /* slate-900 */
+  --mdxkit-flow-tip-bg: #fff;
+  --mdxkit-flow-tip-border: oklch(92.9% 0.013 255.508); /* slate-200 */
+  --mdxkit-flow-tip-title-fg: oklch(20.8% 0.042 265.755); /* slate-900 */
+  --mdxkit-flow-tip-meta-fg: oklch(51.1% 0.262 276.966); /* indigo-600 */
+  --mdxkit-flow-tip-body-fg: oklch(44.6% 0.043 257.281); /* slate-600 */
+
+  /* SVG palette */
+  --mdxkit-flow-band-fill: #f8fafc;
+  --mdxkit-flow-band-stroke: #e2e8f0;
+  --mdxkit-flow-band-label: #64748b;
+  --mdxkit-flow-node-fill: #ffffff;
+  --mdxkit-flow-node-stroke: #cbd5e1;
+  --mdxkit-flow-node-text: #0f172a;
+  --mdxkit-flow-node-meta: #64748b;
+  --mdxkit-flow-edge: #94a3b8;
+  --mdxkit-flow-edge-label: #64748b;
+  --mdxkit-flow-edge-label-bg: #ffffff;
+  --mdxkit-flow-accent-fallback: #94a3b8;
+}
+
+:where([data-mdxkit-theme='dark']) {
+  --mdxkit-flow-bg: color-mix(in oklab, oklch(12.9% 0.042 264.695) 90%, transparent);
+  --mdxkit-flow-border: oklch(27.9% 0.041 260.031); /* slate-800 */
+  --mdxkit-flow-header-bg: oklch(20.8% 0.042 265.755); /* slate-900 */
+  --mdxkit-flow-title-fg: oklch(86.9% 0.022 252.894); /* slate-300 */
+  --mdxkit-flow-subtitle-fg: oklch(70.4% 0.04 256.788); /* slate-400 */
+  --mdxkit-flow-icon: oklch(58.5% 0.233 277.117); /* indigo-500 */
+  --mdxkit-flow-label-fg: oklch(70.4% 0.04 256.788); /* slate-400 */
+  --mdxkit-flow-hint-fg: oklch(55.4% 0.046 257.417); /* slate-500 */
+  --mdxkit-flow-action-fg: oklch(67.3% 0.182 276.935); /* indigo-400 */
+  --mdxkit-flow-chip-fg: oklch(86.9% 0.022 252.894); /* slate-300 */
+  --mdxkit-flow-chip-bg-hover: color-mix(in oklab, oklch(27.9% 0.041 260.031) 60%, transparent);
+  --mdxkit-flow-chip-on-bg: oklch(27.9% 0.041 260.031); /* slate-800 */
+  --mdxkit-flow-chip-on-fg: oklch(96.8% 0.007 247.896); /* slate-100 */
+  --mdxkit-flow-tip-bg: oklch(20.8% 0.042 265.755); /* slate-900 */
+  --mdxkit-flow-tip-border: oklch(37.2% 0.044 257.287); /* slate-700 */
+  --mdxkit-flow-tip-title-fg: oklch(96.8% 0.007 247.896); /* slate-100 */
+  --mdxkit-flow-tip-meta-fg: oklch(67.3% 0.182 276.935); /* indigo-400 */
+  --mdxkit-flow-tip-body-fg: oklch(86.9% 0.022 252.894); /* slate-300 */
+
+  --mdxkit-flow-band-fill: #0b1220;
+  --mdxkit-flow-band-stroke: #1e293b;
+  --mdxkit-flow-band-label: #94a3b8;
+  --mdxkit-flow-node-fill: #111c2e;
+  --mdxkit-flow-node-stroke: #334155;
+  --mdxkit-flow-node-text: #e2e8f0;
+  --mdxkit-flow-node-meta: #94a3b8;
+  --mdxkit-flow-edge: #64748b;
+  --mdxkit-flow-edge-label: #94a3b8;
+  --mdxkit-flow-edge-label-bg: #0b1220;
+  --mdxkit-flow-accent-fallback: #64748b;
+}
+
+:where(:root),
+:where([data-mdxkit-theme]) {
+  --mdxkit-space-1: 0.25rem;
+  --mdxkit-space-1-5: 0.375rem;
+  --mdxkit-space-2: 0.5rem;
+  --mdxkit-space-2-5: 0.625rem;
+  --mdxkit-space-3: 0.75rem;
+  --mdxkit-space-4: 1rem;
+  --mdxkit-space-6: 1.5rem;
+  --mdxkit-radius-lg: 0.5rem;
+  --mdxkit-radius-xl: 0.75rem;
+  --mdxkit-radius-2xl: 1rem;
+  --mdxkit-radius-full: 9999px;
+  --mdxkit-text-2xs: 0.625rem;
+  --mdxkit-text-2xs-plus: 0.6875rem;
+  --mdxkit-text-xs: 0.75rem;
+  --mdxkit-weight-medium: 500;
+  --mdxkit-weight-semibold: 600;
+  --mdxkit-weight-bold: 700;
+  --mdxkit-tracking-wider: 0.05em;
+  --mdxkit-leading-snug: 1.375;
+  --mdxkit-shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --mdxkit-shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+  --mdxkit-shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  --mdxkit-blur-md: 12px;
+  --mdxkit-transition-duration: 150ms;
+  --mdxkit-transition-timing: cubic-bezier(0.4, 0, 0.2, 1);
+  --mdxkit-font-mono:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New',
+    monospace;
+}
+
+/* ------------------------------------------------------------------ *
+ * Shell
+ * ------------------------------------------------------------------ */
+
+.mdxkit-flow {
+  margin-block: var(--mdxkit-space-6);
+  border-radius: var(--mdxkit-radius-2xl);
+  border: 1px solid var(--mdxkit-flow-border);
+  background-color: var(--mdxkit-flow-bg);
+  backdrop-filter: blur(var(--mdxkit-blur-md));
+  -webkit-backdrop-filter: blur(var(--mdxkit-blur-md));
+  box-shadow: var(--mdxkit-shadow-sm);
+  transition:
+    color var(--mdxkit-transition-duration) var(--mdxkit-transition-timing),
+    background-color var(--mdxkit-transition-duration) var(--mdxkit-transition-timing),
+    border-color var(--mdxkit-transition-duration) var(--mdxkit-transition-timing);
+}
+
+/* The export sheet is opaque, unblurred and still. */
+.mdxkit-flow--pdf {
+  background-color: #fff;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: none;
+  transition: none;
+}
+
+.mdxkit-flow__empty {
+  display: flex;
+  align-items: center;
+  gap: var(--mdxkit-space-2);
+  padding: var(--mdxkit-space-4);
+  font-size: var(--mdxkit-text-xs);
+  line-height: calc(1 / 0.75);
+  font-family: var(--mdxkit-font-mono);
+  color: var(--mdxkit-flow-label-fg);
+}
+
+.mdxkit-flow__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--mdxkit-space-2);
+  padding: var(--mdxkit-space-2-5) var(--mdxkit-space-4);
+  border-bottom: 1px solid var(--mdxkit-flow-border);
+  background-color: var(--mdxkit-flow-header-bg);
+  border-top-left-radius: var(--mdxkit-radius-2xl);
+  border-top-right-radius: var(--mdxkit-radius-2xl);
+}
+
+.mdxkit-flow__heading {
+  display: flex;
+  align-items: center;
+  gap: var(--mdxkit-space-2);
+  min-width: 0;
+}
+
+.mdxkit-flow__title {
+  font-size: var(--mdxkit-text-xs);
+  line-height: calc(1 / 0.75);
+  font-weight: var(--mdxkit-weight-semibold);
+  color: var(--mdxkit-flow-title-fg);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mdxkit-flow__subtitle {
+  font-size: var(--mdxkit-text-2xs-plus);
+  color: var(--mdxkit-flow-subtitle-fg);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+.mdxkit-flow__body { display: flex; }
+.mdxkit-flow__body--stacked { flex-direction: column; }
+.mdxkit-flow__body--side { flex-direction: row; align-items: stretch; }
+
+.mdxkit-flow__diagram {
+  min-width: 0;
+  flex: 1 1 0%;
+  position: relative;
+}
+
+.mdxkit-flow__canvas {
+  position: relative;
+  padding: var(--mdxkit-space-3) var(--mdxkit-space-2);
+  overflow: hidden;
+}
+
+/* ------------------------------------------------------------------ *
+ * SVG palette
+ * ------------------------------------------------------------------ */
+
+.mdxkit-flow__svg {
+  display: block;
+  overflow: visible;
+  font-family:
+    ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+
+.mdxkit-flow__band { fill: var(--mdxkit-flow-band-fill); stroke: var(--mdxkit-flow-band-stroke); }
+.mdxkit-flow__band-label { fill: var(--mdxkit-flow-band-label); }
+.mdxkit-flow__node-box { fill: var(--mdxkit-flow-node-fill); stroke: var(--mdxkit-flow-node-stroke); }
+.mdxkit-flow__node-text { fill: var(--mdxkit-flow-node-text); }
+.mdxkit-flow__node-meta { fill: var(--mdxkit-flow-node-meta); }
+.mdxkit-flow__node-accent { fill: var(--mdxkit-flow-accent-fallback); }
+.mdxkit-flow__edge { stroke: var(--mdxkit-flow-edge); }
+.mdxkit-flow__edge-arrow { fill: var(--mdxkit-flow-edge); }
+.mdxkit-flow__edge-label {
+  fill: var(--mdxkit-flow-edge-label);
+  stroke: var(--mdxkit-flow-edge-label-bg);
+}
+.mdxkit-flow__node-group { cursor: pointer; outline: none; }
+
+/* ------------------------------------------------------------------ *
+ * Tooltip
+ * ------------------------------------------------------------------ */
+
+.mdxkit-flow__tooltip {
+  pointer-events: none;
+  position: absolute;
+  z-index: 20;
+}
+
+.mdxkit-flow__tooltip-card {
+  border-radius: var(--mdxkit-radius-xl);
+  border: 1px solid var(--mdxkit-flow-tip-border);
+  background-color: var(--mdxkit-flow-tip-bg);
+  box-shadow: var(--mdxkit-shadow-lg);
+  padding: var(--mdxkit-space-2) var(--mdxkit-space-3);
+  width: max-content;
+  max-width: 260px;
+}
+
+.mdxkit-flow__tooltip-title {
+  font-size: var(--mdxkit-text-2xs-plus);
+  font-weight: var(--mdxkit-weight-semibold);
+  color: var(--mdxkit-flow-tip-title-fg);
+  line-height: var(--mdxkit-leading-snug);
+}
+
+.mdxkit-flow__tooltip-meta {
+  font-size: var(--mdxkit-text-2xs);
+  font-family: var(--mdxkit-font-mono);
+  color: var(--mdxkit-flow-tip-meta-fg);
+  margin-top: 0.125rem;
+}
+
+.mdxkit-flow__tooltip-body {
+  font-size: var(--mdxkit-text-2xs-plus);
+  color: var(--mdxkit-flow-tip-body-fg);
+  margin-top: var(--mdxkit-space-1);
+  line-height: 1.625;
+  white-space: normal;
+}
+
+/* ------------------------------------------------------------------ *
+ * Flows panel
+ * ------------------------------------------------------------------ */
+
+.mdxkit-flow__panel { padding: var(--mdxkit-space-3); }
+.mdxkit-flow__panel--stacked { border-top: 1px solid var(--mdxkit-flow-border); }
+.mdxkit-flow__panel--side {
+  width: 244px;
+  flex-shrink: 0;
+  border-left: 1px solid var(--mdxkit-flow-border);
+}
+
+.mdxkit-flow__panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--mdxkit-space-2);
+  margin-bottom: var(--mdxkit-space-2);
+}
+
+.mdxkit-flow__panel-title {
+  font-size: var(--mdxkit-text-2xs);
+  font-weight: var(--mdxkit-weight-bold);
+  text-transform: uppercase;
+  letter-spacing: var(--mdxkit-tracking-wider);
+  color: var(--mdxkit-flow-label-fg);
+}
+
+.mdxkit-flow__panel-count {
+  font-size: var(--mdxkit-text-2xs);
+  color: var(--mdxkit-flow-hint-fg);
+}
+
+/* The PDF variant of the count used the muted colour, not the fainter one. */
+.mdxkit-flow--pdf .mdxkit-flow__panel-count { color: var(--mdxkit-flow-label-fg); }
+
+.mdxkit-flow__reset {
+  display: flex;
+  align-items: center;
+  gap: var(--mdxkit-space-1);
+  font-size: var(--mdxkit-text-2xs);
+  font-weight: var(--mdxkit-weight-semibold);
+  color: var(--mdxkit-flow-action-fg);
+  cursor: pointer;
+}
+
+.mdxkit-flow__reset:hover { text-decoration: underline; }
+
+.mdxkit-flow__list { display: flex; flex-direction: column; gap: var(--mdxkit-space-1-5); }
+
+.mdxkit-flow__list--stacked {
+  display: grid;
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+  gap: var(--mdxkit-space-1-5);
+}
+
+@media (width >= 40rem) {
+  .mdxkit-flow__list--stacked { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+.mdxkit-flow__chip {
+  text-align: left;
+  padding: var(--mdxkit-space-2) var(--mdxkit-space-2-5);
+  border-radius: var(--mdxkit-radius-lg);
+  border: 1px solid var(--mdxkit-flow-border);
+  color: var(--mdxkit-flow-chip-fg);
+  cursor: pointer;
+  transition:
+    color var(--mdxkit-transition-duration) var(--mdxkit-transition-timing),
+    background-color var(--mdxkit-transition-duration) var(--mdxkit-transition-timing);
+}
+
+.mdxkit-flow__chip:hover { background-color: var(--mdxkit-flow-chip-bg-hover); }
+
+.mdxkit-flow__chip--on {
+  border-color: transparent;
+  background-color: var(--mdxkit-flow-chip-on-bg);
+  color: var(--mdxkit-flow-chip-on-fg);
+  box-shadow: var(--mdxkit-shadow-xs);
+}
+
+.mdxkit-flow__chip--on:hover { background-color: var(--mdxkit-flow-chip-on-bg); }
+
+/* The export pass renders the flows as static entries, not as buttons. */
+.mdxkit-flow__chip--static {
+  text-align: left;
+  padding: var(--mdxkit-space-2) var(--mdxkit-space-2-5);
+  border-radius: var(--mdxkit-radius-lg);
+  border: 1px solid var(--mdxkit-flow-border);
+  color: var(--mdxkit-flow-chip-static-fg, oklch(27.9% 0.041 260.031));
+}
+
+.mdxkit-flow__chip-head {
+  display: flex;
+  align-items: center;
+  gap: var(--mdxkit-space-2);
+  min-width: 0;
+}
+
+.mdxkit-flow__chip-swatch {
+  width: var(--mdxkit-space-2);
+  height: var(--mdxkit-space-2);
+  border-radius: var(--mdxkit-radius-full);
+  flex-shrink: 0;
+}
+
+.mdxkit-flow__chip-label {
+  font-size: 0.71875rem;
+  font-weight: var(--mdxkit-weight-medium);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mdxkit-flow__chip-summary {
+  display: block;
+  font-size: 0.65625rem;
+  color: var(--mdxkit-flow-label-fg);
+  margin-top: var(--mdxkit-space-1);
+  line-height: var(--mdxkit-leading-snug);
+  white-space: normal;
+}
+
+.mdxkit-flow__chip-path {
+  display: block;
+  font-size: var(--mdxkit-text-2xs);
+  font-family: var(--mdxkit-font-mono);
+  color: var(--mdxkit-flow-label-fg);
+  margin-top: var(--mdxkit-space-1);
+  line-height: var(--mdxkit-leading-snug);
+  white-space: normal;
+  overflow-wrap: break-word;
+}
+
+.mdxkit-flow__hint {
+  margin-top: var(--mdxkit-space-2-5);
+  font-size: var(--mdxkit-text-2xs);
+  color: var(--mdxkit-flow-hint-fg);
+  line-height: var(--mdxkit-leading-snug);
+}
+
+.mdxkit-flow__icon-12 { width: 0.75rem; height: 0.75rem; }
+.mdxkit-flow__icon-14 { width: 0.875rem; height: 0.875rem; }
+.mdxkit-flow__icon-16 { width: 1rem; height: 1rem; }
+.mdxkit-flow__icon-accent { color: var(--mdxkit-flow-icon); flex-shrink: 0; }

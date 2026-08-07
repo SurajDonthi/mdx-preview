@@ -40,10 +40,8 @@ export function Chart({
   color = '#6366f1',
 }: ChartProps) {
   return (
-    <div className="my-6 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md">
-      {title && (
-        <h5 className="text-sm font-semibold text-slate-800 dark:text-slate-200 mb-4">{title}</h5>
-      )}
+    <div className="mdxkit-chart">
+      {title && <h5 className="mdxkit-chart__title">{title}</h5>}
       <div style={{ width: '100%', height }}>
         <ResponsiveContainer>
           {type === 'bar' ? (

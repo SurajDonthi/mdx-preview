@@ -1,0 +1,56 @@
+/*
+ * @mdxkit/charts — the frame around a Recharts figure.
+ *
+ *   import '@mdxkit/charts/styles.css';
+ *
+ * Recharts draws the series itself from props, so only the card is styled here.
+ * Theme comes from `data-mdxkit-theme` on an ancestor, never from
+ * `prefers-color-scheme`.
+ *
+ * The token defaults repeat the ones in `@mdxkit/react/styles.css` so this
+ * sheet also stands alone. Loading both is harmless: the values are identical.
+ */
+/* Pins the reset layer's position; see @mdxkit/react/styles.css. */
+@layer mdxkit-reset;
+
+
+:where(:root),
+:where([data-mdxkit-theme='light']) {
+  --mdxkit-chart-bg: color-mix(in oklab, #fff 80%, transparent);
+  --mdxkit-chart-border: oklch(92.9% 0.013 255.508); /* slate-200 */
+  --mdxkit-chart-title-fg: oklch(27.9% 0.041 260.031); /* slate-800 */
+}
+
+:where([data-mdxkit-theme='dark']) {
+  --mdxkit-chart-bg: color-mix(in oklab, oklch(20.8% 0.042 265.755) 80%, transparent);
+  --mdxkit-chart-border: oklch(27.9% 0.041 260.031); /* slate-800 */
+  --mdxkit-chart-title-fg: oklch(92.9% 0.013 255.508); /* slate-200 */
+}
+
+:where(:root),
+:where([data-mdxkit-theme]) {
+  --mdxkit-space-4: 1rem;
+  --mdxkit-space-6: 1.5rem;
+  --mdxkit-radius-2xl: 1rem;
+  --mdxkit-text-sm: 0.875rem;
+  --mdxkit-weight-semibold: 600;
+  --mdxkit-blur-md: 12px;
+}
+
+.mdxkit-chart {
+  margin-block: var(--mdxkit-space-6);
+  padding: var(--mdxkit-space-4);
+  border-radius: var(--mdxkit-radius-2xl);
+  border: 1px solid var(--mdxkit-chart-border);
+  background-color: var(--mdxkit-chart-bg);
+  backdrop-filter: blur(var(--mdxkit-blur-md));
+  -webkit-backdrop-filter: blur(var(--mdxkit-blur-md));
+}
+
+.mdxkit-chart__title {
+  font-size: var(--mdxkit-text-sm);
+  line-height: calc(1.25 / 0.875);
+  font-weight: var(--mdxkit-weight-semibold);
+  color: var(--mdxkit-chart-title-fg);
+  margin-bottom: var(--mdxkit-space-4);
+}

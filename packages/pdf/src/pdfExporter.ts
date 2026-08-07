@@ -195,13 +195,20 @@ function applyLightExportStyles(root: HTMLElement): void {
           'border-color': '#e2e8f0',
         });
       });
-    frontmatter.querySelectorAll<HTMLElement>('span.rounded-full, span.rounded-md').forEach((element) => {
-      setStyles(element, {
-        'background-color': '#eef2ff',
-        color: '#3730a3',
-        'border-color': '#c7d2fe',
+    // The pills used to be found by their utility classes. They now say what
+    // they are, so the selector no longer depends on how they are styled - the
+    // legacy class selectors stay for markup this exporter did not produce.
+    frontmatter
+      .querySelectorAll<HTMLElement>(
+        '[data-pdf-frontmatter-pill], [data-inline-token], span.rounded-full, span.rounded-md'
+      )
+      .forEach((element) => {
+        setStyles(element, {
+          'background-color': '#eef2ff',
+          color: '#3730a3',
+          'border-color': '#c7d2fe',
+        });
       });
-    });
   });
 
   // The blanket pass above clears every background. Small solid swatches (the

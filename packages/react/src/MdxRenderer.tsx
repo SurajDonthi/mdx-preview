@@ -77,9 +77,9 @@ class MdxErrorBoundary extends Component<
   render() {
     if (this.state.hasError) {
       return (
-        <div className="p-4 my-4 rounded-xl border border-amber-500/30 bg-amber-500/10 text-amber-800 dark:text-amber-300 text-xs font-mono">
-          <div className="font-semibold flex items-center gap-2 text-sm mb-1">
-            <Icons.AlertTriangle className="w-4 h-4 text-amber-500" />
+        <div className="mdxkit-alert mdxkit-alert--boundary">
+          <div className="mdxkit-alert__title">
+            <Icons.AlertTriangle className="mdxkit-icon-16 mdxkit-alert__icon" />
             <span>MDX Component Error</span>
           </div>
           <div>{this.state.error?.message || 'A component threw while rendering.'}</div>
@@ -128,29 +128,24 @@ function CodeBlock({
   };
 
   return (
-    <div className="relative my-5 rounded-2xl overflow-hidden border border-slate-700/50 bg-slate-950 text-slate-100 shadow-lg group">
+    <div className="mdxkit-code">
       {/* Code Header Bar */}
-      <div className="flex items-center justify-between px-4 py-2 bg-slate-900 border-b border-slate-800 text-xs text-slate-400 font-mono">
-        <span className="flex items-center gap-2">
-          <span className="w-2.5 h-2.5 rounded-full bg-rose-500/80 inline-block" />
-          <span className="w-2.5 h-2.5 rounded-full bg-amber-500/80 inline-block" />
-          <span className="w-2.5 h-2.5 rounded-full bg-emerald-500/80 inline-block" />
-          <span className="ml-2 font-semibold text-slate-300 uppercase tracking-wider text-[10px]">
-            {cleanLang}
-          </span>
+      <div className="mdxkit-code__header">
+        <span className="mdxkit-code__dots">
+          <span className="mdxkit-code__dot mdxkit-code__dot--red" />
+          <span className="mdxkit-code__dot mdxkit-code__dot--amber" />
+          <span className="mdxkit-code__dot mdxkit-code__dot--green" />
+          <span className="mdxkit-code__lang">{cleanLang}</span>
         </span>
-        <button
-          onClick={handleCopy}
-          className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors"
-        >
+        <button onClick={handleCopy} className="mdxkit-code__copy">
           {copied ? (
             <>
-              <Icons.Check className="w-3.5 h-3.5 text-emerald-400" />
-              <span className="text-emerald-400">Copied</span>
+              <Icons.Check className="mdxkit-icon-14 mdxkit-code__copied" />
+              <span className="mdxkit-code__copied">Copied</span>
             </>
           ) : (
             <>
-              <Icons.Copy className="w-3.5 h-3.5" />
+              <Icons.Copy className="mdxkit-icon-14" />
               <span>Copy</span>
             </>
           )}
@@ -158,8 +153,8 @@ function CodeBlock({
       </div>
 
       {/* Highlighting Content */}
-      <div className="p-4 overflow-x-auto custom-scrollbar font-mono text-xs leading-relaxed">
-        <pre className="m-0 p-0 bg-transparent">
+      <div className="mdxkit-code__body mdxkit-scrollbar">
+        <pre className="mdxkit-code__pre">
           <code
             className={`language-${cleanLang}`}
             dangerouslySetInnerHTML={{ __html: highlightedCode }}
@@ -212,13 +207,15 @@ function CustomCodeElement({
     );
   }
 
-  // Inline code rendering
+  // Inline code rendering. A backtick span follows the theme preset's own code
+  // colours - `--mdxkit-inline-code-*`, set on the renderer root - which is what
+  // threading `codeBgClass`/`codeTextClass` through here used to achieve.
   return (
     <InlineToken
       as="code"
       kind="code"
       tone={themeConfig.category}
-      appearanceClassName={`${themeConfig.codeBgClass} ${themeConfig.codeTextClass}`}
+      appearanceClassName="mdxkit-token--themed"
       {...props}
     >
       {children}
@@ -240,13 +237,10 @@ function getUnknownComponent(name: string): React.ComponentType<any> {
 
   const UnknownMdxComponent = ({ children }: { children?: React.ReactNode }) => (
     <>
-      <span
-        data-mdx-unknown-component={name}
-        className="inline-flex items-center gap-1.5 align-middle px-2 py-0.5 mx-0.5 my-1 rounded-md border border-dashed border-rose-400/60 bg-rose-500/10 text-rose-700 dark:text-rose-300 text-xs font-mono"
-      >
-        <Icons.HelpCircle className="w-3.5 h-3.5 shrink-0" />
+      <span data-mdx-unknown-component={name} className="mdxkit-unknown">
+        <Icons.HelpCircle className="mdxkit-icon-14 mdxkit-shrink-0" />
         <span>
-          Unknown component <strong className="font-semibold">{`<${name}>`}</strong>
+          Unknown component <strong>{`<${name}>`}</strong>
         </span>
       </span>
       {children}
@@ -609,31 +603,31 @@ export function MdxRenderer({
         });
 
         if (hasBlockChild) {
-          return <div className="my-4 leading-relaxed" {...props}>{children}</div>;
+          return <div className="mdxkit-p" {...props}>{children}</div>;
         }
 
-        return <p className="my-4 leading-relaxed" {...props}>{children}</p>;
+        return <p className="mdxkit-p" {...props}>{children}</p>;
       },
 
       // Heading anchors for scroll spy TOC. `id` is stamped on the tree before
       // rendering, in document order, so it matches extractHeadings().
       h1: ({ children, node, ...props }: any) => (
-        <h1 className={`text-2xl sm:text-3xl font-bold my-6 pb-2 ${themeConfig.headingClass}`} {...props}>
+        <h1 className="mdxkit-heading mdxkit-heading--1" {...props}>
           {children}
         </h1>
       ),
       h2: ({ children, node, ...props }: any) => (
-        <h2 className={`text-xl sm:text-2xl font-semibold my-5 pb-1.5 ${themeConfig.headingClass}`} {...props}>
+        <h2 className="mdxkit-heading mdxkit-heading--2" {...props}>
           {children}
         </h2>
       ),
       h3: ({ children, node, ...props }: any) => (
-        <h3 className="text-lg font-semibold my-4" {...props}>
+        <h3 className="mdxkit-heading mdxkit-heading--3" {...props}>
           {children}
         </h3>
       ),
       h4: ({ children, node, ...props }: any) => (
-        <h4 className="text-base font-semibold my-3" {...props}>
+        <h4 className="mdxkit-heading mdxkit-heading--4" {...props}>
           {children}
         </h4>
       ),
@@ -645,38 +639,20 @@ export function MdxRenderer({
 
       // Table overrides with enhanced styling and borders
       table: ({ children }: any) => (
-        <div className="overflow-x-auto my-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs bg-white/70 dark:bg-slate-900/70 backdrop-blur-md">
-          <table className="w-full text-sm text-left border-collapse">{children}</table>
+        <div className="mdxkit-table-wrap">
+          <table className="mdxkit-table">{children}</table>
         </div>
       ),
-      thead: ({ children }: any) => (
-        <thead className="bg-slate-100/90 dark:bg-slate-800/90 text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 border-b border-slate-200 dark:border-slate-700">
-          {children}
-        </thead>
-      ),
-      tbody: ({ children }: any) => (
-        <tbody className="divide-y divide-slate-200/80 dark:divide-slate-800/80 bg-transparent text-slate-700 dark:text-slate-300">
-          {children}
-        </tbody>
-      ),
-      tr: ({ children }: any) => (
-        <tr className="hover:bg-indigo-50/50 dark:hover:bg-indigo-950/30 transition-colors duration-150">
-          {children}
-        </tr>
-      ),
+      thead: ({ children }: any) => <thead className="mdxkit-thead">{children}</thead>,
+      tbody: ({ children }: any) => <tbody className="mdxkit-tbody">{children}</tbody>,
+      tr: ({ children }: any) => <tr className="mdxkit-tr">{children}</tr>,
       th: ({ children, style }: any) => (
-        <th
-          style={style}
-          className="px-4 py-3.5 sm:px-5 font-bold text-slate-900 dark:text-slate-100 border-r last:border-r-0 border-slate-200/70 dark:border-slate-700/70 whitespace-nowrap"
-        >
+        <th style={style} className="mdxkit-th">
           {children}
         </th>
       ),
       td: ({ children, style }: any) => (
-        <td
-          style={style}
-          className="px-4 py-3 sm:px-5 sm:py-3.5 text-slate-700 dark:text-slate-300 border-r last:border-r-0 border-slate-200/50 dark:border-slate-800/50 leading-relaxed"
-        >
+        <td style={style} className="mdxkit-td">
           {children}
         </td>
       ),
@@ -687,7 +663,7 @@ export function MdxRenderer({
           href={safeHref(href)}
           target="_blank"
           rel="noopener noreferrer"
-          className={`font-medium underline underline-offset-4 ${themeConfig.accentClass}`}
+          className="mdxkit-link"
         >
           {children}
         </a>
@@ -695,17 +671,17 @@ export function MdxRenderer({
 
       // Lists (ul, ol, li) overrides
       ul: ({ children, node, ...props }: any) => (
-        <ul className="list-disc pl-6 my-4 space-y-1.5 marker:text-indigo-500 dark:marker:text-indigo-400" {...props}>
+        <ul className="mdxkit-list mdxkit-list--ul" {...props}>
           {children}
         </ul>
       ),
       ol: ({ children, node, ...props }: any) => (
-        <ol className="list-decimal pl-6 my-4 space-y-1.5 marker:text-indigo-500 dark:marker:text-indigo-400 font-medium" {...props}>
+        <ol className="mdxkit-list mdxkit-list--ol" {...props}>
           {children}
         </ol>
       ),
       li: ({ children, node, ...props }: any) => (
-        <li className="pl-1 leading-relaxed text-slate-700 dark:text-slate-300" {...props}>
+        <li className="mdxkit-li" {...props}>
           {children}
         </li>
       ),
@@ -767,12 +743,17 @@ export function MdxRenderer({
         id={containerId}
         ref={containerRef}
         data-mdx-render-mode={renderMode}
-        className={
-          isPdf
-            ? `min-h-full p-6 sm:p-10 bg-white text-slate-900 ${themeConfig.fontFamily}`
-            : `min-h-full p-6 sm:p-10 transition-colors duration-200 ${themeConfig.bgClass} ${themeConfig.textClass} ${themeConfig.fontFamily}`
-        }
+        // The single signal every themed rule in the shipped stylesheets keys
+        // off. It comes from the application's own theme, never from
+        // `prefers-color-scheme`, and it is declared here rather than on the
+        // document root so the PDF exporter's detached clone still resolves it.
+        data-mdxkit-theme={isPdf ? 'light' : themeConfig.category}
+        className="mdxkit-root"
         style={{
+          // The preset's own properties are declared even for the export pass:
+          // it overrides colour, background and blur with `!important` anyway,
+          // and what is left - the font stack - is what the export used to keep.
+          ...(themeConfig.cssVars as React.CSSProperties | undefined),
           backgroundColor: isPdf ? '#ffffff' : themeConfig.previewBg,
           color: isPdf ? '#0f172a' : themeConfig.previewText,
         }}
@@ -788,19 +769,19 @@ export function MdxRenderer({
 
       {/* Located warning banner while the document does not parse */}
       {banner && (
-        <div className="mb-4 p-3.5 rounded-xl border border-amber-500/30 bg-amber-500/10 text-amber-800 dark:text-amber-300 text-xs font-mono flex items-start justify-between gap-3">
-          <div className="flex items-start gap-2 min-w-0">
-            <Icons.AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
-            <span className="break-words">MDX: {banner.split('\n')[0]}</span>
+        <div className="mdxkit-alert mdxkit-alert--banner">
+          <div className="mdxkit-alert__body">
+            <Icons.AlertTriangle className="mdxkit-icon-16 mdxkit-alert__body-icon" />
+            <span className="mdxkit-alert__message">MDX: {banner.split('\n')[0]}</span>
           </div>
-          <span className="text-[10px] text-amber-600 dark:text-amber-400 font-semibold uppercase shrink-0">
+          <span className="mdxkit-alert__meta">
             {element ? 'Last good render' : 'Nothing to show'}
           </span>
         </div>
       )}
 
       {/* Main Render Canvas */}
-      <div className={isPdf ? 'prose max-w-none' : 'prose dark:prose-invert max-w-none'}>
+      <div className="mdxkit-prose">
         <MdxErrorBoundary resetKey={element} onError={(e) => setRuntimeError(e.message)}>
           {element}
         </MdxErrorBoundary>

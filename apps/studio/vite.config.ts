@@ -5,12 +5,20 @@ import {defineConfig} from 'vite';
 
 const workspaceRoot = path.resolve(__dirname, '../..');
 const pkg = (name: string) => path.resolve(workspaceRoot, `packages/${name}/src/index.ts`);
+const pkgCss = (name: string) => path.resolve(workspaceRoot, `packages/${name}/src/styles.css`);
 
 export default defineConfig(() => {
   return {
     plugins: [react(), tailwindcss()],
     resolve: {
       alias: {
+        // The stylesheet entries come first: a bare package alias also matches
+        // its subpaths, so `@mdxkit/react/styles.css` would otherwise be
+        // rewritten to `.../src/index.ts/styles.css`.
+        '@mdxkit/react/styles.css': pkgCss('react'),
+        '@mdxkit/mermaid/styles.css': pkgCss('mermaid'),
+        '@mdxkit/charts/styles.css': pkgCss('charts'),
+        '@mdxkit/flow/styles.css': pkgCss('flow'),
         // Workspace packages are TypeScript source; resolve them explicitly so
         // Vite compiles them instead of treating them as prebundled deps.
         '@mdxkit/core': pkg('core'),

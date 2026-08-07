@@ -103,7 +103,8 @@ button** for callouts, tabs and interactive diagrams; GitHub renders them as pla
 
 ## Tech stack
 
-**Runtime** React 19 · TypeScript 5.8 · Vite 6 · Tailwind CSS v4
+**Runtime** React 19 · TypeScript 5.8 · Vite 6 · Tailwind CSS v4 (the Studio shell only —
+the `packages/*` ship plain CSS and have no framework dependency)
 
 **Rendering** `@babel/standalone` (compiles JSX at runtime) · `react-markdown` +
 `remark-gfm` · `prismjs` · `mermaid` · `recharts` · `js-yaml` · `lucide-react` · `motion`
@@ -116,6 +117,41 @@ button** for callouts, tabs and interactive diagrams; GitHub renders them as pla
 > markdown and JSX chunks by a hand-written scanner and the JSX is compiled at runtime
 > with Babel. That has real consequences for what you can write — read
 > [docs/AUTHORING.md](docs/AUTHORING.md) before authoring anything non-trivial.
+
+---
+
+## Styling the packages
+
+The `packages/*` ship plain CSS. Import each stylesheet once, anywhere in the
+application — there is no framework, config file or build step to add:
+
+```ts
+import '@mdxkit/react/styles.css';    // renderer, markdown elements, built-in components
+import '@mdxkit/mermaid/styles.css';  // diagram card chrome
+import '@mdxkit/charts/styles.css';   // chart card chrome
+import '@mdxkit/flow/styles.css';     // flow map chrome and SVG palette
+```
+
+**Theme comes from the application, not the operating system.** `MdxRenderer` stamps
+`data-mdxkit-theme="light" | "dark"` on its root from `themeConfig.category`, and every
+themed rule keys off that attribute. `prefers-color-scheme` is never consulted; a host
+that wants OS-following behaviour opts in by setting the attribute from a media query
+itself.
+
+**Retheme by overriding custom properties, not by forking components.** Every colour,
+radius, spacing step and font stack is a `--mdxkit-*` property. Set them on any ancestor:
+
+```css
+.my-docs {
+  --mdxkit-accent: #0f766e;
+  --mdxkit-surface-base: #fffaf3;
+  --mdxkit-radius-2xl: 0;
+  --mdxkit-font-body: ui-serif, Georgia, serif;
+}
+```
+
+A `ThemeConfig` preset carries its own overrides in `cssVars`, which the renderer applies
+to its root as inline custom properties.
 
 ---
 
@@ -149,10 +185,6 @@ src/
 
 ## Known limitations
 
-- **`dark:` classes follow the operating system, not the theme picker.** Tailwind v4
-  defaults the `dark` variant to `prefers-color-scheme`, and this project declares no
-  custom `dark` variant and never sets a `dark` class. The theme selector changes the
-  preview surface; the hundreds of `dark:` utilities in components do not follow it.
 - **The preview pane scrolls sideways on narrow screens** for documents containing wide
   tables or many tabs. The page itself does not.
 - **PDF output is a raster image**, so text in the PDF is not selectable or searchable.
