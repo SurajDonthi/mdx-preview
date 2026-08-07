@@ -1,5 +1,7 @@
 node_modules/
-build/
+# Anchored: unanchored these match any directory of that name at any depth, which
+# silently hid packages/sandbox/src/build/ - real source - from the repository.
+/build/
 dist/
 coverage/
 .DS_Store
