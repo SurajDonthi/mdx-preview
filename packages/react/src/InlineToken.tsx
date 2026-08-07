@@ -32,8 +32,8 @@ export function InlineToken({
     {
       ...props,
       'data-inline-token': kind,
-      'data-mdxkit-tone': tone,
-      className: `mdxkit-token mdxkit-token--${kind} ${appearanceClassName}`.trim(),
+      'data-mdxstudio-tone': tone,
+      className: `mdxstudio-token mdxstudio-token--${kind} ${appearanceClassName}`.trim(),
     },
     children
   );

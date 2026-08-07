@@ -2,7 +2,7 @@
   "name": "@mdxstudio/mermaid",
   "version": "0.1.0",
   "type": "module",
-  "description": "Mermaid diagram component and MDX plugin for mdxkit. Mermaid itself is loaded on demand.",
+  "description": "Mermaid diagram component and MDX plugin for mdxstudio. Mermaid itself is loaded on demand.",
   "keywords": [
     "mdx",
     "mermaid",

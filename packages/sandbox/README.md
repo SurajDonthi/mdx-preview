@@ -58,10 +58,10 @@ With Vite, the bundled script is exposed as a virtual module:
 // vite.config.ts
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
-import { mdxkitSandboxGuest } from '@mdxstudio/sandbox/vite';
+import { mdxstudioSandboxGuest } from '@mdxstudio/sandbox/vite';
 
 export default defineConfig({
-  plugins: [react(), mdxkitSandboxGuest({ entry: './src/sandbox-guest.tsx' })],
+  plugins: [react(), mdxstudioSandboxGuest({ entry: './src/sandbox-guest.tsx' })],
 });
 ```
 
@@ -73,9 +73,9 @@ and write the result wherever your app can import it as a string. Both paths nee
 
 ```tsx
 import { SandboxedMdx } from '@mdxstudio/sandbox';
-import guestScript from 'virtual:mdxkit-sandbox-guest';
+import guestScript from 'virtual:mdxstudio-sandbox-guest';
 
-import mdxkitCss from '@mdxstudio/react/styles.css?raw';
+import mdxstudioCss from '@mdxstudio/react/styles.css?raw';
 import mermaidCss from '@mdxstudio/mermaid/styles.css?raw';
 
 export function UntrustedDocument({ source }: { source: string }) {
@@ -83,7 +83,7 @@ export function UntrustedDocument({ source }: { source: string }) {
     <SandboxedMdx
       content={source}
       guestScript={guestScript}
-      styles={mdxkitCss + mermaidCss}
+      styles={mdxstudioCss + mermaidCss}
       props={{ theme: 'github-light' }}
       capabilities={{
         // This object *is* the document's permission set. Every handler is a
@@ -130,7 +130,7 @@ as text through `styles`. In Vite, `?raw` does that; with webpack, use
 | `@mdxstudio/sandbox/guest`      | browser | `startGuest` — build a renderer other than MdxRenderer |
 | `@mdxstudio/sandbox/guest/mdx`  | browser | `startMdxGuest` — the default MdxRenderer guest        |
 | `@mdxstudio/sandbox/protocol`   | shared  | Wire types and envelope helpers                        |
-| `@mdxstudio/sandbox/vite`       | node    | `mdxkitSandboxGuest()` Vite plugin                     |
+| `@mdxstudio/sandbox/vite`       | node    | `mdxstudioSandboxGuest()` Vite plugin                     |
 | `@mdxstudio/sandbox/build`      | node    | `bundleGuest()`                                        |
 
 ESM only, with TypeScript declarations.

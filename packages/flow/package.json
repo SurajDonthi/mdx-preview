@@ -2,7 +2,7 @@
   "name": "@mdxstudio/flow",
   "version": "0.1.0",
   "type": "module",
-  "description": "FlowGraph architecture/flow diagram component and MDX plugin for mdxkit.",
+  "description": "FlowGraph architecture/flow diagram component and MDX plugin for mdxstudio.",
   "keywords": [
     "mdx",
     "flow",

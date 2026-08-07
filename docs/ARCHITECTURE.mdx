@@ -1,7 +1,7 @@
 ---
 title: "Architecture"
 subtitle: "The packages, the registry, and the two ways a document gets rendered"
-description: "How mdxkit works internally, for anyone changing it: the workspace layout, the component registry, the parse-and-render pipeline, the sandbox, and the PDF exporter."
+description: "How mdxstudio works internally, for anyone changing it: the workspace layout, the component registry, the parse-and-render pipeline, the sandbox, and the PDF exporter."
 category: "Reference"
 status: "Current"
 tags: ["Architecture", "Renderer", "Registry", "Sandbox", "PDF"]
@@ -364,7 +364,7 @@ reach the frame by accident.
 3. If it renders differently in the export pass, read `MdxRenderContext` from
    `@mdxstudio/core`. It gives you `renderMode` and `themeCategory`, so nothing has
    to be threaded through the tree as props.
-4. Style it with `--mdxkit-*` custom properties in your package's `styles.css`.
+4. Style it with `--mdxstudio-*` custom properties in your package's `styles.css`.
    No Tailwind, no build step — see the styling section of the README.
 
 Constraints worth designing around:

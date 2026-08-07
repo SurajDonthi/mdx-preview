@@ -57,7 +57,7 @@ function mountSandbox(props: Partial<SandboxedMdxProps> = {}): MountedSandbox {
 
   const frame = container.querySelector('iframe') as HTMLIFrameElement;
   const srcDoc = frame.getAttribute('srcdoc') ?? '';
-  const config = /id="mdxkit-sandbox-config">([^<]*)</.exec(srcDoc);
+  const config = /id="mdxstudio-sandbox-config">([^<]*)</.exec(srcDoc);
   const channel = JSON.parse(config![1]).channel as string;
 
   const posted: SandboxEnvelope<HostMessage>[] = [];

@@ -1,6 +1,6 @@
 # @mdxstudio/charts
 
-A Recharts-backed `<Chart>` for mdxkit: line, bar and area.
+A Recharts-backed `<Chart>` for mdxstudio: line, bar and area.
 
 Recharts and its D3 dependencies (~350 kB minified) sit behind a dynamic
 `import()`, so registering the plugin costs almost nothing and the charting

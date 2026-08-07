@@ -111,7 +111,7 @@ export const defaultSandboxCsp: SandboxCsp = {
 export const SANDBOX_ATTRIBUTE = 'allow-scripts';
 
 export interface SandboxFrameDocumentOptions {
-  /** Per-instance channel secret; the guest reads it from `window.__MDXKIT_SANDBOX__`. */
+  /** Per-instance channel secret; the guest reads it from `window.__MDXSTUDIO_SANDBOX__`. */
   channel: string;
   /** The bundled guest runtime, as JavaScript source. */
   guestScript: string;
@@ -173,7 +173,7 @@ body {
      produce a scrollbar of its own - that is what "sized to content" means. */
   overflow: hidden;
 }
-#mdxkit-sandbox-root { padding: 4px; }
+#mdxstudio-sandbox-root { padding: 4px; }
 `;
 
 export function buildSandboxFrameDocument(options: SandboxFrameDocumentOptions): string {
@@ -197,8 +197,8 @@ export function buildSandboxFrameDocument(options: SandboxFrameDocumentOptions):
 ${options.styles ? `<style>${escapeHtmlText(options.styles)}</style>` : ''}
 </head>
 <body>
-<div id="mdxkit-sandbox-root"></div>
-<script type="application/json" id="mdxkit-sandbox-config">${escapeHtmlText(config)}</script>
+<div id="mdxstudio-sandbox-root"></div>
+<script type="application/json" id="mdxstudio-sandbox-config">${escapeHtmlText(config)}</script>
 <script>${escapeScriptBody(options.guestScript)}</script>
 </body>
 </html>`;

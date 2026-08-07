@@ -73,7 +73,7 @@ export interface MdxRegistry {
   codeFences: Record<string, MdxComponent>;
 }
 
-const MDX_PLUGIN = Symbol.for('mdxkit.plugin');
+const MDX_PLUGIN = Symbol.for('mdxstudio.plugin');
 
 /**
  * Marks an object as an MDX plugin. Returns it unchanged apart from the brand,

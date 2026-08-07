@@ -65,8 +65,8 @@ export function Chart({
   }, []);
 
   return (
-    <div className="mdxkit-chart">
-      {title && <h5 className="mdxkit-chart__title">{title}</h5>}
+    <div className="mdxstudio-chart">
+      {title && <h5 className="mdxstudio-chart__title">{title}</h5>}
       <div style={{ width: '100%', height }}>
         {Canvas ? (
           <Canvas type={type} data={data} dataKey={dataKey} nameKey={nameKey} color={color} />

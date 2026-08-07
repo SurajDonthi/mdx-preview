@@ -17,7 +17,7 @@ type MermaidApi = Awaited<typeof import('mermaid')>['default'];
 
 /**
  * Mermaid is ~3 MB of parsers, layout engines and fonts - more than the rest of
- * mdxkit put together. Importing it here rather than at module scope means the
+ * mdxstudio put together. Importing it here rather than at module scope means the
  * cost lands on the first document that actually contains a diagram; registering
  * `mermaidPlugin` costs nothing until then. The promise is memoised so N
  * diagrams on a page share one load.
@@ -171,43 +171,43 @@ export function MermaidDiagram({ chart, children, className = '', renderMode, th
       data-render-state={renderState}
       data-mermaid-error={renderState === 'error' ? 'true' : undefined}
       data-error-message={error || undefined}
-      className={`mdxkit-mermaid${isPdf ? ' mdxkit-mermaid--pdf' : ''} ${className}`.trim()}
+      className={`mdxstudio-mermaid${isPdf ? ' mdxstudio-mermaid--pdf' : ''} ${className}`.trim()}
     >
-      <div className="mdxkit-mermaid__header">
-        <span className="mdxkit-mermaid__title">
-          <Icons.GitFork className="mdxkit-mermaid__icon-14 mdxkit-mermaid__title-icon" />
+      <div className="mdxstudio-mermaid__header">
+        <span className="mdxstudio-mermaid__title">
+          <Icons.GitFork className="mdxstudio-mermaid__icon-14 mdxstudio-mermaid__title-icon" />
           <span>Mermaid Diagram</span>
         </span>
         {!isPdf && <button
           onClick={handleCopy}
-          className="mdxkit-mermaid__copy"
+          className="mdxstudio-mermaid__copy"
           title="Copy Mermaid Code"
         >
           {copied ? (
             <>
-              <Icons.Check className="mdxkit-mermaid__icon-14 mdxkit-mermaid__copied" />
-              <span className="mdxkit-mermaid__copied">Copied</span>
+              <Icons.Check className="mdxstudio-mermaid__icon-14 mdxstudio-mermaid__copied" />
+              <span className="mdxstudio-mermaid__copied">Copied</span>
             </>
           ) : (
             <>
-              <Icons.Copy className="mdxkit-mermaid__icon-14" />
+              <Icons.Copy className="mdxstudio-mermaid__icon-14" />
               <span>Copy Code</span>
             </>
           )}
         </button>}
       </div>
 
-      <div className="mdxkit-mermaid__canvas">
+      <div className="mdxstudio-mermaid__canvas">
         {error ? (
-          <div data-mermaid-error-message="true" role="alert" className="mdxkit-mermaid__error">
-            <div className="mdxkit-mermaid__error-title">
-              <Icons.AlertTriangle className="mdxkit-mermaid__icon-16" />
+          <div data-mermaid-error-message="true" role="alert" className="mdxstudio-mermaid__error">
+            <div className="mdxstudio-mermaid__error-title">
+              <Icons.AlertTriangle className="mdxstudio-mermaid__icon-16" />
               <span>Mermaid Diagram Error</span>
             </div>
-            <pre className="mdxkit-mermaid__error-detail">{error}</pre>
-            <details className="mdxkit-mermaid__error-more">
-              <summary className="mdxkit-mermaid__error-summary">View raw syntax</summary>
-              <pre className="mdxkit-mermaid__error-raw">{chartCode}</pre>
+            <pre className="mdxstudio-mermaid__error-detail">{error}</pre>
+            <details className="mdxstudio-mermaid__error-more">
+              <summary className="mdxstudio-mermaid__error-summary">View raw syntax</summary>
+              <pre className="mdxstudio-mermaid__error-raw">{chartCode}</pre>
             </details>
           </div>
         ) : svg ? (
@@ -216,10 +216,10 @@ export function MermaidDiagram({ chart, children, className = '', renderMode, th
             dangerouslySetInnerHTML={{ __html: svg }}
           />
         ) : (
-          <div className="mdxkit-mermaid__pending">
+          <div className="mdxstudio-mermaid__pending">
             <Icons.Loader2
-              className={`mdxkit-mermaid__icon-16 mdxkit-mermaid__spinner${
-                isPdf ? '' : ' mdxkit-mermaid__spinner--busy'
+              className={`mdxstudio-mermaid__icon-16 mdxstudio-mermaid__spinner${
+                isPdf ? '' : ' mdxstudio-mermaid__spinner--busy'
               }`}
             />
             <span>Rendering diagram...</span>

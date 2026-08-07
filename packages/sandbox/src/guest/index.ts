@@ -79,7 +79,7 @@ const READY_RETRY_MS = 50;
 const READY_RETRY_LIMIT = 200; // 10s, matching the host's default handshake window.
 
 function readConfig(): GuestConfig {
-  const element = document.getElementById('mdxkit-sandbox-config');
+  const element = document.getElementById('mdxstudio-sandbox-config');
   if (!element?.textContent) throw new Error('Sandbox guest booted without a config block.');
   const parsed = JSON.parse(element.textContent) as Partial<GuestConfig>;
   if (typeof parsed.channel !== 'string' || parsed.channel.length === 0) {
@@ -211,7 +211,7 @@ export function startGuest(options: StartGuestOptions): void {
   let heightFrame = 0;
 
   const measure = (): number => {
-    const root = document.getElementById(options.rootId ?? 'mdxkit-sandbox-root');
+    const root = document.getElementById(options.rootId ?? 'mdxstudio-sandbox-root');
     if (!root) return document.documentElement.scrollHeight;
     // Measure the content, never the viewport. `documentElement.scrollHeight`
     // is floored by the frame's own height, so using it makes the frame able to
@@ -259,7 +259,7 @@ export function startGuest(options: StartGuestOptions): void {
   /* Rendering                                                              */
   /* ---------------------------------------------------------------------- */
 
-  const rootId = options.rootId ?? 'mdxkit-sandbox-root';
+  const rootId = options.rootId ?? 'mdxstudio-sandbox-root';
   let cleanup: (() => void) | void;
   let renderChain: Promise<void> = Promise.resolve();
 

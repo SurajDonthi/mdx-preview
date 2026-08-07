@@ -36,8 +36,8 @@ function bootGuest(render = vi.fn()): BootedGuest {
   const channel = `channel-${channelSeq}`;
 
   document.body.innerHTML =
-    '<div id="mdxkit-sandbox-root"></div>' +
-    `<script type="application/json" id="mdxkit-sandbox-config">${JSON.stringify({
+    '<div id="mdxstudio-sandbox-root"></div>' +
+    `<script type="application/json" id="mdxstudio-sandbox-config">${JSON.stringify({
       channel,
     })}</script>`;
 
@@ -127,14 +127,14 @@ describe('handshake', () => {
     expect(guest.posted[0]).toMatchObject({
       type: 'guest:ready',
       channel: guest.channel,
-      tag: 'mdxkit-sandbox',
+      tag: 'mdxstudio-sandbox',
       version: 1,
     });
   });
 
   it('refuses to boot without a channel in its config', () => {
     document.body.innerHTML =
-      '<script type="application/json" id="mdxkit-sandbox-config">{}</script>';
+      '<script type="application/json" id="mdxstudio-sandbox-config">{}</script>';
 
     expect(() => startGuest({ render: vi.fn() })).toThrow(/missing a channel/);
   });

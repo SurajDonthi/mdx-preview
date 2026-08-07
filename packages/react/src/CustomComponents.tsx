@@ -3,7 +3,7 @@ import * as Icons from 'lucide-react';
 import { InlineToken } from './InlineToken';
 
 // Helper to render Lucide icon dynamically
-function DynamicIcon({ name, className = 'mdxkit-icon-20' }: { name?: string; className?: string }) {
+function DynamicIcon({ name, className = 'mdxstudio-icon-20' }: { name?: string; className?: string }) {
   if (!name) return null;
   const IconComponent = (Icons as Record<string, any>)[name] || Icons.HelpCircle;
   return <IconComponent className={className} />;
@@ -28,13 +28,13 @@ export function Callout({ type = 'info', title, children }: CalloutProps) {
   const variant = CALLOUT_ICONS[type] ? type : 'info';
 
   return (
-    <div className={`mdxkit-callout mdxkit-callout--${variant}`}>
-      <div className="mdxkit-callout__row">
-        <div className="mdxkit-callout__icon">
-          <DynamicIcon name={CALLOUT_ICONS[variant]} className="mdxkit-icon-20" />
+    <div className={`mdxstudio-callout mdxstudio-callout--${variant}`}>
+      <div className="mdxstudio-callout__row">
+        <div className="mdxstudio-callout__icon">
+          <DynamicIcon name={CALLOUT_ICONS[variant]} className="mdxstudio-icon-20" />
         </div>
-        <div className="mdxkit-callout__content">
-          {title && <div className="mdxkit-callout__title">{title}</div>}
+        <div className="mdxstudio-callout__content">
+          {title && <div className="mdxstudio-callout__title">{title}</div>}
           <div>{children}</div>
         </div>
       </div>
@@ -55,29 +55,29 @@ export interface CardProps {
 
 export function Card({ title, description, subtitle, icon, badge, children, href }: CardProps) {
   const content = (
-    <div className="mdxkit-card">
-      <div className="mdxkit-card__head">
-        <div className="mdxkit-card__identity">
+    <div className="mdxstudio-card">
+      <div className="mdxstudio-card__head">
+        <div className="mdxstudio-card__identity">
           {icon && (
-            <div className="mdxkit-card__icon">
-              <DynamicIcon name={icon} className="mdxkit-icon-20" />
+            <div className="mdxstudio-card__icon">
+              <DynamicIcon name={icon} className="mdxstudio-icon-20" />
             </div>
           )}
           <div>
-            <h4 className="mdxkit-card__title">{title}</h4>
-            {subtitle && <p className="mdxkit-card__subtitle">{subtitle}</p>}
+            <h4 className="mdxstudio-card__title">{title}</h4>
+            {subtitle && <p className="mdxstudio-card__subtitle">{subtitle}</p>}
           </div>
         </div>
-        {badge && <span className="mdxkit-card__badge">{badge}</span>}
+        {badge && <span className="mdxstudio-card__badge">{badge}</span>}
       </div>
-      {description && <p className="mdxkit-card__description">{description}</p>}
-      {children && <div className="mdxkit-card__body">{children}</div>}
+      {description && <p className="mdxstudio-card__description">{description}</p>}
+      {children && <div className="mdxstudio-card__body">{children}</div>}
     </div>
   );
 
   if (href) {
     return (
-      <a href={href} target="_blank" rel="noopener noreferrer" className="mdxkit-card-link">
+      <a href={href} target="_blank" rel="noopener noreferrer" className="mdxstudio-card-link">
         {content}
       </a>
     );
@@ -95,7 +95,7 @@ export function CardGrid({
 }) {
   const columns = cols === 3 ? 3 : cols === 4 ? 4 : 2;
 
-  return <div className={`mdxkit-card-grid mdxkit-card-grid--${columns}`}>{children}</div>;
+  return <div className={`mdxstudio-card-grid mdxstudio-card-grid--${columns}`}>{children}</div>;
 }
 
 // 3. Stat Card & Grid
@@ -111,15 +111,15 @@ export function Stat({ title, value, change, trend = 'up', icon }: StatProps) {
   const direction = trend === 'down' ? 'down' : trend === 'neutral' ? 'neutral' : 'up';
 
   return (
-    <div className="mdxkit-stat">
-      <div className="mdxkit-stat__head">
+    <div className="mdxstudio-stat">
+      <div className="mdxstudio-stat__head">
         <span>{title}</span>
-        {icon && <DynamicIcon name={icon} className="mdxkit-icon-16 mdxkit-stat__icon" />}
+        {icon && <DynamicIcon name={icon} className="mdxstudio-icon-16 mdxstudio-stat__icon" />}
       </div>
-      <div className="mdxkit-stat__row">
-        <span className="mdxkit-stat__value">{value}</span>
+      <div className="mdxstudio-stat__row">
+        <span className="mdxstudio-stat__value">{value}</span>
         {change && (
-          <span className={`mdxkit-stat__change mdxkit-stat__change--${direction}`}>{change}</span>
+          <span className={`mdxstudio-stat__change mdxstudio-stat__change--${direction}`}>{change}</span>
         )}
       </div>
     </div>
@@ -135,7 +135,7 @@ export function StatGrid({
 }) {
   const columns = cols === 2 ? 2 : cols === 4 ? 4 : 3;
 
-  return <div className={`mdxkit-stat-grid mdxkit-stat-grid--${columns}`}>{children}</div>;
+  return <div className={`mdxstudio-stat-grid mdxstudio-stat-grid--${columns}`}>{children}</div>;
 }
 
 // 4. Tabs & Tab
@@ -155,19 +155,19 @@ export function Tabs({
       : childArray.map((child: any) => child.props?.title || child.props?.label || `Tab`);
 
   return (
-    <div className="mdxkit-tabs">
-      <div className="mdxkit-tabs__list">
+    <div className="mdxstudio-tabs">
+      <div className="mdxstudio-tabs__list">
         {tabLabels.map((label, idx) => (
           <button
             key={idx}
             onClick={() => setActiveIndex(idx)}
-            className={`mdxkit-tabs__tab${activeIndex === idx ? ' mdxkit-tabs__tab--active' : ''}`}
+            className={`mdxstudio-tabs__tab${activeIndex === idx ? ' mdxstudio-tabs__tab--active' : ''}`}
           >
             {label}
           </button>
         ))}
       </div>
-      <div className="mdxkit-tabs__panel">{childArray[activeIndex] || childArray}</div>
+      <div className="mdxstudio-tabs__panel">{childArray[activeIndex] || childArray}</div>
     </div>
   );
 }
@@ -186,23 +186,23 @@ export function Accordion({ items = [] }: { items?: AccordionItem[] }) {
   const [openIndex, setOpenIndex] = useState<number | null>(0);
 
   return (
-    <div className="mdxkit-accordion">
+    <div className="mdxstudio-accordion">
       {items.map((item, idx) => {
         const isOpen = openIndex === idx;
         return (
-          <div key={idx} className="mdxkit-accordion__item">
+          <div key={idx} className="mdxstudio-accordion__item">
             <button
               onClick={() => setOpenIndex(isOpen ? null : idx)}
-              className="mdxkit-accordion__trigger"
+              className="mdxstudio-accordion__trigger"
             >
               <span>{item.title}</span>
               <Icons.ChevronDown
-                className={`mdxkit-icon-16 mdxkit-accordion__chevron${
-                  isOpen ? ' mdxkit-accordion__chevron--open' : ''
+                className={`mdxstudio-icon-16 mdxstudio-accordion__chevron${
+                  isOpen ? ' mdxstudio-accordion__chevron--open' : ''
                 }`}
               />
             </button>
-            {isOpen && <div className="mdxkit-accordion__panel">{item.content}</div>}
+            {isOpen && <div className="mdxstudio-accordion__panel">{item.content}</div>}
           </div>
         );
       })}
@@ -227,31 +227,31 @@ export function InteractiveCounter({
   const [count, setCount] = useState(initial);
 
   return (
-    <div className="mdxkit-counter">
+    <div className="mdxstudio-counter">
       <div>
-        <h5 className="mdxkit-counter__title">{title}</h5>
-        <p className="mdxkit-counter__range">
+        <h5 className="mdxstudio-counter__title">{title}</h5>
+        <p className="mdxstudio-counter__range">
           Range: {min} to {max} | Step: {step}
         </p>
       </div>
-      <div className="mdxkit-counter__controls">
+      <div className="mdxstudio-counter__controls">
         <button
           onClick={() => setCount(Math.max(min, count - step))}
           disabled={count <= min}
-          className="mdxkit-counter__button"
+          className="mdxstudio-counter__button"
         >
-          <Icons.Minus className="mdxkit-icon-16" />
+          <Icons.Minus className="mdxstudio-icon-16" />
         </button>
-        <span className="mdxkit-counter__value">{count}</span>
+        <span className="mdxstudio-counter__value">{count}</span>
         <button
           onClick={() => setCount(Math.min(max, count + step))}
           disabled={count >= max}
-          className="mdxkit-counter__button"
+          className="mdxstudio-counter__button"
         >
-          <Icons.Plus className="mdxkit-icon-16" />
+          <Icons.Plus className="mdxstudio-icon-16" />
         </button>
-        <button onClick={() => setCount(initial)} title="Reset" className="mdxkit-counter__reset">
-          <Icons.RotateCcw className="mdxkit-icon-14" />
+        <button onClick={() => setCount(initial)} title="Reset" className="mdxstudio-counter__reset">
+          <Icons.RotateCcw className="mdxstudio-icon-14" />
         </button>
       </div>
     </div>
@@ -273,16 +273,16 @@ export function ProgressBar({
   const tone = PROGRESS_COLORS.has(color) ? color : 'indigo';
 
   return (
-    <div className="mdxkit-progress">
+    <div className="mdxstudio-progress">
       {(label || progress !== undefined) && (
-        <div className="mdxkit-progress__labels">
+        <div className="mdxstudio-progress__labels">
           <span>{label}</span>
           <span>{progress}%</span>
         </div>
       )}
-      <div className="mdxkit-progress__track">
+      <div className="mdxstudio-progress__track">
         <div
-          className={`mdxkit-progress__fill mdxkit-progress__fill--${tone}`}
+          className={`mdxstudio-progress__fill mdxstudio-progress__fill--${tone}`}
           style={{ width: `${Math.min(100, Math.max(0, progress))}%` }}
         />
       </div>
@@ -300,15 +300,15 @@ export interface TimelineItem {
 
 export function Timeline({ items = [] }: { items?: TimelineItem[] }) {
   return (
-    <div className="mdxkit-timeline">
+    <div className="mdxstudio-timeline">
       {items.map((item, idx) => (
-        <div key={idx} className="mdxkit-timeline__item">
-          <div className="mdxkit-timeline__marker">
-            <DynamicIcon name={item.icon || 'CircleDot'} className="mdxkit-icon-14" />
+        <div key={idx} className="mdxstudio-timeline__item">
+          <div className="mdxstudio-timeline__marker">
+            <DynamicIcon name={item.icon || 'CircleDot'} className="mdxstudio-icon-14" />
           </div>
-          <div className="mdxkit-timeline__date">{item.date}</div>
-          <h5 className="mdxkit-timeline__title">{item.title}</h5>
-          <p className="mdxkit-timeline__description">{item.description}</p>
+          <div className="mdxstudio-timeline__date">{item.date}</div>
+          <h5 className="mdxstudio-timeline__title">{item.title}</h5>
+          <p className="mdxstudio-timeline__description">{item.description}</p>
         </div>
       ))}
     </div>
@@ -316,7 +316,7 @@ export function Timeline({ items = [] }: { items?: TimelineItem[] }) {
 }
 
 export function Steps({ children }: { children?: React.ReactNode }) {
-  return <div className="mdxkit-steps">{children}</div>;
+  return <div className="mdxstudio-steps">{children}</div>;
 }
 
 export function Step({
@@ -329,11 +329,11 @@ export function Step({
   children?: React.ReactNode;
 }) {
   return (
-    <div className="mdxkit-step">
-      <div className="mdxkit-step__number">{number}</div>
+    <div className="mdxstudio-step">
+      <div className="mdxstudio-step__number">{number}</div>
       <div>
-        <h5 className="mdxkit-step__title">{title}</h5>
-        <div className="mdxkit-step__body">{children}</div>
+        <h5 className="mdxstudio-step__title">{title}</h5>
+        <div className="mdxstudio-step__body">{children}</div>
       </div>
     </div>
   );
@@ -349,7 +349,7 @@ export function InlineCode({ children }: { children?: React.ReactNode }) {
 }
 
 export function Kbd({ children }: { children?: React.ReactNode }) {
-  return <kbd className="mdxkit-kbd">{children}</kbd>;
+  return <kbd className="mdxstudio-kbd">{children}</kbd>;
 }
 
 const BADGE_VARIANTS = new Set(['indigo', 'emerald', 'rose', 'amber', 'slate']);
@@ -366,8 +366,8 @@ export function Badge({
   const tone = BADGE_VARIANTS.has(variant) ? variant : 'indigo';
 
   return (
-    <span className={`mdxkit-badge mdxkit-badge--${tone}`}>
-      {icon && <DynamicIcon name={icon} className="mdxkit-icon-14" />}
+    <span className={`mdxstudio-badge mdxstudio-badge--${tone}`}>
+      {icon && <DynamicIcon name={icon} className="mdxstudio-icon-14" />}
       {children}
     </span>
   );
@@ -395,10 +395,10 @@ export function Button({
   const tone = variant === 'secondary' || variant === 'outline' ? variant : 'primary';
 
   return (
-    <button onClick={handleClick} className={`mdxkit-button mdxkit-button--${tone}`}>
-      {icon && <DynamicIcon name={icon} className="mdxkit-icon-16" />}
+    <button onClick={handleClick} className={`mdxstudio-button mdxstudio-button--${tone}`}>
+      {icon && <DynamicIcon name={icon} className="mdxstudio-icon-16" />}
       {children}
-      {clicked && <Icons.Check className="mdxkit-icon-16 mdxkit-button__done" />}
+      {clicked && <Icons.Check className="mdxstudio-icon-16 mdxstudio-button__done" />}
     </button>
   );
 }
@@ -419,36 +419,36 @@ export function TableComponent({
   const effectiveRows: any[][] = rows.length > 0 ? rows : (Array.isArray(data) && Array.isArray(data[0]) ? data : []);
 
   return (
-    <div className="mdxkit-datatable">
+    <div className="mdxstudio-datatable">
       {title && (
-        <div className="mdxkit-datatable__caption">
-          <Icons.Table className="mdxkit-icon-16 mdxkit-datatable__caption-icon" />
+        <div className="mdxstudio-datatable__caption">
+          <Icons.Table className="mdxstudio-icon-16 mdxstudio-datatable__caption-icon" />
           <span>{title}</span>
         </div>
       )}
-      <div className="mdxkit-datatable__scroll">
-        <table className="mdxkit-table">
+      <div className="mdxstudio-datatable__scroll">
+        <table className="mdxstudio-table">
           {headers.length > 0 && (
-            <thead className="mdxkit-thead">
+            <thead className="mdxstudio-thead">
               <tr>
                 {headers.map((h, i) => (
-                  <th key={i} className="mdxkit-datatable__th">
+                  <th key={i} className="mdxstudio-datatable__th">
                     {h}
                   </th>
                 ))}
               </tr>
             </thead>
           )}
-          <tbody className="mdxkit-tbody">
+          <tbody className="mdxstudio-tbody">
             {effectiveRows.map((row, rIdx) => (
               <tr
                 key={rIdx}
-                className={`mdxkit-tr${
-                  striped && rIdx % 2 === 1 ? ' mdxkit-datatable__row--striped' : ''
+                className={`mdxstudio-tr${
+                  striped && rIdx % 2 === 1 ? ' mdxstudio-datatable__row--striped' : ''
                 }`}
               >
                 {row.map((cell: any, cIdx: number) => (
-                  <td key={cIdx} className="mdxkit-datatable__td">
+                  <td key={cIdx} className="mdxstudio-datatable__td">
                     {cell}
                   </td>
                 ))}

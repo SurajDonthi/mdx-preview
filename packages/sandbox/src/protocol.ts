@@ -17,7 +17,7 @@ export const SANDBOX_PROTOCOL_VERSION = 1;
  * servers, extensions and other embeds all post into it - so an unrecognised
  * tag is the cheapest way to drop traffic that was never meant for us.
  */
-export const SANDBOX_MESSAGE_TAG = 'mdxkit-sandbox';
+export const SANDBOX_MESSAGE_TAG = 'mdxstudio-sandbox';
 
 /**
  * The origin a sandboxed frame reports.

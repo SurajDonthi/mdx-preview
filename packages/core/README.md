@@ -1,8 +1,8 @@
 # @mdxstudio/core
 
-The renderer-agnostic half of mdxkit: MDX parsing, frontmatter, heading
+The renderer-agnostic half of mdxstudio: MDX parsing, frontmatter, heading
 extraction, document stats, the expression evaluator, the component registry, and
-the React context every mdxkit package reads its render mode and theme from.
+the React context every mdxstudio package reads its render mode and theme from.
 
 You rarely install this directly — [`@mdxstudio/react`](https://github.com/SurajDonthi/mdx-preview/tree/main/packages/react#readme)
 and the plugin packages declare it as a peer dependency so that exactly one copy

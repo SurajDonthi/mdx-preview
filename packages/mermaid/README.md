@@ -1,6 +1,6 @@
 # @mdxstudio/mermaid
 
-Mermaid diagrams for mdxkit. Registers `<MermaidDiagram>` (also `<Mermaid>`) and
+Mermaid diagrams for mdxstudio. Registers `<MermaidDiagram>` (also `<Mermaid>`) and
 takes over ` ```mermaid ` fenced code blocks.
 
 Mermaid itself — roughly 3 MB of grammars and layout engines — is behind a dynamic

@@ -1,6 +1,6 @@
 # @mdxstudio/flow
 
-`<FlowGraph>` (also `<ArchitectureMap>`) for mdxkit: a declarative
+`<FlowGraph>` (also `<ArchitectureMap>`) for mdxstudio: a declarative
 architecture/flow diagram with grouped nodes, labelled edges and animated flows.
 Rendered as SVG, no diagram engine required.
 

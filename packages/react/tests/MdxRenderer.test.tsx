@@ -87,7 +87,7 @@ function renderMdx(
 
   return {
     container,
-    root: container.querySelector('.mdxkit-root') as HTMLElement,
+    root: container.querySelector('.mdxstudio-root') as HTMLElement,
     html: () => container.innerHTML,
     text: () => container.textContent ?? '',
     update: render,
@@ -244,7 +244,7 @@ describe('code fences', () => {
     expect(fence?.getAttribute('data-language')).toBe('mermaid');
     expect(fence?.textContent).toBe('graph TD;\n  A-->B;');
     // Not also syntax-highlighted as an ordinary block.
-    expect(view.container.querySelector('.mdxkit-code')).toBeNull();
+    expect(view.container.querySelector('.mdxstudio-code')).toBeNull();
   });
 
   it('matches a fence language case-insensitively', () => {
@@ -256,15 +256,15 @@ describe('code fences', () => {
   it('syntax-highlights a language nothing claimed', () => {
     const view = renderMdx('```js\nconst a = 1;\n```\n');
 
-    expect(view.container.querySelector('.mdxkit-code')).not.toBeNull();
-    expect(view.container.querySelector('.mdxkit-code__lang')?.textContent).toBe('js');
+    expect(view.container.querySelector('.mdxstudio-code')).not.toBeNull();
+    expect(view.container.querySelector('.mdxstudio-code__lang')?.textContent).toBe('js');
     expect(view.text()).toContain('const a = 1;');
   });
 
   it('renders a backtick span as inline code, not a block', () => {
     const view = renderMdx('Run `npm ci` first.\n');
 
-    expect(view.container.querySelector('.mdxkit-code')).toBeNull();
+    expect(view.container.querySelector('.mdxstudio-code')).toBeNull();
     expect(view.container.querySelector('code')?.textContent).toBe('npm ci');
   });
 });
@@ -357,6 +357,6 @@ describe('frontmatter header', () => {
 
     expect(view.root.getAttribute('data-mdx-render-mode')).toBe('pdf');
     // The export always captures light, whatever the screen theme is.
-    expect(view.root.getAttribute('data-mdxkit-theme')).toBe('light');
+    expect(view.root.getAttribute('data-mdxstudio-theme')).toBe('light');
   });
 });

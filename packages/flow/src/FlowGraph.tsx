@@ -621,7 +621,7 @@ function arrowPath(tip: { x: number; y: number }, dir: Direction): string {
  * Component
  *
  * The SVG's flat palette - bands, node fills, edges, label haloes - is CSS,
- * driven by `--mdxkit-flow-*` on `data-mdxkit-theme`. Only the values that
+ * driven by `--mdxstudio-flow-*` on `data-mdxstudio-theme`. Only the values that
  * come from the *document* (a flow's tone, a node kind's accent) are still
  * written inline, because no stylesheet can know them.
  * ------------------------------------------------------------------ */
@@ -685,13 +685,13 @@ export function FlowGraph(props: FlowGraphProps) {
   const stacked = (shellWidth || (isPdf ? 690 : 720)) < SIDE_BY_SIDE_AT;
   const hasFlows = model.flows.length > 0;
 
-  const shellClass = `mdxkit-flow${isPdf ? ' mdxkit-flow--pdf' : ''}`;
+  const shellClass = `mdxstudio-flow${isPdf ? ' mdxstudio-flow--pdf' : ''}`;
 
   if (model.nodes.length === 0) {
     return (
       <div ref={shellRef} className={`${shellClass} ${props.className || ''}`.trim()}>
-        <div className="mdxkit-flow__empty">
-          <Icons.Network className="mdxkit-flow__icon-16 mdxkit-flow__icon-accent" />
+        <div className="mdxstudio-flow__empty">
+          <Icons.Network className="mdxstudio-flow__icon-16 mdxstudio-flow__icon-accent" />
           <span>FlowGraph: no nodes to draw. Pass nodes, edges and flows to render the map.</span>
         </div>
       </div>
@@ -712,18 +712,18 @@ export function FlowGraph(props: FlowGraphProps) {
       className={`${shellClass} ${props.className || ''}`.trim()}
     >
       {/* Header */}
-      <div className="mdxkit-flow__header">
-        <span className="mdxkit-flow__heading">
-          <Icons.Network className="mdxkit-flow__icon-14 mdxkit-flow__icon-accent" />
-          <span className="mdxkit-flow__title">{props.title || 'Architecture map'}</span>
+      <div className="mdxstudio-flow__header">
+        <span className="mdxstudio-flow__heading">
+          <Icons.Network className="mdxstudio-flow__icon-14 mdxstudio-flow__icon-accent" />
+          <span className="mdxstudio-flow__title">{props.title || 'Architecture map'}</span>
         </span>
-        {props.subtitle && <span className="mdxkit-flow__subtitle">{props.subtitle}</span>}
+        {props.subtitle && <span className="mdxstudio-flow__subtitle">{props.subtitle}</span>}
       </div>
 
-      <div className={`mdxkit-flow__body mdxkit-flow__body--${stacked ? 'stacked' : 'side'}`}>
+      <div className={`mdxstudio-flow__body mdxstudio-flow__body--${stacked ? 'stacked' : 'side'}`}>
         {/* Diagram */}
-        <div className="mdxkit-flow__diagram">
-          <div ref={canvasRef} className="mdxkit-flow__canvas">
+        <div className="mdxstudio-flow__diagram">
+          <div ref={canvasRef} className="mdxstudio-flow__canvas">
             <svg
               viewBox={`0 0 ${board.width} ${board.height}`}
               width="100%"
@@ -731,7 +731,7 @@ export function FlowGraph(props: FlowGraphProps) {
               preserveAspectRatio="xMinYMin meet"
               role="img"
               aria-label={props.title || 'Architecture map'}
-              className="mdxkit-flow__svg"
+              className="mdxstudio-flow__svg"
             >
               {/* Bands */}
               {board.bands.map((band) => (
@@ -745,7 +745,7 @@ export function FlowGraph(props: FlowGraphProps) {
                       width={band.rect.w}
                       height={band.rect.h}
                       rx={14}
-                      className="mdxkit-flow__band"
+                      className="mdxstudio-flow__band"
                       strokeWidth={1}
                     />
                   )}
@@ -756,7 +756,7 @@ export function FlowGraph(props: FlowGraphProps) {
                       fontSize={10.5}
                       fontWeight={600}
                       letterSpacing="0.06em"
-                      className="mdxkit-flow__band-label"
+                      className="mdxstudio-flow__band-label"
                     >
                       {band.group.label.toUpperCase()}
                     </text>
@@ -785,7 +785,7 @@ export function FlowGraph(props: FlowGraphProps) {
                     <path
                       d={geometry.d}
                       fill="none"
-                      className="mdxkit-flow__edge"
+                      className="mdxstudio-flow__edge"
                       style={litStroke ? { stroke: litStroke } : undefined}
                       strokeWidth={selected && onFlow ? 2.2 : 1.3}
                       strokeDasharray={edge.dashed ? '5 4' : undefined}
@@ -793,7 +793,7 @@ export function FlowGraph(props: FlowGraphProps) {
                     />
                     <path
                       d={arrowPath(geometry.tip, geometry.dir)}
-                      className="mdxkit-flow__edge-arrow"
+                      className="mdxstudio-flow__edge-arrow"
                       style={litStroke ? { fill: litStroke } : undefined}
                     />
                     {edge.label && board.width >= 480 && (!selected || onFlow) && (
@@ -802,7 +802,7 @@ export function FlowGraph(props: FlowGraphProps) {
                         y={(from.rect.y + from.rect.h / 2 + to.rect.y + to.rect.h / 2) / 2}
                         fontSize={9}
                         textAnchor="middle"
-                        className="mdxkit-flow__edge-label"
+                        className="mdxstudio-flow__edge-label"
                         style={litStroke ? { fill: litStroke } : undefined}
                         strokeWidth={3}
                         paintOrder="stroke"
@@ -832,7 +832,7 @@ export function FlowGraph(props: FlowGraphProps) {
                     tabIndex={isPdf ? undefined : 0}
                     role={isPdf ? undefined : 'button'}
                     aria-label={node.description ? `${node.label}. ${node.description}` : node.label}
-                    className={isPdf ? undefined : 'mdxkit-flow__node-group'}
+                    className={isPdf ? undefined : 'mdxstudio-flow__node-group'}
                     onMouseEnter={isPdf ? undefined : () => setHoveredNode(node.id)}
                     onMouseLeave={isPdf ? undefined : () => setHoveredNode((c) => (c === node.id ? null : c))}
                     onFocus={isPdf ? undefined : () => setHoveredNode(node.id)}
@@ -873,7 +873,7 @@ export function FlowGraph(props: FlowGraphProps) {
                       width={rect.w}
                       height={rect.h}
                       rx={10}
-                      className="mdxkit-flow__node-box"
+                      className="mdxstudio-flow__node-box"
                       style={highlight ? { stroke: (selected as NormFlow).hex } : undefined}
                       strokeWidth={highlight ? 1.8 : 1}
                       strokeDasharray={DASHED_KINDS.has(node.kind) ? '4 3' : undefined}
@@ -896,7 +896,7 @@ export function FlowGraph(props: FlowGraphProps) {
                       width={3}
                       height={Math.max(8, rect.h - 16)}
                       rx={1.5}
-                      className="mdxkit-flow__node-accent"
+                      className="mdxstudio-flow__node-accent"
                       style={
                         highlight
                           ? { fill: (selected as NormFlow).hex }
@@ -936,7 +936,7 @@ export function FlowGraph(props: FlowGraphProps) {
                           y={blockTop + 9.5 + index * LINE_H + (isMeta ? 1 : 0)}
                           fontSize={isMeta ? META_SIZE : LABEL_SIZE}
                           fontWeight={isMeta ? 400 : 600}
-                          className={isMeta ? 'mdxkit-flow__node-meta' : 'mdxkit-flow__node-text'}
+                          className={isMeta ? 'mdxstudio-flow__node-meta' : 'mdxstudio-flow__node-text'}
                         >
                           {text}
                         </text>
@@ -951,7 +951,7 @@ export function FlowGraph(props: FlowGraphProps) {
             {!isPdf && activePlaced && (
               <div
                 role="tooltip"
-                className="mdxkit-flow__tooltip"
+                className="mdxstudio-flow__tooltip"
                 style={{
                   left: `${((activePlaced.rect.x + activePlaced.rect.w / 2) / board.width) * 100}%`,
                   top: `${((activePlaced.rect.y - 6) / board.height) * 100}%`,
@@ -959,12 +959,12 @@ export function FlowGraph(props: FlowGraphProps) {
                   maxWidth: 'min(260px, 88%)',
                 }}
               >
-                <div className="mdxkit-flow__tooltip-card">
-                  <div className="mdxkit-flow__tooltip-title">{activePlaced.node.label}</div>
+                <div className="mdxstudio-flow__tooltip-card">
+                  <div className="mdxstudio-flow__tooltip-title">{activePlaced.node.label}</div>
                   {activePlaced.node.meta && (
-                    <div className="mdxkit-flow__tooltip-meta">{activePlaced.node.meta}</div>
+                    <div className="mdxstudio-flow__tooltip-meta">{activePlaced.node.meta}</div>
                   )}
-                  <div className="mdxkit-flow__tooltip-body">
+                  <div className="mdxstudio-flow__tooltip-body">
                     {activePlaced.node.description || 'No description supplied for this node.'}
                   </div>
                 </div>
@@ -976,44 +976,44 @@ export function FlowGraph(props: FlowGraphProps) {
         {/* Flows panel */}
         {hasFlows && (
           <div
-            className={`mdxkit-flow__panel mdxkit-flow__panel--${stacked ? 'stacked' : 'side'}`}
+            className={`mdxstudio-flow__panel mdxstudio-flow__panel--${stacked ? 'stacked' : 'side'}`}
           >
-            <div className="mdxkit-flow__panel-head">
-              <span className="mdxkit-flow__panel-title">Flows</span>
+            <div className="mdxstudio-flow__panel-head">
+              <span className="mdxstudio-flow__panel-title">Flows</span>
               {isPdf ? (
-                <span className="mdxkit-flow__panel-count">{model.flows.length} paths</span>
+                <span className="mdxstudio-flow__panel-count">{model.flows.length} paths</span>
               ) : selected ? (
                 <button
                   type="button"
                   onClick={() => setSelectedId(null)}
-                  className="mdxkit-flow__reset"
+                  className="mdxstudio-flow__reset"
                 >
-                  <Icons.RotateCcw className="mdxkit-flow__icon-12" />
+                  <Icons.RotateCcw className="mdxstudio-flow__icon-12" />
                   Show all
                 </button>
               ) : (
-                <span className="mdxkit-flow__panel-count">{model.flows.length} paths</span>
+                <span className="mdxstudio-flow__panel-count">{model.flows.length} paths</span>
               )}
             </div>
 
-            <div className={`mdxkit-flow__list${stacked ? ' mdxkit-flow__list--stacked' : ''}`}>
+            <div className={`mdxstudio-flow__list${stacked ? ' mdxstudio-flow__list--stacked' : ''}`}>
               {model.flows.map((flow) => {
                 const isOn = selected ? selected.id === flow.id : false;
                 const body = (
                   <>
-                    <span className="mdxkit-flow__chip-head">
+                    <span className="mdxstudio-flow__chip-head">
                       <span
                         data-pdf-swatch={flow.hex}
-                        className="mdxkit-flow__chip-swatch"
+                        className="mdxstudio-flow__chip-swatch"
                         style={{ backgroundColor: flow.hex }}
                       />
-                      <span className="mdxkit-flow__chip-label">{flow.label}</span>
+                      <span className="mdxstudio-flow__chip-label">{flow.label}</span>
                     </span>
                     {(isOn || isPdf) && flow.summary && (
-                      <span className="mdxkit-flow__chip-summary">{flow.summary}</span>
+                      <span className="mdxstudio-flow__chip-summary">{flow.summary}</span>
                     )}
                     {(isOn || isPdf) && flow.path.length > 0 && (
-                      <span className="mdxkit-flow__chip-path">
+                      <span className="mdxstudio-flow__chip-path">
                         {flow.path
                           .map((id) => model.nodeById.get(id)?.label || id)
                           .join(' → ')}
@@ -1024,7 +1024,7 @@ export function FlowGraph(props: FlowGraphProps) {
 
                 if (isPdf) {
                   return (
-                    <div key={flow.id} className="mdxkit-flow__chip--static">
+                    <div key={flow.id} className="mdxstudio-flow__chip--static">
                       {body}
                     </div>
                   );
@@ -1036,7 +1036,7 @@ export function FlowGraph(props: FlowGraphProps) {
                     type="button"
                     aria-pressed={isOn}
                     onClick={() => setSelectedId(isOn ? null : flow.id)}
-                    className={`mdxkit-flow__chip${isOn ? ' mdxkit-flow__chip--on' : ''}`}
+                    className={`mdxstudio-flow__chip${isOn ? ' mdxstudio-flow__chip--on' : ''}`}
                     style={isOn ? { borderColor: flow.hex } : undefined}
                   >
                     {body}
@@ -1046,7 +1046,7 @@ export function FlowGraph(props: FlowGraphProps) {
             </div>
 
             {!isPdf && (
-              <p className="mdxkit-flow__hint">
+              <p className="mdxstudio-flow__hint">
                 Pick a flow to light up its path. Hover or focus a node for its description.
               </p>
             )}

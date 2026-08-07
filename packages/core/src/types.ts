@@ -27,7 +27,7 @@ export interface ThemeConfig {
   previewText: string;
   headingFont?: string;
   /**
-   * `--mdxkit-*` custom properties the renderer stamps on its root.
+   * `--mdxstudio-*` custom properties the renderer stamps on its root.
    *
    * This is how a preset reaches the stylesheets the packages ship: the
    * `*Class` fields above are Tailwind utility strings and mean nothing to a

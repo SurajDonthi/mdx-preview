@@ -17,7 +17,7 @@ pnpm and yarn need them listed explicitly.
 | Peer            | Range      | Why                                                          |
 | --------------- | ---------- | ------------------------------------------------------------ |
 | `react`         | `^19.0.0`  | One React instance, or hooks throw.                          |
-| `@mdxstudio/core`  | `^0.1.0`   | Holds the render context every mdxkit package reads from — a second copy silently breaks theming inside diagrams and charts. |
+| `@mdxstudio/core`  | `^0.1.0`   | Holds the render context every mdxstudio package reads from — a second copy silently breaks theming inside diagrams and charts. |
 
 ## Usage
 

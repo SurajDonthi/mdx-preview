@@ -1,6 +1,6 @@
 <div align="center">
 
-# mdxkit
+# mdxstudio
 
 **A React MDX renderer you can drop into an app — and the Studio that proves it works.**
 
@@ -200,21 +200,21 @@ import '@mdxstudio/flow/styles.css';     // flow map chrome and SVG palette
 ```
 
 **Theme comes from the application, not the operating system.** `MdxRenderer` stamps
-`data-mdxkit-theme="light" | "dark"` on its root from `themeConfig.category`, and every
+`data-mdxstudio-theme="light" | "dark"` on its root from `themeConfig.category`, and every
 themed rule keys off that attribute. `prefers-color-scheme` is never consulted; a host
 that wants OS-following behaviour opts in by setting the attribute from a media query
 itself. The attribute lives on the renderer's own root rather than on `:root` so the PDF
 exporter's detached clone still resolves it.
 
 **Retheme by overriding custom properties, not by forking components.** Every colour,
-radius, spacing step and font stack is a `--mdxkit-*` property. Set them on any ancestor:
+radius, spacing step and font stack is a `--mdxstudio-*` property. Set them on any ancestor:
 
 ```css
 .my-docs {
-  --mdxkit-accent: #0f766e;
-  --mdxkit-surface-base: #fffaf3;
-  --mdxkit-radius-2xl: 0;
-  --mdxkit-font-body: ui-serif, Georgia, serif;
+  --mdxstudio-accent: #0f766e;
+  --mdxstudio-surface-base: #fffaf3;
+  --mdxstudio-radius-2xl: 0;
+  --mdxstudio-font-body: ui-serif, Georgia, serif;
 }
 ```
 

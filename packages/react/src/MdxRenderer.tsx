@@ -77,9 +77,9 @@ class MdxErrorBoundary extends Component<
   render() {
     if (this.state.hasError) {
       return (
-        <div className="mdxkit-alert mdxkit-alert--boundary">
-          <div className="mdxkit-alert__title">
-            <Icons.AlertTriangle className="mdxkit-icon-16 mdxkit-alert__icon" />
+        <div className="mdxstudio-alert mdxstudio-alert--boundary">
+          <div className="mdxstudio-alert__title">
+            <Icons.AlertTriangle className="mdxstudio-icon-16 mdxstudio-alert__icon" />
             <span>MDX Component Error</span>
           </div>
           <div>{this.state.error?.message || 'A component threw while rendering.'}</div>
@@ -128,24 +128,24 @@ function CodeBlock({
   };
 
   return (
-    <div className="mdxkit-code">
+    <div className="mdxstudio-code">
       {/* Code Header Bar */}
-      <div className="mdxkit-code__header">
-        <span className="mdxkit-code__dots">
-          <span className="mdxkit-code__dot mdxkit-code__dot--red" />
-          <span className="mdxkit-code__dot mdxkit-code__dot--amber" />
-          <span className="mdxkit-code__dot mdxkit-code__dot--green" />
-          <span className="mdxkit-code__lang">{cleanLang}</span>
+      <div className="mdxstudio-code__header">
+        <span className="mdxstudio-code__dots">
+          <span className="mdxstudio-code__dot mdxstudio-code__dot--red" />
+          <span className="mdxstudio-code__dot mdxstudio-code__dot--amber" />
+          <span className="mdxstudio-code__dot mdxstudio-code__dot--green" />
+          <span className="mdxstudio-code__lang">{cleanLang}</span>
         </span>
-        <button onClick={handleCopy} className="mdxkit-code__copy">
+        <button onClick={handleCopy} className="mdxstudio-code__copy">
           {copied ? (
             <>
-              <Icons.Check className="mdxkit-icon-14 mdxkit-code__copied" />
-              <span className="mdxkit-code__copied">Copied</span>
+              <Icons.Check className="mdxstudio-icon-14 mdxstudio-code__copied" />
+              <span className="mdxstudio-code__copied">Copied</span>
             </>
           ) : (
             <>
-              <Icons.Copy className="mdxkit-icon-14" />
+              <Icons.Copy className="mdxstudio-icon-14" />
               <span>Copy</span>
             </>
           )}
@@ -153,8 +153,8 @@ function CodeBlock({
       </div>
 
       {/* Highlighting Content */}
-      <div className="mdxkit-code__body mdxkit-scrollbar">
-        <pre className="mdxkit-code__pre">
+      <div className="mdxstudio-code__body mdxstudio-scrollbar">
+        <pre className="mdxstudio-code__pre">
           <code
             className={`language-${cleanLang}`}
             dangerouslySetInnerHTML={{ __html: highlightedCode }}
@@ -208,14 +208,14 @@ function CustomCodeElement({
   }
 
   // Inline code rendering. A backtick span follows the theme preset's own code
-  // colours - `--mdxkit-inline-code-*`, set on the renderer root - which is what
+  // colours - `--mdxstudio-inline-code-*`, set on the renderer root - which is what
   // threading `codeBgClass`/`codeTextClass` through here used to achieve.
   return (
     <InlineToken
       as="code"
       kind="code"
       tone={themeConfig.category}
-      appearanceClassName="mdxkit-token--themed"
+      appearanceClassName="mdxstudio-token--themed"
       {...props}
     >
       {children}
@@ -237,8 +237,8 @@ function getUnknownComponent(name: string): React.ComponentType<any> {
 
   const UnknownMdxComponent = ({ children }: { children?: React.ReactNode }) => (
     <>
-      <span data-mdx-unknown-component={name} className="mdxkit-unknown">
-        <Icons.HelpCircle className="mdxkit-icon-14 mdxkit-shrink-0" />
+      <span data-mdx-unknown-component={name} className="mdxstudio-unknown">
+        <Icons.HelpCircle className="mdxstudio-icon-14 mdxstudio-shrink-0" />
         <span>
           Unknown component <strong>{`<${name}>`}</strong>
         </span>
@@ -584,31 +584,31 @@ export function MdxRenderer({
         });
 
         if (hasBlockChild) {
-          return <div className="mdxkit-p" {...props}>{children}</div>;
+          return <div className="mdxstudio-p" {...props}>{children}</div>;
         }
 
-        return <p className="mdxkit-p" {...props}>{children}</p>;
+        return <p className="mdxstudio-p" {...props}>{children}</p>;
       },
 
       // Heading anchors for scroll spy TOC. `id` is stamped on the tree before
       // rendering, in document order, so it matches extractHeadings().
       h1: ({ children, node, ...props }: any) => (
-        <h1 className="mdxkit-heading mdxkit-heading--1" {...props}>
+        <h1 className="mdxstudio-heading mdxstudio-heading--1" {...props}>
           {children}
         </h1>
       ),
       h2: ({ children, node, ...props }: any) => (
-        <h2 className="mdxkit-heading mdxkit-heading--2" {...props}>
+        <h2 className="mdxstudio-heading mdxstudio-heading--2" {...props}>
           {children}
         </h2>
       ),
       h3: ({ children, node, ...props }: any) => (
-        <h3 className="mdxkit-heading mdxkit-heading--3" {...props}>
+        <h3 className="mdxstudio-heading mdxstudio-heading--3" {...props}>
           {children}
         </h3>
       ),
       h4: ({ children, node, ...props }: any) => (
-        <h4 className="mdxkit-heading mdxkit-heading--4" {...props}>
+        <h4 className="mdxstudio-heading mdxstudio-heading--4" {...props}>
           {children}
         </h4>
       ),
@@ -620,20 +620,20 @@ export function MdxRenderer({
 
       // Table overrides with enhanced styling and borders
       table: ({ children }: any) => (
-        <div className="mdxkit-table-wrap">
-          <table className="mdxkit-table">{children}</table>
+        <div className="mdxstudio-table-wrap">
+          <table className="mdxstudio-table">{children}</table>
         </div>
       ),
-      thead: ({ children }: any) => <thead className="mdxkit-thead">{children}</thead>,
-      tbody: ({ children }: any) => <tbody className="mdxkit-tbody">{children}</tbody>,
-      tr: ({ children }: any) => <tr className="mdxkit-tr">{children}</tr>,
+      thead: ({ children }: any) => <thead className="mdxstudio-thead">{children}</thead>,
+      tbody: ({ children }: any) => <tbody className="mdxstudio-tbody">{children}</tbody>,
+      tr: ({ children }: any) => <tr className="mdxstudio-tr">{children}</tr>,
       th: ({ children, style }: any) => (
-        <th style={style} className="mdxkit-th">
+        <th style={style} className="mdxstudio-th">
           {children}
         </th>
       ),
       td: ({ children, style }: any) => (
-        <td style={style} className="mdxkit-td">
+        <td style={style} className="mdxstudio-td">
           {children}
         </td>
       ),
@@ -644,7 +644,7 @@ export function MdxRenderer({
           href={safeHref(href)}
           target="_blank"
           rel="noopener noreferrer"
-          className="mdxkit-link"
+          className="mdxstudio-link"
         >
           {children}
         </a>
@@ -652,17 +652,17 @@ export function MdxRenderer({
 
       // Lists (ul, ol, li) overrides
       ul: ({ children, node, ...props }: any) => (
-        <ul className="mdxkit-list mdxkit-list--ul" {...props}>
+        <ul className="mdxstudio-list mdxstudio-list--ul" {...props}>
           {children}
         </ul>
       ),
       ol: ({ children, node, ...props }: any) => (
-        <ol className="mdxkit-list mdxkit-list--ol" {...props}>
+        <ol className="mdxstudio-list mdxstudio-list--ol" {...props}>
           {children}
         </ol>
       ),
       li: ({ children, node, ...props }: any) => (
-        <li className="mdxkit-li" {...props}>
+        <li className="mdxstudio-li" {...props}>
           {children}
         </li>
       ),
@@ -728,8 +728,8 @@ export function MdxRenderer({
         // off. It comes from the application's own theme, never from
         // `prefers-color-scheme`, and it is declared here rather than on the
         // document root so the PDF exporter's detached clone still resolves it.
-        data-mdxkit-theme={isPdf ? 'light' : themeConfig.category}
-        className="mdxkit-root"
+        data-mdxstudio-theme={isPdf ? 'light' : themeConfig.category}
+        className="mdxstudio-root"
         style={{
           // The preset's own properties are declared even for the export pass:
           // it overrides colour, background and blur with `!important` anyway,
@@ -750,19 +750,19 @@ export function MdxRenderer({
 
       {/* Located warning banner while the document does not parse */}
       {banner && (
-        <div className="mdxkit-alert mdxkit-alert--banner">
-          <div className="mdxkit-alert__body">
-            <Icons.AlertTriangle className="mdxkit-icon-16 mdxkit-alert__body-icon" />
-            <span className="mdxkit-alert__message">MDX: {banner.split('\n')[0]}</span>
+        <div className="mdxstudio-alert mdxstudio-alert--banner">
+          <div className="mdxstudio-alert__body">
+            <Icons.AlertTriangle className="mdxstudio-icon-16 mdxstudio-alert__body-icon" />
+            <span className="mdxstudio-alert__message">MDX: {banner.split('\n')[0]}</span>
           </div>
-          <span className="mdxkit-alert__meta">
+          <span className="mdxstudio-alert__meta">
             {element ? 'Last good render' : 'Nothing to show'}
           </span>
         </div>
       )}
 
       {/* Main Render Canvas */}
-      <div className="mdxkit-prose">
+      <div className="mdxstudio-prose">
         <MdxErrorBoundary resetKey={element} onError={(e) => setRuntimeError(e.message)}>
           {element}
         </MdxErrorBoundary>
