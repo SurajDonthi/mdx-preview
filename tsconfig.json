@@ -44,7 +44,10 @@
   },
   "include": [
     "packages/*/src",
+    "packages/*/tests",
     "apps/*/src",
-    "apps/*/vite.config.ts"
+    "apps/*/tests",
+    "apps/*/vite.config.ts",
+    "vitest.config.ts"
   ]
 }
