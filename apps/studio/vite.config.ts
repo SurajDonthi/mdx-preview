@@ -13,20 +13,20 @@ export default defineConfig(() => {
     resolve: {
       alias: {
         // The stylesheet entries come first: a bare package alias also matches
-        // its subpaths, so `@mdxkit/react/styles.css` would otherwise be
+        // its subpaths, so `@mdxstudio/react/styles.css` would otherwise be
         // rewritten to `.../src/index.ts/styles.css`.
-        '@mdxkit/react/styles.css': pkgCss('react'),
-        '@mdxkit/mermaid/styles.css': pkgCss('mermaid'),
-        '@mdxkit/charts/styles.css': pkgCss('charts'),
-        '@mdxkit/flow/styles.css': pkgCss('flow'),
+        '@mdxstudio/react/styles.css': pkgCss('react'),
+        '@mdxstudio/mermaid/styles.css': pkgCss('mermaid'),
+        '@mdxstudio/charts/styles.css': pkgCss('charts'),
+        '@mdxstudio/flow/styles.css': pkgCss('flow'),
         // Workspace packages are TypeScript source; resolve them explicitly so
         // Vite compiles them instead of treating them as prebundled deps.
-        '@mdxkit/core': pkg('core'),
-        '@mdxkit/react': pkg('react'),
-        '@mdxkit/mermaid': pkg('mermaid'),
-        '@mdxkit/charts': pkg('charts'),
-        '@mdxkit/flow': pkg('flow'),
-        '@mdxkit/pdf': pkg('pdf'),
+        '@mdxstudio/core': pkg('core'),
+        '@mdxstudio/react': pkg('react'),
+        '@mdxstudio/mermaid': pkg('mermaid'),
+        '@mdxstudio/charts': pkg('charts'),
+        '@mdxstudio/flow': pkg('flow'),
+        '@mdxstudio/pdf': pkg('pdf'),
         '@': path.resolve(__dirname, '.'),
       },
       // One React instance across every workspace package.

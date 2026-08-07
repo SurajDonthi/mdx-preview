@@ -1,8 +1,8 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { User } from 'firebase/auth';
 import { ViewMode, ThemeId } from './types';
-import { extractHeadings, calculateDocumentStats } from '@mdxkit/core';
-import { MdxRenderer, THEMES } from '@mdxkit/react';
+import { extractHeadings, calculateDocumentStats } from '@mdxstudio/core';
+import { MdxRenderer, THEMES } from '@mdxstudio/react';
 import { studioMdxRegistry } from './mdxRegistry';
 import {
   loadAllDocuments,

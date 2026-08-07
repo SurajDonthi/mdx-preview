@@ -1,4 +1,4 @@
-import { defineMdxPlugin } from '@mdxkit/core';
+import { defineMdxPlugin } from '@mdxstudio/core';
 import { MermaidDiagram } from './MermaidDiagram';
 
 export { MermaidDiagram };
@@ -9,7 +9,7 @@ export type { MermaidDiagramProps } from './MermaidDiagram';
  * ```` ```mermaid ```` fenced code blocks.
  */
 export const mermaidPlugin = defineMdxPlugin({
-  name: '@mdxkit/mermaid',
+  name: '@mdxstudio/mermaid',
   components: { MermaidDiagram },
   aliases: { Mermaid: 'MermaidDiagram' },
   codeFences: { mermaid: 'MermaidDiagram' },

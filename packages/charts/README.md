@@ -1,4 +1,4 @@
-# @mdxkit/charts
+# @mdxstudio/charts
 
 A Recharts-backed `<Chart>` for mdxkit: line, bar and area.
 
@@ -9,21 +9,21 @@ library downloads only when a chart mounts.
 ## Install
 
 ```sh
-npm install @mdxkit/charts @mdxkit/core @mdxkit/react react
+npm install @mdxstudio/charts @mdxstudio/core @mdxstudio/react react
 ```
 
 | Peer           | Range     |
 | -------------- | --------- |
 | `react`        | `^19.0.0` |
-| `@mdxkit/core` | `^0.1.0`  |
+| `@mdxstudio/core` | `^0.1.0`  |
 
 `recharts` is an ordinary dependency.
 
 ## Usage
 
 ```ts
-import { createRendererRegistry } from '@mdxkit/react';
-import { chartsPlugin } from '@mdxkit/charts';
+import { createRendererRegistry } from '@mdxstudio/react';
+import { chartsPlugin } from '@mdxstudio/charts';
 
 export const registry = createRendererRegistry(chartsPlugin);
 ```
@@ -42,10 +42,10 @@ export const registry = createRendererRegistry(chartsPlugin);
 ## Stylesheet
 
 ```ts
-import '@mdxkit/charts/styles.css';
+import '@mdxstudio/charts/styles.css';
 ```
 
-Required, in addition to `@mdxkit/react/styles.css`.
+Required, in addition to `@mdxstudio/react/styles.css`.
 
 ESM only, with TypeScript declarations.
 

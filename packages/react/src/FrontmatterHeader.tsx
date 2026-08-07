@@ -1,6 +1,6 @@
 import { useContext } from 'react';
-import { MdxRenderContext } from '@mdxkit/core';
-import type { Frontmatter, MdxRenderMode, MdxThemeCategory } from '@mdxkit/core';
+import { MdxRenderContext } from '@mdxstudio/core';
+import type { Frontmatter, MdxRenderMode, MdxThemeCategory } from '@mdxstudio/core';
 import { InlineToken } from './InlineToken';
 import * as Icons from 'lucide-react';
 

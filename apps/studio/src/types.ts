@@ -4,7 +4,7 @@ export type {
   Frontmatter,
   HeaderItem,
   DocumentStats,
-} from '@mdxkit/core';
+} from '@mdxstudio/core';
 
 export interface MdxDocSample {
   id: string;

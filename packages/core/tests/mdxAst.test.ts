@@ -16,7 +16,7 @@ import {
   extractHeadings,
   formatMdxParseError,
   parseMdxDocument,
-} from '@mdxkit/core';
+} from '@mdxstudio/core';
 import { codeFences, findAll, flattenText } from './helpers';
 
 /** A document with a literal fence in prose, then real content that must survive. */

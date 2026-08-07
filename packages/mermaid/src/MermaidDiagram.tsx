@@ -1,7 +1,7 @@
 import React, { useContext, useEffect, useId, useMemo, useState } from 'react';
 import * as Icons from 'lucide-react';
-import { MdxRenderContext } from '@mdxkit/core';
-import type { MdxRenderMode, MdxThemeCategory } from '@mdxkit/core';
+import { MdxRenderContext } from '@mdxstudio/core';
+import type { MdxRenderMode, MdxThemeCategory } from '@mdxstudio/core';
 
 export interface MermaidDiagramProps {
   chart?: string;

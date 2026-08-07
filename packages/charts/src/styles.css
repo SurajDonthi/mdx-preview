@@ -1,16 +1,16 @@
 /*
- * @mdxkit/charts — the frame around a Recharts figure.
+ * @mdxstudio/charts — the frame around a Recharts figure.
  *
- *   import '@mdxkit/charts/styles.css';
+ *   import '@mdxstudio/charts/styles.css';
  *
  * Recharts draws the series itself from props, so only the card is styled here.
  * Theme comes from `data-mdxkit-theme` on an ancestor, never from
  * `prefers-color-scheme`.
  *
- * The token defaults repeat the ones in `@mdxkit/react/styles.css` so this
+ * The token defaults repeat the ones in `@mdxstudio/react/styles.css` so this
  * sheet also stands alone. Loading both is harmless: the values are identical.
  */
-/* Pins the reset layer's position; see @mdxkit/react/styles.css. */
+/* Pins the reset layer's position; see @mdxstudio/react/styles.css. */
 @layer mdxkit-reset;
 
 

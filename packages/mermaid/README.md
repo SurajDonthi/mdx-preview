@@ -1,4 +1,4 @@
-# @mdxkit/mermaid
+# @mdxstudio/mermaid
 
 Mermaid diagrams for mdxkit. Registers `<MermaidDiagram>` (also `<Mermaid>`) and
 takes over ` ```mermaid ` fenced code blocks.
@@ -10,21 +10,21 @@ the diagram engine downloads the first time a document actually contains one.
 ## Install
 
 ```sh
-npm install @mdxkit/mermaid @mdxkit/core @mdxkit/react react
+npm install @mdxstudio/mermaid @mdxstudio/core @mdxstudio/react react
 ```
 
 | Peer           | Range     |
 | -------------- | --------- |
 | `react`        | `^19.0.0` |
-| `@mdxkit/core` | `^0.1.0`  |
+| `@mdxstudio/core` | `^0.1.0`  |
 
 `mermaid` and `lucide-react` are ordinary dependencies — no need to install them.
 
 ## Usage
 
 ```ts
-import { createRendererRegistry } from '@mdxkit/react';
-import { mermaidPlugin } from '@mdxkit/mermaid';
+import { createRendererRegistry } from '@mdxstudio/react';
+import { mermaidPlugin } from '@mdxstudio/mermaid';
 
 export const registry = createRendererRegistry(mermaidPlugin);
 ```
@@ -41,11 +41,11 @@ graph TD
 ## Stylesheet
 
 ```ts
-import '@mdxkit/mermaid/styles.css';
+import '@mdxstudio/mermaid/styles.css';
 ```
 
 Required — without it the diagram frame, header and error state are unstyled.
-This is in addition to `@mdxkit/react/styles.css`.
+This is in addition to `@mdxstudio/react/styles.css`.
 
 ESM only, with TypeScript declarations.
 

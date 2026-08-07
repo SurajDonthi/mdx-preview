@@ -1,4 +1,4 @@
-# @mdxkit/sandbox
+# @mdxstudio/sandbox
 
 Renders MDX you did not write.
 
@@ -16,15 +16,15 @@ operations you explicitly register.
 ## Install
 
 ```sh
-npm install @mdxkit/sandbox @mdxkit/react @mdxkit/core react react-dom
+npm install @mdxstudio/sandbox @mdxstudio/react @mdxstudio/core react react-dom
 ```
 
 | Peer            | Range     | Why                                                     |
 | --------------- | --------- | ------------------------------------------------------- |
 | `react`         | `^19.0.0` | Host component.                                          |
 | `react-dom`     | `^19.0.0` | The guest mounts its own root inside the frame.          |
-| `@mdxkit/core`  | `^0.1.0`  | Registry and render context.                             |
-| `@mdxkit/react` | `^0.1.0`  | The default guest renders with `MdxRenderer`.            |
+| `@mdxstudio/core`  | `^0.1.0`  | Registry and render context.                             |
+| `@mdxstudio/react` | `^0.1.0`  | The default guest renders with `MdxRenderer`.            |
 
 No stylesheet of its own — see [Styling the frame](#styling-the-frame).
 
@@ -40,9 +40,9 @@ runtime has to arrive as **source text** and be inlined into the frame document.
 
 ```tsx
 // src/sandbox-guest.tsx
-import { startMdxGuest } from '@mdxkit/sandbox/guest/mdx';
-import { createRendererRegistry } from '@mdxkit/react';
-import { mermaidPlugin } from '@mdxkit/mermaid';
+import { startMdxGuest } from '@mdxstudio/sandbox/guest/mdx';
+import { createRendererRegistry } from '@mdxstudio/react';
+import { mermaidPlugin } from '@mdxstudio/mermaid';
 
 startMdxGuest({
   registry: createRendererRegistry(mermaidPlugin),
@@ -58,25 +58,25 @@ With Vite, the bundled script is exposed as a virtual module:
 // vite.config.ts
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
-import { mdxkitSandboxGuest } from '@mdxkit/sandbox/vite';
+import { mdxkitSandboxGuest } from '@mdxstudio/sandbox/vite';
 
 export default defineConfig({
   plugins: [react(), mdxkitSandboxGuest({ entry: './src/sandbox-guest.tsx' })],
 });
 ```
 
-Outside Vite, call `bundleGuest()` from `@mdxkit/sandbox/build` in a Node script
+Outside Vite, call `bundleGuest()` from `@mdxstudio/sandbox/build` in a Node script
 and write the result wherever your app can import it as a string. Both paths need
 `esbuild`, which ships as a dependency of this package.
 
 ### 3. Render
 
 ```tsx
-import { SandboxedMdx } from '@mdxkit/sandbox';
+import { SandboxedMdx } from '@mdxstudio/sandbox';
 import guestScript from 'virtual:mdxkit-sandbox-guest';
 
-import mdxkitCss from '@mdxkit/react/styles.css?raw';
-import mermaidCss from '@mdxkit/mermaid/styles.css?raw';
+import mdxkitCss from '@mdxstudio/react/styles.css?raw';
+import mermaidCss from '@mdxstudio/mermaid/styles.css?raw';
 
 export function UntrustedDocument({ source }: { source: string }) {
   return (
@@ -126,12 +126,12 @@ as text through `styles`. In Vite, `?raw` does that; with webpack, use
 
 | Import                       | Runtime | Contents                                              |
 | ---------------------------- | ------- | ----------------------------------------------------- |
-| `@mdxkit/sandbox`            | browser | `SandboxedMdx`, `buildSandboxFrameDocument`, CSP types |
-| `@mdxkit/sandbox/guest`      | browser | `startGuest` — build a renderer other than MdxRenderer |
-| `@mdxkit/sandbox/guest/mdx`  | browser | `startMdxGuest` — the default MdxRenderer guest        |
-| `@mdxkit/sandbox/protocol`   | shared  | Wire types and envelope helpers                        |
-| `@mdxkit/sandbox/vite`       | node    | `mdxkitSandboxGuest()` Vite plugin                     |
-| `@mdxkit/sandbox/build`      | node    | `bundleGuest()`                                        |
+| `@mdxstudio/sandbox`            | browser | `SandboxedMdx`, `buildSandboxFrameDocument`, CSP types |
+| `@mdxstudio/sandbox/guest`      | browser | `startGuest` — build a renderer other than MdxRenderer |
+| `@mdxstudio/sandbox/guest/mdx`  | browser | `startMdxGuest` — the default MdxRenderer guest        |
+| `@mdxstudio/sandbox/protocol`   | shared  | Wire types and envelope helpers                        |
+| `@mdxstudio/sandbox/vite`       | node    | `mdxkitSandboxGuest()` Vite plugin                     |
+| `@mdxstudio/sandbox/build`      | node    | `bundleGuest()`                                        |
 
 ESM only, with TypeScript declarations.
 

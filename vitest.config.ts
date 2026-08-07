@@ -11,12 +11,12 @@ const pkg = (name: string) => path.resolve(root, `packages/${name}/src/index.ts`
  * compiling the sources under test instead of treating them as prebuilt deps.
  */
 const alias = {
-  '@mdxkit/core': pkg('core'),
-  '@mdxkit/react': pkg('react'),
-  '@mdxkit/mermaid': pkg('mermaid'),
-  '@mdxkit/charts': pkg('charts'),
-  '@mdxkit/flow': pkg('flow'),
-  '@mdxkit/pdf': pkg('pdf'),
+  '@mdxstudio/core': pkg('core'),
+  '@mdxstudio/react': pkg('react'),
+  '@mdxstudio/mermaid': pkg('mermaid'),
+  '@mdxstudio/charts': pkg('charts'),
+  '@mdxstudio/flow': pkg('flow'),
+  '@mdxstudio/pdf': pkg('pdf'),
 };
 
 export default defineConfig({

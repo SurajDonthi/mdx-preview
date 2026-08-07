@@ -1,9 +1,9 @@
 /*
- * @mdxkit/react — the base stylesheet.
+ * @mdxstudio/react — the base stylesheet.
  *
  * Import it once, anywhere in the application:
  *
- *   import '@mdxkit/react/styles.css';
+ *   import '@mdxstudio/react/styles.css';
  *
  * Nothing here needs Tailwind, a preprocessor or a build step: it is plain CSS
  * with custom properties. Retheming means overriding the properties, not

@@ -1,5 +1,5 @@
 {
-  "//": "Compiler options for building a publishable package. Mirrors the root tsconfig, minus the `paths` that resolve workspace packages to their sources: a published `.d.ts` has to reference `@mdxkit/core` by name so consumers get one shared set of types, not an inlined copy per package.",
+  "//": "Compiler options for building a publishable package. Mirrors the root tsconfig, minus the `paths` that resolve workspace packages to their sources: a published `.d.ts` has to reference `@mdxstudio/core` by name so consumers get one shared set of types, not an inlined copy per package.",
   "compilerOptions": {
     "target": "ES2022",
     "module": "ESNext",

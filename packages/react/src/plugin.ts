@@ -1,13 +1,13 @@
-import { createMdxRegistry, defineMdxPlugin } from '@mdxkit/core';
-import type { MdxRegistry, MdxRegistrySource } from '@mdxkit/core';
+import { createMdxRegistry, defineMdxPlugin } from '@mdxstudio/core';
+import type { MdxRegistry, MdxRegistrySource } from '@mdxstudio/core';
 import { baseMdxAliases, baseMdxComponents } from './CustomComponents';
 
 /**
- * The components `@mdxkit/react` ships itself: layout, callouts, tabs, badges
+ * The components `@mdxstudio/react` ships itself: layout, callouts, tabs, badges
  * and the other light primitives that only cost React and `lucide-react`.
  */
 export const reactPlugin = defineMdxPlugin({
-  name: '@mdxkit/react',
+  name: '@mdxstudio/react',
   components: baseMdxComponents,
   aliases: baseMdxAliases,
 });

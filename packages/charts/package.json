@@ -1,5 +1,5 @@
 {
-  "name": "@mdxkit/charts",
+  "name": "@mdxstudio/charts",
   "version": "0.1.0",
   "type": "module",
   "description": "Recharts-backed Chart component and MDX plugin for mdxkit. Recharts itself is loaded on demand.",
@@ -54,7 +54,7 @@
     "recharts": "^3.10.1"
   },
   "peerDependencies": {
-    "@mdxkit/core": "^0.1.0",
+    "@mdxstudio/core": "^0.1.0",
     "react": "^19.0.0"
   }
 }

@@ -1,4 +1,4 @@
-# @mdxkit/react
+# @mdxstudio/react
 
 Renders an MDX string to React. `MdxRenderer` parses the document, evaluates its
 expressions and mounts the result with a set of built-in components — callouts,
@@ -8,22 +8,22 @@ code blocks — none of which the consuming app has to write.
 ## Install
 
 ```sh
-npm install @mdxkit/react @mdxkit/core react
+npm install @mdxstudio/react @mdxstudio/core react
 ```
 
-`@mdxkit/core` and `react` are peer dependencies. npm 7+ installs peers for you;
+`@mdxstudio/core` and `react` are peer dependencies. npm 7+ installs peers for you;
 pnpm and yarn need them listed explicitly.
 
 | Peer            | Range      | Why                                                          |
 | --------------- | ---------- | ------------------------------------------------------------ |
 | `react`         | `^19.0.0`  | One React instance, or hooks throw.                          |
-| `@mdxkit/core`  | `^0.1.0`   | Holds the render context every mdxkit package reads from — a second copy silently breaks theming inside diagrams and charts. |
+| `@mdxstudio/core`  | `^0.1.0`   | Holds the render context every mdxkit package reads from — a second copy silently breaks theming inside diagrams and charts. |
 
 ## Usage
 
 ```tsx
-import { MdxRenderer, THEMES } from '@mdxkit/react';
-import '@mdxkit/react/styles.css';
+import { MdxRenderer, THEMES } from '@mdxstudio/react';
+import '@mdxstudio/react/styles.css';
 
 const source = `---
 title: Release notes
@@ -58,7 +58,7 @@ export function Doc() {
 ### Stylesheet
 
 ```ts
-import '@mdxkit/react/styles.css';
+import '@mdxstudio/react/styles.css';
 ```
 
 Plain CSS — no Tailwind, no preprocessor, no build step. Import it once, anywhere
@@ -72,9 +72,9 @@ graphs ship separately so their weight is opt-in:
 
 ```ts
 // mdxRegistry.ts — module scope, so the object identity is stable.
-import { createRendererRegistry } from '@mdxkit/react';
-import { mermaidPlugin } from '@mdxkit/mermaid';
-import { chartsPlugin } from '@mdxkit/charts';
+import { createRendererRegistry } from '@mdxstudio/react';
+import { mermaidPlugin } from '@mdxstudio/mermaid';
+import { chartsPlugin } from '@mdxstudio/charts';
 
 export const registry = createRendererRegistry(mermaidPlugin, chartsPlugin);
 ```
@@ -90,7 +90,7 @@ module scope: a new registry object on every render re-parses the document.
 
 `expressions="literals"` restricts `{...}` to values the syntax spells out. For a
 document you did not write, that is not enough on its own — the components
-themselves still run in your page. Use [`@mdxkit/sandbox`](https://github.com/SurajDonthi/mdx-preview/tree/main/packages/sandbox#readme).
+themselves still run in your page. Use [`@mdxstudio/sandbox`](https://github.com/SurajDonthi/mdx-preview/tree/main/packages/sandbox#readme).
 
 ## Exports
 

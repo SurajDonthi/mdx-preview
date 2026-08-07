@@ -1,5 +1,5 @@
 {
-  "name": "@mdxkit/sandbox",
+  "name": "@mdxstudio/sandbox",
   "version": "0.1.0",
   "type": "module",
   "description": "Renders untrusted MDX inside an opaque-origin iframe and brokers a capability bridge between it and the host.",
@@ -81,8 +81,8 @@
     "esbuild": "^0.25.0"
   },
   "peerDependencies": {
-    "@mdxkit/core": "^0.1.0",
-    "@mdxkit/react": "^0.1.0",
+    "@mdxstudio/core": "^0.1.0",
+    "@mdxstudio/react": "^0.1.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   }

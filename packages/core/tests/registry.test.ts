@@ -7,8 +7,8 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { createMdxRegistry, defineMdxPlugin, emptyMdxRegistry } from '@mdxkit/core';
-import type { MdxComponent } from '@mdxkit/core';
+import { createMdxRegistry, defineMdxPlugin, emptyMdxRegistry } from '@mdxstudio/core';
+import type { MdxComponent } from '@mdxstudio/core';
 
 /** Distinguishable stand-ins; identity is what the assertions compare. */
 const component = (name: string): MdxComponent => {
@@ -35,7 +35,7 @@ describe('createMdxRegistry', () => {
     const replacement = component('replacement');
 
     const registry = createMdxRegistry(
-      defineMdxPlugin({ name: '@mdxkit/react', components: { Callout: shipped } }),
+      defineMdxPlugin({ name: '@mdxstudio/react', components: { Callout: shipped } }),
       { Callout: replacement }
     );
 
@@ -61,7 +61,7 @@ describe('createMdxRegistry', () => {
     // target. Resolving eagerly would throw here.
     const registry = createMdxRegistry(
       defineMdxPlugin({ name: 'aliases-first', aliases: { Mermaid: 'MermaidDiagram' } }),
-      defineMdxPlugin({ name: '@mdxkit/mermaid', components: { MermaidDiagram: diagram } })
+      defineMdxPlugin({ name: '@mdxstudio/mermaid', components: { MermaidDiagram: diagram } })
     );
 
     expect(registry.components.Mermaid).toBe(diagram);
@@ -88,7 +88,7 @@ describe('createMdxRegistry', () => {
 
     const registry = createMdxRegistry(
       defineMdxPlugin({ name: 'fences-first', codeFences: { MerMaid: 'MermaidDiagram' } }),
-      defineMdxPlugin({ name: '@mdxkit/mermaid', components: { MermaidDiagram: diagram } })
+      defineMdxPlugin({ name: '@mdxstudio/mermaid', components: { MermaidDiagram: diagram } })
     );
 
     expect(registry.codeFences).toEqual({ mermaid: diagram });
@@ -99,7 +99,7 @@ describe('createMdxRegistry', () => {
 
     const registry = createMdxRegistry(
       defineMdxPlugin({
-        name: '@mdxkit/mermaid',
+        name: '@mdxstudio/mermaid',
         components: { MermaidDiagram: diagram },
         aliases: { Mermaid: 'MermaidDiagram' },
         codeFences: { mermaid: 'Mermaid' },
@@ -112,17 +112,17 @@ describe('createMdxRegistry', () => {
   it('throws naming the plugin when an alias points at nothing', () => {
     expect(() =>
       createMdxRegistry(
-        defineMdxPlugin({ name: '@mdxkit/mermaid', aliases: { Mermaid: 'MermaidDiagram' } })
+        defineMdxPlugin({ name: '@mdxstudio/mermaid', aliases: { Mermaid: 'MermaidDiagram' } })
       )
-    ).toThrow(/@mdxkit\/mermaid declares alias "Mermaid" pointing at "MermaidDiagram"/);
+    ).toThrow(/@mdxstudio\/mermaid declares alias "Mermaid" pointing at "MermaidDiagram"/);
   });
 
   it('throws naming the plugin when a code fence points at nothing', () => {
     expect(() =>
       createMdxRegistry(
-        defineMdxPlugin({ name: '@mdxkit/charts', codeFences: { vega: 'VegaChart' } })
+        defineMdxPlugin({ name: '@mdxstudio/charts', codeFences: { vega: 'VegaChart' } })
       )
-    ).toThrow(/@mdxkit\/charts declares code fence "vega" pointing at "VegaChart"/);
+    ).toThrow(/@mdxstudio\/charts declares code fence "vega" pointing at "VegaChart"/);
   });
 
   it('is empty when given nothing', () => {

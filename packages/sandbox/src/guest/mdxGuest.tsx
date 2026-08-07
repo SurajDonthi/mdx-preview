@@ -2,13 +2,13 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 import type { Root } from 'react-dom/client';
 
-import type { MdxRegistry, ThemeId } from '@mdxkit/core';
-import { MdxRenderer, THEMES } from '@mdxkit/react';
+import type { MdxRegistry, ThemeId } from '@mdxstudio/core';
+import { MdxRenderer, THEMES } from '@mdxstudio/react';
 
 import { startGuest } from './index';
 
 /**
- * The default guest: renders the document with `@mdxkit/react`'s `MdxRenderer`.
+ * The default guest: renders the document with `@mdxstudio/react`'s `MdxRenderer`.
  *
  * This is the entry an application bundles into a standalone script and passes
  * to `<SandboxedMdx guestScript={...} />`. Applications that register extra
@@ -17,7 +17,7 @@ import { startGuest } from './index';
  * does not restrict what a document may contain, only what it may reach.
  */
 export interface MdxGuestOptions {
-  /** Components available to the document. Defaults to `@mdxkit/react`'s built-ins. */
+  /** Components available to the document. Defaults to `@mdxstudio/react`'s built-ins. */
   registry?: MdxRegistry;
   /** Theme used when the host does not send one. */
   defaultTheme?: ThemeId;

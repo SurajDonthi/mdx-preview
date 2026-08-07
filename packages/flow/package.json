@@ -1,5 +1,5 @@
 {
-  "name": "@mdxkit/flow",
+  "name": "@mdxstudio/flow",
   "version": "0.1.0",
   "type": "module",
   "description": "FlowGraph architecture/flow diagram component and MDX plugin for mdxkit.",
@@ -54,7 +54,7 @@
     "lucide-react": "^0.546.0"
   },
   "peerDependencies": {
-    "@mdxkit/core": "^0.1.0",
+    "@mdxstudio/core": "^0.1.0",
     "react": "^19.0.0"
   }
 }

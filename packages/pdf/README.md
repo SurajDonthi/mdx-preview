@@ -1,4 +1,4 @@
-# @mdxkit/pdf
+# @mdxstudio/pdf
 
 Exports an already-rendered MDX document from the DOM to an A4 PDF, paginating
 between block elements rather than through them instead of slicing the page at a
@@ -9,7 +9,7 @@ Browser only — it reads live layout out of the DOM.
 ## Install
 
 ```sh
-npm install @mdxkit/pdf
+npm install @mdxstudio/pdf
 ```
 
 No peer dependencies; no React; no stylesheet. `jspdf` and `html2canvas` are
@@ -22,7 +22,7 @@ Render the document with `renderMode="pdf"` into an off-screen container, then
 hand the element over:
 
 ```ts
-import { exportToPdf, downloadMdxFile } from '@mdxkit/pdf';
+import { exportToPdf, downloadMdxFile } from '@mdxstudio/pdf';
 
 // `source` is the rendered element (or its id); the title names the file.
 await exportToPdf(document.getElementById('doc')!, 'Release notes');

@@ -1,4 +1,4 @@
-import { defineMdxPlugin } from '@mdxkit/core';
+import { defineMdxPlugin } from '@mdxstudio/core';
 import { FlowGraph } from './FlowGraph';
 
 export { FlowGraph };
@@ -13,7 +13,7 @@ export type {
 
 /** Registers `<FlowGraph>` (also available as `<ArchitectureMap>`). */
 export const flowPlugin = defineMdxPlugin({
-  name: '@mdxkit/flow',
+  name: '@mdxstudio/flow',
   components: { FlowGraph },
   aliases: { ArchitectureMap: 'FlowGraph' },
 });

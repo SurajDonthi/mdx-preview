@@ -1,6 +1,6 @@
 import React, { useContext, useEffect, useMemo, useRef, useState } from 'react';
 import * as Icons from 'lucide-react';
-import { MdxRenderContext } from '@mdxkit/core';
+import { MdxRenderContext } from '@mdxstudio/core';
 
 /* ------------------------------------------------------------------ *
  * Public shape

@@ -1,17 +1,17 @@
 /*
- * @mdxkit/mermaid — the diagram card's chrome.
+ * @mdxstudio/mermaid — the diagram card's chrome.
  *
- *   import '@mdxkit/mermaid/styles.css';
+ *   import '@mdxstudio/mermaid/styles.css';
  *
  * The drawing itself is produced by Mermaid and styled by Mermaid's own theme;
  * everything around it lives here. Theme comes from `data-mdxkit-theme` on an
  * ancestor - `MdxRenderer` sets it - never from `prefers-color-scheme`.
  *
- * The token defaults below are the same values `@mdxkit/react/styles.css`
+ * The token defaults below are the same values `@mdxstudio/react/styles.css`
  * declares, repeated so this sheet also works on its own. Loading both is
  * harmless: the declarations are identical.
  */
-/* Pins the reset layer's position; see @mdxkit/react/styles.css. */
+/* Pins the reset layer's position; see @mdxstudio/react/styles.css. */
 @layer mdxkit-reset;
 
 

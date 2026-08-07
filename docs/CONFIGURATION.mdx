@@ -144,7 +144,7 @@ npm run build:app     # apps/studio/dist only
 ```
 
 `build:packages` names each workspace explicitly rather than using
-`--workspaces`, because a package's declaration build resolves its `@mdxkit`
+`--workspaces`, because a package's declaration build resolves its `@mdxstudio`
 dependencies through their published types entry — which has to exist by the
 time it runs.
 
@@ -153,7 +153,7 @@ native binaries for both, and CI runs the whole matrix on `ubuntu-latest` and
 `windows-latest` precisely so a platform-specific gap cannot hide again.
 
 <Callout type="note" title="Package sources, not build output">
-  `apps/studio/vite.config.ts` and `vitest.config.ts` both alias `@mdxkit/*` to
+  `apps/studio/vite.config.ts` and `vitest.config.ts` both alias `@mdxstudio/*` to
   `packages/*/src` and dedupe React. That is what lets you edit a package and see
   it in the app without a build step — and what keeps hooks working across the
   package boundary.
@@ -170,5 +170,5 @@ native binaries for both, and CI runs the whole matrix on `ubuntu-latest` and
 - [ ] No service account JSON anywhere in the repo or its history
 - [ ] Legacy flat `documents` collection cleaned up after migration
 - [ ] If you render documents your users did not write, they go through
-      `@mdxkit/sandbox` or through `expressions="literals"` — never the default
+      `@mdxstudio/sandbox` or through `expressions="literals"` — never the default
       in-page renderer

@@ -8,8 +8,8 @@
  */
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { createFullEstreeEvaluator, evaluateEstreeLiteral, parseMdxDocument } from '@mdxkit/core';
-import type { MdxExpressionEvaluator } from '@mdxkit/core';
+import { createFullEstreeEvaluator, evaluateEstreeLiteral, parseMdxDocument } from '@mdxstudio/core';
+import type { MdxExpressionEvaluator } from '@mdxstudio/core';
 
 /**
  * The ESTree the real parser produces for `{ source }`, so these tests evaluate

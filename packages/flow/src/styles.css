@@ -1,7 +1,7 @@
 /*
- * @mdxkit/flow — the architecture map's chrome and SVG palette.
+ * @mdxstudio/flow — the architecture map's chrome and SVG palette.
  *
- *   import '@mdxkit/flow/styles.css';
+ *   import '@mdxstudio/flow/styles.css';
  *
  * The drawing is an inline SVG, so its fills and strokes are CSS properties
  * (`fill`, `stroke`) driven by the same custom properties as the surrounding
@@ -12,10 +12,10 @@
  * Anything that varies per node - a flow's tone, a node kind's accent - stays
  * an inline value, because it comes from the document, not from the theme.
  *
- * The token defaults repeat the ones in `@mdxkit/react/styles.css` so this
+ * The token defaults repeat the ones in `@mdxstudio/react/styles.css` so this
  * sheet also stands alone. Loading both is harmless: the values are identical.
  */
-/* Pins the reset layer's position; see @mdxkit/react/styles.css. */
+/* Pins the reset layer's position; see @mdxstudio/react/styles.css. */
 @layer mdxkit-reset;
 
 

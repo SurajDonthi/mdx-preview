@@ -12,8 +12,8 @@ import { createRoot } from 'react-dom/client';
 import type { Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { createMdxRegistry, defineMdxPlugin, extractHeadings } from '@mdxkit/core';
-import type { MdxRegistry } from '@mdxkit/core';
+import { createMdxRegistry, defineMdxPlugin, extractHeadings } from '@mdxstudio/core';
+import type { MdxRegistry } from '@mdxstudio/core';
 import { MdxRenderer } from '../src/MdxRenderer';
 import { createRendererRegistry } from '../src/plugin';
 import { THEMES } from '../src/themes';
@@ -41,7 +41,7 @@ function Exploding(): React.ReactElement {
 }
 
 const fencePlugin = defineMdxPlugin({
-  name: '@mdxkit/test-fences',
+  name: '@mdxstudio/test-fences',
   components: { MermaidDiagram: FenceStub },
   aliases: { Mermaid: 'MermaidDiagram' },
   codeFences: { mermaid: 'MermaidDiagram' },

@@ -9,7 +9,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { collectHeadings, extractHeadings, parseMdxDocument, slugify } from '@mdxkit/core';
+import { collectHeadings, extractHeadings, parseMdxDocument, slugify } from '@mdxstudio/core';
 
 const ids = (source: string) => extractHeadings(source).map((heading) => heading.id);
 const texts = (source: string) => extractHeadings(source).map((heading) => heading.text);

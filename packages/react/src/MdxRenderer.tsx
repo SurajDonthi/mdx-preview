@@ -22,7 +22,7 @@ import {
   countLines,
   evaluateEstreeLiteral,
   createFullEstreeEvaluator,
-} from '@mdxkit/core';
+} from '@mdxstudio/core';
 import type {
   ThemeConfig,
   MdxRegistry,
@@ -34,7 +34,7 @@ import type {
   MdxExpressionResult,
   MdxExpressionSlot,
   MdxParseError,
-} from '@mdxkit/core';
+} from '@mdxstudio/core';
 import { FrontmatterHeader } from './FrontmatterHeader';
 import { baseMdxRegistry } from './plugin';
 import { InlineToken } from './InlineToken';
@@ -710,7 +710,7 @@ export function MdxRenderer({
       const where = diagnostic.point
         ? ` (line ${diagnostic.point.line}, column ${diagnostic.point.column})`
         : '';
-      console.warn(`[@mdxkit/react] ${diagnostic.message}${where}`);
+      console.warn(`[@mdxstudio/react] ${diagnostic.message}${where}`);
     }
   }, [rendered]);
 

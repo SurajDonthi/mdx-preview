@@ -13,16 +13,16 @@ import type { ComponentType } from 'react';
  * application composes them:
  *
  * ```ts
- * import { createMdxRegistry } from '@mdxkit/core';
- * import { reactPlugin } from '@mdxkit/react';
- * import { mermaidPlugin } from '@mdxkit/mermaid';
+ * import { createMdxRegistry } from '@mdxstudio/core';
+ * import { reactPlugin } from '@mdxstudio/react';
+ * import { mermaidPlugin } from '@mdxstudio/mermaid';
  *
  * export const registry = createMdxRegistry(reactPlugin, mermaidPlugin, {
  *   MyOwnComponent,
  * });
  * ```
  *
- * This keeps `@mdxkit/react` free of any dependency on Mermaid, Recharts or the
+ * This keeps `@mdxstudio/react` free of any dependency on Mermaid, Recharts or the
  * flow renderer: the app decides which of those it pays for.
  */
 
@@ -96,7 +96,7 @@ function resolve(
   const component = components[target];
   if (!component) {
     throw new Error(
-      `[@mdxkit/core] ${pluginName} declares ${what} pointing at "${target}", ` +
+      `[@mdxstudio/core] ${pluginName} declares ${what} pointing at "${target}", ` +
         `but no component with that name is registered. Register it in the same ` +
         `plugin, or pass the plugin that provides it to createMdxRegistry() first.`
     );

@@ -1,5 +1,5 @@
 /**
- * `@mdxkit/sandbox` - render MDX you did not write.
+ * `@mdxstudio/sandbox` - render MDX you did not write.
  *
  * The unsandboxed renderer executes a document's JavaScript in the page, with
  * the page's origin. That is fine for a document the user authored and fatal for
@@ -11,8 +11,8 @@
  * runs inside an iframe with an opaque origin and no network, and reaches the
  * application only through operations the host explicitly registered.
  *
- * The host half is exported here. The guest half lives at `@mdxkit/sandbox/guest`
- * and is bundled separately (see `@mdxkit/sandbox/vite`).
+ * The host half is exported here. The guest half lives at `@mdxstudio/sandbox/guest`
+ * and is bundled separately (see `@mdxstudio/sandbox/vite`).
  */
 
 export { SandboxedMdx } from './host/SandboxedMdx';

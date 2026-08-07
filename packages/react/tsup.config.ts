@@ -14,7 +14,7 @@ export default defineConfig({
   splitting: true,
   treeshake: true,
   // The stylesheet ships verbatim instead of through esbuild's CSS pipeline, so
-  // a consumer's `import '@mdxkit/react/styles.css'` gets exactly the rules the
+  // a consumer's `import '@mdxstudio/react/styles.css'` gets exactly the rules the
   // source declares - no reordering, no dropped at-rules.
   onSuccess: async () => {
     copyFileSync('src/styles.css', 'dist/styles.css');

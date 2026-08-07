@@ -1,4 +1,4 @@
-# @mdxkit/flow
+# @mdxstudio/flow
 
 `<FlowGraph>` (also `<ArchitectureMap>`) for mdxkit: a declarative
 architecture/flow diagram with grouped nodes, labelled edges and animated flows.
@@ -7,19 +7,19 @@ Rendered as SVG, no diagram engine required.
 ## Install
 
 ```sh
-npm install @mdxkit/flow @mdxkit/core @mdxkit/react react
+npm install @mdxstudio/flow @mdxstudio/core @mdxstudio/react react
 ```
 
 | Peer           | Range     |
 | -------------- | --------- |
 | `react`        | `^19.0.0` |
-| `@mdxkit/core` | `^0.1.0`  |
+| `@mdxstudio/core` | `^0.1.0`  |
 
 ## Usage
 
 ```ts
-import { createRendererRegistry } from '@mdxkit/react';
-import { flowPlugin } from '@mdxkit/flow';
+import { createRendererRegistry } from '@mdxstudio/react';
+import { flowPlugin } from '@mdxstudio/flow';
 
 export const registry = createRendererRegistry(flowPlugin);
 ```
@@ -43,10 +43,10 @@ export const registry = createRendererRegistry(flowPlugin);
 ## Stylesheet
 
 ```ts
-import '@mdxkit/flow/styles.css';
+import '@mdxstudio/flow/styles.css';
 ```
 
-Required, in addition to `@mdxkit/react/styles.css`.
+Required, in addition to `@mdxstudio/react/styles.css`.
 
 ESM only, with TypeScript declarations.
 

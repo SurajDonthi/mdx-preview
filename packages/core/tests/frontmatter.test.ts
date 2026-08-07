@@ -6,7 +6,7 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { calculateDocumentStats, countLines, parseFrontmatter } from '@mdxkit/core';
+import { calculateDocumentStats, countLines, parseFrontmatter } from '@mdxstudio/core';
 
 const withFrontmatter = (yaml: string, body: string) => `---\n${yaml}\n---\n${body}`;
 

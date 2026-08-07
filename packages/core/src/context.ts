@@ -4,8 +4,8 @@ import type { MdxRenderSettings } from './types';
 /**
  * Ambient render settings for an MDX tree.
  *
- * `@mdxkit/react`'s `MdxRenderer` provides it; every component package
- * (`@mdxkit/mermaid`, `@mdxkit/flow`, ...) reads it so that a component knows
+ * `@mdxstudio/react`'s `MdxRenderer` provides it; every component package
+ * (`@mdxstudio/mermaid`, `@mdxstudio/flow`, ...) reads it so that a component knows
  * whether it is on screen or in the PDF export pass without the host having to
  * thread props through the document.
  */

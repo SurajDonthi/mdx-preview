@@ -17,22 +17,22 @@
     "resolveJsonModule": true,
     "jsx": "react-jsx",
     "paths": {
-      "@mdxkit/core": [
+      "@mdxstudio/core": [
         "./packages/core/src/index.ts"
       ],
-      "@mdxkit/react": [
+      "@mdxstudio/react": [
         "./packages/react/src/index.ts"
       ],
-      "@mdxkit/mermaid": [
+      "@mdxstudio/mermaid": [
         "./packages/mermaid/src/index.ts"
       ],
-      "@mdxkit/charts": [
+      "@mdxstudio/charts": [
         "./packages/charts/src/index.ts"
       ],
-      "@mdxkit/flow": [
+      "@mdxstudio/flow": [
         "./packages/flow/src/index.ts"
       ],
-      "@mdxkit/pdf": [
+      "@mdxstudio/pdf": [
         "./packages/pdf/src/index.ts"
       ],
       "@/*": [

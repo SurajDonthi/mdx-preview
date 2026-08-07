@@ -128,7 +128,7 @@ strings, and a circular reference is printed as such rather than throwing.
 
 Everything below is available in any Studio document with no import. Which ones
 exist is a property of the *application*, not of MDX: the Studio registers
-`@mdxkit/react` plus the Mermaid, chart and flow packages. A different host may
+`@mdxstudio/react` plus the Mermaid, chart and flow packages. A different host may
 register a different set.
 
 ### Layout and emphasis
@@ -215,7 +215,7 @@ A fenced `mermaid` block, or the component:
     A["Start"] --> B["End"]`} />
 ```
 
-The fence and the component are the same thing: `@mdxkit/mermaid` claims the
+The fence and the component are the same thing: `@mdxstudio/mermaid` claims the
 `mermaid` fence language in its plugin, so the renderer mounts the diagram
 component instead of syntax-highlighting the block. Invalid diagram syntax
 renders an inline error card with the raw source in a details element; it does

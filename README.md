@@ -63,23 +63,23 @@ not download a diagram engine to get them.
 
 | Package | What it gives you |
 | --- | --- |
-| `@mdxkit/core` | The MDX parser, the expression evaluators, the plugin registry, shared types and the render context |
-| `@mdxkit/react` | `MdxRenderer`, the built-in components, eight theme presets, the base stylesheet |
-| `@mdxkit/mermaid` | `MermaidDiagram`, plus the plugin that takes over the ` ```mermaid ` fence |
-| `@mdxkit/charts` | `Chart` — Recharts, imported on mount rather than with the page |
-| `@mdxkit/flow` | `FlowGraph`, the interactive node/edge map used throughout these docs |
-| `@mdxkit/pdf` | A4 export from a rendered DOM subtree |
-| `@mdxkit/sandbox` | `SandboxedMdx` — render a document you did not write, in an opaque-origin frame |
+| `@mdxstudio/core` | The MDX parser, the expression evaluators, the plugin registry, shared types and the render context |
+| `@mdxstudio/react` | `MdxRenderer`, the built-in components, eight theme presets, the base stylesheet |
+| `@mdxstudio/mermaid` | `MermaidDiagram`, plus the plugin that takes over the ` ```mermaid ` fence |
+| `@mdxstudio/charts` | `Chart` — Recharts, imported on mount rather than with the page |
+| `@mdxstudio/flow` | `FlowGraph`, the interactive node/edge map used throughout these docs |
+| `@mdxstudio/pdf` | A4 export from a rendered DOM subtree |
+| `@mdxstudio/sandbox` | `SandboxedMdx` — render a document you did not write, in an opaque-origin frame |
 
 ### Composing them
 
 Nothing is registered by default beyond the built-ins. The host decides:
 
 ```ts
-import { createRendererRegistry } from '@mdxkit/react';
-import { mermaidPlugin } from '@mdxkit/mermaid';
-import { chartsPlugin } from '@mdxkit/charts';
-import { flowPlugin } from '@mdxkit/flow';
+import { createRendererRegistry } from '@mdxstudio/react';
+import { mermaidPlugin } from '@mdxstudio/mermaid';
+import { chartsPlugin } from '@mdxstudio/charts';
+import { flowPlugin } from '@mdxstudio/flow';
 
 // Module-level: MdxRenderer re-parses the document when the registry changes.
 export const registry = createRendererRegistry(mermaidPlugin, chartsPlugin, flowPlugin);
@@ -193,10 +193,10 @@ The `packages/*` ship plain CSS. Import each stylesheet once, anywhere in the
 application — there is no framework, config file or build step to add:
 
 ```ts
-import '@mdxkit/react/styles.css';    // renderer, markdown elements, built-in components
-import '@mdxkit/mermaid/styles.css';  // diagram card chrome
-import '@mdxkit/charts/styles.css';   // chart card chrome
-import '@mdxkit/flow/styles.css';     // flow map chrome and SVG palette
+import '@mdxstudio/react/styles.css';    // renderer, markdown elements, built-in components
+import '@mdxstudio/mermaid/styles.css';  // diagram card chrome
+import '@mdxstudio/charts/styles.css';   // chart card chrome
+import '@mdxstudio/flow/styles.css';     // flow map chrome and SVG palette
 ```
 
 **Theme comes from the application, not the operating system.** `MdxRenderer` stamps
@@ -255,7 +255,7 @@ docs/
   UI; a document edited on two devices while both are offline will lose one side.
 - **`expressions` defaults to `'full'`**, which is the right default for an author's own
   documents and the wrong one for anything else. Nothing forces a host to think about it.
-- **`@mdxkit/sandbox` is not wired into the Studio.** It is complete and tested, but no
+- **`@mdxstudio/sandbox` is not wired into the Studio.** It is complete and tested, but no
   application in this repository mounts it yet.
 - **The Studio ships as one large JavaScript chunk** (about 4 MB uncompressed, ~1 MB
   gzipped). Mermaid's diagram types and Recharts code-split themselves; the renderer,

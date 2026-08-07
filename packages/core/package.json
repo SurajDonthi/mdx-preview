@@ -1,5 +1,5 @@
 {
-  "name": "@mdxkit/core",
+  "name": "@mdxstudio/core",
   "version": "0.1.0",
   "type": "module",
   "description": "Shared types, render context, MDX parsing and the component registry for mdxkit.",

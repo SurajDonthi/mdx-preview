@@ -1,4 +1,4 @@
-import type { ThemeConfig, ThemeId } from '@mdxkit/core';
+import type { ThemeConfig, ThemeId } from '@mdxstudio/core';
 
 /*
  * Font stacks, spelled out rather than named through a framework's variables.

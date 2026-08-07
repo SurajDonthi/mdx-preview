@@ -34,15 +34,15 @@ them.
 
 | Package | What it is | Costs you |
 | --- | --- | --- |
-| `@mdxkit/core` | Types, the MDX parser, the expression evaluators, the plugin registry, the render context | `unified`, `remark-*`, `js-yaml`, two `estree-util-*` helpers |
-| `@mdxkit/react` | `MdxRenderer`, the built-in components, the theme presets, the base stylesheet | `hast-util-to-jsx-runtime`, `prismjs`, `lucide-react` |
-| `@mdxkit/mermaid` | `MermaidDiagram`, and the plugin that claims the mermaid code fence | `mermaid` |
-| `@mdxkit/charts` | `Chart`, backed by Recharts and loaded on demand | `recharts` |
-| `@mdxkit/flow` | `FlowGraph`, the interactive node/edge diagram | `lucide-react` |
-| `@mdxkit/pdf` | The A4 exporter | `jspdf`, `html2canvas` on the fallback path only |
-| `@mdxkit/sandbox` | Renders a document you do not trust, in an isolated frame | nothing beyond core and react |
+| `@mdxstudio/core` | Types, the MDX parser, the expression evaluators, the plugin registry, the render context | `unified`, `remark-*`, `js-yaml`, two `estree-util-*` helpers |
+| `@mdxstudio/react` | `MdxRenderer`, the built-in components, the theme presets, the base stylesheet | `hast-util-to-jsx-runtime`, `prismjs`, `lucide-react` |
+| `@mdxstudio/mermaid` | `MermaidDiagram`, and the plugin that claims the mermaid code fence | `mermaid` |
+| `@mdxstudio/charts` | `Chart`, backed by Recharts and loaded on demand | `recharts` |
+| `@mdxstudio/flow` | `FlowGraph`, the interactive node/edge diagram | `lucide-react` |
+| `@mdxstudio/pdf` | The A4 exporter | `jspdf`, `html2canvas` on the fallback path only |
+| `@mdxstudio/sandbox` | Renders a document you do not trust, in an isolated frame | nothing beyond core and react |
 
-`@mdxkit/react` deliberately does **not** depend on Mermaid, Recharts or the
+`@mdxstudio/react` deliberately does **not** depend on Mermaid, Recharts or the
 flow renderer. It cannot: they are what a host opts into.
 
 <FlowGraph
@@ -58,13 +58,13 @@ flow renderer. It cannot: they are what a host opts into.
     nodes: [
       { id: "Studio", label: "apps/studio", group: "app", kind: "ui", description: "The editor, the file store and the cloud sync. Composes a registry and renders with it." },
       { id: "Guest", label: "sandbox guest", group: "app", kind: "ui", description: "A second, standalone bundle that runs inside the iframe. Never shares a module graph with the app." },
-      { id: "Sandbox", label: "@mdxkit/sandbox", group: "render", kind: "module", description: "Host component plus wire protocol. Renders untrusted documents in an opaque-origin frame." },
-      { id: "React", label: "@mdxkit/react", group: "render", kind: "module", description: "MdxRenderer, the built-in components, the themes and the stylesheet. No diagram or chart dependency." },
-      { id: "Pdf", label: "@mdxkit/pdf", group: "render", kind: "module", description: "Takes a rendered DOM subtree and produces A4 pages. Independent of the renderer." },
-      { id: "Mermaid", label: "@mdxkit/mermaid", group: "opt", kind: "module", description: "Diagram component, and the plugin that takes over the mermaid fence language." },
-      { id: "Charts", label: "@mdxkit/charts", group: "opt", kind: "module", description: "Recharts wrapper. Recharts itself is imported on mount, not at module scope." },
-      { id: "Flow", label: "@mdxkit/flow", group: "opt", kind: "module", description: "Inline-SVG flow map with a flows panel. Pure React and lucide icons." },
-      { id: "Core", label: "@mdxkit/core", group: "base", kind: "state", description: "Parser, expression evaluators, registry, render context, shared types. Every package depends on this one." }
+      { id: "Sandbox", label: "@mdxstudio/sandbox", group: "render", kind: "module", description: "Host component plus wire protocol. Renders untrusted documents in an opaque-origin frame." },
+      { id: "React", label: "@mdxstudio/react", group: "render", kind: "module", description: "MdxRenderer, the built-in components, the themes and the stylesheet. No diagram or chart dependency." },
+      { id: "Pdf", label: "@mdxstudio/pdf", group: "render", kind: "module", description: "Takes a rendered DOM subtree and produces A4 pages. Independent of the renderer." },
+      { id: "Mermaid", label: "@mdxstudio/mermaid", group: "opt", kind: "module", description: "Diagram component, and the plugin that takes over the mermaid fence language." },
+      { id: "Charts", label: "@mdxstudio/charts", group: "opt", kind: "module", description: "Recharts wrapper. Recharts itself is imported on mount, not at module scope." },
+      { id: "Flow", label: "@mdxstudio/flow", group: "opt", kind: "module", description: "Inline-SVG flow map with a flows panel. Pure React and lucide icons." },
+      { id: "Core", label: "@mdxstudio/core", group: "base", kind: "state", description: "Parser, expression evaluators, registry, render context, shared types. Every package depends on this one." }
     ],
     edges: [
       { from: "Studio", to: "React" },
@@ -90,7 +90,7 @@ flow renderer. It cannot: they are what a host opts into.
 />
 
 The Studio resolves the packages from source rather than from built output:
-`apps/studio/vite.config.ts` and `vitest.config.ts` both alias `@mdxkit/*` to
+`apps/studio/vite.config.ts` and `vitest.config.ts` both alias `@mdxstudio/*` to
 `packages/*/src`, and both set `dedupe: ['react', 'react-dom']` so a hook called
 in a package and a hook called in the app belong to the same React.
 
@@ -111,10 +111,10 @@ application composes them:
 
 ```ts
 // apps/studio/src/mdxRegistry.ts
-import { createRendererRegistry } from '@mdxkit/react';
-import { mermaidPlugin } from '@mdxkit/mermaid';
-import { chartsPlugin } from '@mdxkit/charts';
-import { flowPlugin } from '@mdxkit/flow';
+import { createRendererRegistry } from '@mdxstudio/react';
+import { mermaidPlugin } from '@mdxstudio/mermaid';
+import { chartsPlugin } from '@mdxstudio/charts';
+import { flowPlugin } from '@mdxstudio/flow';
 
 export const studioMdxRegistry = createRendererRegistry(
   mermaidPlugin,
@@ -130,7 +130,7 @@ A plugin is plain data with three optional parts:
 
 ```ts
 export const mermaidPlugin = defineMdxPlugin({
-  name: '@mdxkit/mermaid',
+  name: '@mdxstudio/mermaid',
   components: { MermaidDiagram },
   aliases: { Mermaid: 'MermaidDiagram' },
   codeFences: { mermaid: 'MermaidDiagram' },
@@ -346,7 +346,7 @@ is a second, independent module graph; nothing from the application's scope can
 reach the frame by accident.
 
 <Callout type="warning" title="Sandbox is not wired into the Studio">
-  `@mdxkit/sandbox` is complete and tested but no application in this repository
+  `@mdxstudio/sandbox` is complete and tested but no application in this repository
   mounts it — the Studio only ever renders documents its own user wrote. Adding a
   paste-a-document or share-a-link feature is the point at which it stops being
   optional.
@@ -362,7 +362,7 @@ reach the frame by accident.
 2. Register it: add it to `baseMdxComponents` at the bottom of that file, or to
    your package's `defineMdxPlugin` call.
 3. If it renders differently in the export pass, read `MdxRenderContext` from
-   `@mdxkit/core`. It gives you `renderMode` and `themeCategory`, so nothing has
+   `@mdxstudio/core`. It gives you `renderMode` and `themeCategory`, so nothing has
    to be threaded through the tree as props.
 4. Style it with `--mdxkit-*` custom properties in your package's `styles.css`.
    No Tailwind, no build step — see the styling section of the README.

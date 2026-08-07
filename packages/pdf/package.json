@@ -1,5 +1,5 @@
 {
-  "name": "@mdxkit/pdf",
+  "name": "@mdxstudio/pdf",
   "version": "0.1.0",
   "type": "module",
   "description": "DOM-to-A4-PDF exporter for rendered MDX documents.",

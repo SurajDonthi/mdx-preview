@@ -1,10 +1,10 @@
-# @mdxkit/core
+# @mdxstudio/core
 
 The renderer-agnostic half of mdxkit: MDX parsing, frontmatter, heading
 extraction, document stats, the expression evaluator, the component registry, and
 the React context every mdxkit package reads its render mode and theme from.
 
-You rarely install this directly — [`@mdxkit/react`](https://github.com/SurajDonthi/mdx-preview/tree/main/packages/react#readme)
+You rarely install this directly — [`@mdxstudio/react`](https://github.com/SurajDonthi/mdx-preview/tree/main/packages/react#readme)
 and the plugin packages declare it as a peer dependency so that exactly one copy
 exists in an app. A second copy means a second `MdxRenderContext`, and components
 that read it would silently see defaults.
@@ -12,7 +12,7 @@ that read it would silently see defaults.
 ## Install
 
 ```sh
-npm install @mdxkit/core react
+npm install @mdxstudio/core react
 ```
 
 | Peer    | Range     | Why                                    |
@@ -24,7 +24,7 @@ No stylesheet.
 ## Usage
 
 ```ts
-import { parseFrontmatter, extractHeadings, calculateDocumentStats } from '@mdxkit/core';
+import { parseFrontmatter, extractHeadings, calculateDocumentStats } from '@mdxstudio/core';
 
 const { frontmatter, body } = parseFrontmatter(source);
 const headings = extractHeadings(body);        // → table of contents
@@ -34,7 +34,7 @@ const stats = calculateDocumentStats(source);  // → words, reading time, ...
 Registering components for a renderer:
 
 ```ts
-import { defineMdxPlugin, createMdxRegistry } from '@mdxkit/core';
+import { defineMdxPlugin, createMdxRegistry } from '@mdxstudio/core';
 
 const myPlugin = defineMdxPlugin({
   name: 'my-app',
