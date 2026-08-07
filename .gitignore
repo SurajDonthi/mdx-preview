@@ -10,3 +10,6 @@ coverage/
 # browser automation scratch output
 .playwright-cli/
 *.stackdump
+
+# Firebase project config - supplied via .env, see .env.example
+firebase-applet-config.json
