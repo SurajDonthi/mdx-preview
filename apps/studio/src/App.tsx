@@ -47,6 +47,11 @@ function docSignature(
   return JSON.stringify([id, title, content, driveFileId || null]);
 }
 
+/** The same identity, computed from a stored record instead of from editor state. */
+function recordSignature(doc: StoredDocument): string {
+  return docSignature(doc.id, doc.title, doc.content, doc.driveFileId);
+}
+
 export default function App() {
   const exportRootRef = useRef<HTMLDivElement | null>(null);
 
@@ -93,27 +98,117 @@ export default function App() {
   const [isDriveConnected, setIsDriveConnected] = useState(false);
 
   // State already persisted, so a no-op save never bumps updatedAt (see docSignature)
-  const lastSavedRef = useRef<string>(
-    docSignature(currentDoc.id, currentDoc.title, currentDoc.content, currentDoc.driveFileId)
-  );
+  const lastSavedRef = useRef<string>(recordSignature(currentDoc));
 
-  // Sync local state when active document changes
+  // Which document the editor buffer currently holds. Separates "the user opened another
+  // document" from "the open document was replaced underneath us by a sync merge".
+  const loadedDocIdRef = useRef<string>(currentDoc.id);
+
+  // Incoming version already reported as not applied, so one remote edit warns once
+  // instead of once per snapshot for as long as the user keeps typing.
+  const remoteConflictRef = useRef<string | null>(null);
+
+  // Documents deleted from this device: their disappearance is expected and must not be
+  // reported as a deletion made somewhere else.
+  const locallyDeletedRef = useRef<Set<string>>(new Set());
+
+  const applyRecordToEditor = (doc: StoredDocument) => {
+    setMdxContent(doc.content);
+    setDocumentTitle(doc.title);
+    setCurrentDriveFileId(doc.driveFileId || null);
+
+    // The buffer now mirrors a record that is already in storage. Anything else would let
+    // the auto-save below stamp a fresh updatedAt on it and beat the copy it just took.
+    lastSavedRef.current = recordSignature(doc);
+    loadedDocIdRef.current = doc.id;
+  };
+
+  // Keep the editor in step with the active record. This runs both when the user switches
+  // documents and when a Firestore snapshot merges a newer version of the document that is
+  // already open, so the guards below decide which of the two happened.
   useEffect(() => {
-    setMdxContent(currentDoc.content);
-    setDocumentTitle(currentDoc.title);
-    setCurrentDriveFileId(currentDoc.driveFileId || null);
-    setActiveDocumentId(currentDoc.id);
-    lastSavedRef.current = docSignature(
-      currentDoc.id,
-      currentDoc.title,
-      currentDoc.content,
-      currentDoc.driveFileId
-    );
-
     // Keep the selection pointing at a document that actually exists, otherwise the
     // dirty check below compares against the wrong record.
     if (currentDoc.id !== activeDocId) setActiveDocId(currentDoc.id);
-  }, [currentDoc.id]);
+    setActiveDocumentId(currentDoc.id);
+
+    const previousDocId = loadedDocIdRef.current;
+
+    if (previousDocId !== currentDoc.id) {
+      // A different document is in play. Either the user picked it, or the one they had
+      // open stopped being visible, which only a tombstone from another device can do
+      // once local deletions are excluded.
+      const previousTitle = documentTitle;
+      const previousWasDirty =
+        docSignature(previousDocId, documentTitle, mdxContent, currentDriveFileId) !==
+        lastSavedRef.current;
+      const vanishedRemotely =
+        previousDocId === activeDocId &&
+        !locallyDeletedRef.current.has(previousDocId) &&
+        !documents.some((d) => d.id === previousDocId);
+
+      applyRecordToEditor(currentDoc);
+      remoteConflictRef.current = null;
+
+      if (vanishedRemotely) {
+        showToast(
+          'Document deleted on another device',
+          previousWasDirty
+            ? `"${previousTitle}" was deleted elsewhere, so its unsaved changes could not be kept. Opened "${currentDoc.title}".`
+            : `"${previousTitle}" was deleted elsewhere. Opened "${currentDoc.title}".`,
+          'info'
+        );
+      }
+      return;
+    }
+
+    // Same document, but its stored record changed. Compare against the buffer using the
+    // record's own id: activeDocId can still be catching up on the very first render.
+    const bufferSignature = docSignature(
+      currentDoc.id,
+      documentTitle,
+      mdxContent,
+      currentDriveFileId
+    );
+    const incomingSignature = recordSignature(currentDoc);
+
+    if (bufferSignature === incomingSignature) {
+      // This device's own save echoing back through Firestore, or a snapshot that only
+      // touched other documents. Nothing is written to the buffer, so the textarea never
+      // re-renders and the caret and scroll position are left exactly where they were.
+      lastSavedRef.current = incomingSignature;
+      remoteConflictRef.current = null;
+      return;
+    }
+
+    if (bufferSignature === lastSavedRef.current) {
+      // The buffer holds exactly what was last persisted, so there is no work in progress
+      // to destroy: adopt the newer version the merge accepted.
+      applyRecordToEditor(currentDoc);
+      remoteConflictRef.current = null;
+      return;
+    }
+
+    // Unsaved edits are sitting in the buffer. Overwriting them would delete text the user
+    // is still typing, which is worse than the stale view this fix set out to close, so the
+    // local copy is kept and the pending auto-save will stamp a newer updatedAt and win the
+    // next merge. Say so once per incoming version rather than once per snapshot.
+    const conflictKey = `${currentDoc.id}@${currentDoc.updatedAt}`;
+    if (remoteConflictRef.current !== conflictKey) {
+      remoteConflictRef.current = conflictKey;
+      showToast(
+        'Newer version arrived while you were editing',
+        `"${currentDoc.title}" was also changed on another device. Your unsaved changes were kept and will replace it on the next save.`,
+        'info'
+      );
+    }
+  }, [
+    currentDoc.id,
+    currentDoc.updatedAt,
+    currentDoc.title,
+    currentDoc.content,
+    currentDoc.driveFileId,
+  ]);
 
   // Firebase Auth & Firestore Subscription Listener
   useEffect(() => {
@@ -133,6 +228,25 @@ export default function App() {
     return () => unsubscribeAuth();
   }, []);
 
+  /**
+   * Folds an incoming Firestore snapshot into local state. The merge decides per document
+   * whether the cloud copy wins on updatedAt; the effect above then decides whether the
+   * winning copy is safe to push into the editor.
+   */
+  const handleCloudSnapshot = (cloudDocs: StoredDocument[], meta: { fromCache: boolean }) => {
+    const merged = mergeDocuments(loadAllRecords(), cloudDocs);
+    setDocuments(merged);
+
+    // Never upload from a cache-only snapshot: an empty local cache looks exactly
+    // like an empty account and would re-push documents deleted on another device.
+    if (meta.fromCache || !currentUser) return;
+
+    const cloudIds = new Set(cloudDocs.map((d) => d.id));
+    merged
+      .filter((d) => !d.isSample && !cloudIds.has(d.id))
+      .forEach((d) => saveDocumentToFirestore(currentUser.uid, d));
+  };
+
   // Listen to Firestore documents when logged in
   useEffect(() => {
     if (!currentUser) return;
@@ -144,20 +258,7 @@ export default function App() {
     // instead of treating the account as empty.
     migrateLegacyDocuments(currentUser.uid).finally(() => {
       if (cancelled) return;
-
-      unsubscribeFirestore = subscribeToUserDocuments(currentUser.uid, (cloudDocs, meta) => {
-        const merged = mergeDocuments(loadAllRecords(), cloudDocs);
-        setDocuments(merged);
-
-        // Never upload from a cache-only snapshot: an empty local cache looks exactly
-        // like an empty account and would re-push documents deleted on another device.
-        if (meta.fromCache) return;
-
-        const cloudIds = new Set(cloudDocs.map((d) => d.id));
-        merged
-          .filter((d) => !d.isSample && !cloudIds.has(d.id))
-          .forEach((d) => saveDocumentToFirestore(currentUser.uid, d));
-      });
+      unsubscribeFirestore = subscribeToUserDocuments(currentUser.uid, handleCloudSnapshot);
     });
 
     return () => {
@@ -292,6 +393,11 @@ export default function App() {
   // Delete document
   const handleDeleteDocument = (id: string) => {
     const target = documents.find((d) => d.id === id);
+
+    // Remember it so the sync effect does not mistake this for a deletion that arrived
+    // from another device and warn the user about their own click.
+    locallyDeletedRef.current.add(id);
+
     const updatedDocs = deleteDocument(id);
     setDocuments(updatedDocs);
 
