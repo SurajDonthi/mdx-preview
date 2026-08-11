@@ -71,6 +71,27 @@ export default defineConfig({
       {
         extends: true,
         test: {
+          name: 'cli',
+          root: path.resolve(root, 'packages/cli'),
+          // Walks folders, watches files and serves them; no DOM involved.
+          environment: 'node',
+          include: ['tests/**/*.test.ts'],
+        },
+      },
+      {
+        extends: true,
+        test: {
+          name: 'vscode',
+          root: path.resolve(root, 'apps/vscode'),
+          // The extension half runs in Node; the webview half is tested through
+          // its own modules rather than by mounting a real webview.
+          environment: 'node',
+          include: ['tests/**/*.test.ts'],
+        },
+      },
+      {
+        extends: true,
+        test: {
           name: 'studio',
           root: path.resolve(root, 'apps/studio'),
           // storage.ts talks to localStorage.

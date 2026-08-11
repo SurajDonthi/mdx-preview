@@ -11,7 +11,7 @@
     "dev": "npm run dev --workspace @mdxstudio/studio",
     "build": "npm run build:packages && npm run build:app",
     "//build:packages": "Explicit order, not `--workspaces`: npm runs those in config order, and each package's declaration build resolves its @mdxstudio dependencies through their published `types` entry - which has to exist by then.",
-    "build:packages": "npm run build -w @mdxstudio/core -w @mdxstudio/react -w @mdxstudio/mermaid -w @mdxstudio/charts -w @mdxstudio/flow -w @mdxstudio/pdf -w @mdxstudio/sandbox -w @mdxstudio/agent-skill",
+    "build:packages": "npm run build -w @mdxstudio/core -w @mdxstudio/react -w @mdxstudio/mermaid -w @mdxstudio/charts -w @mdxstudio/flow -w @mdxstudio/pdf -w @mdxstudio/sandbox -w @mdxstudio/agent-skill -w @mdxstudio/cli -w @mdxstudio/vscode",
     "build:app": "npm run build --workspace @mdxstudio/studio",
     "preview": "npm run preview --workspace @mdxstudio/studio",
     "clean": "npm run clean --workspaces --if-present",
