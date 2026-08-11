@@ -1,6 +1,6 @@
 {
   "name": "@mdxstudio/agent-skill",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "type": "module",
   "description": "Installs the mdx-docs authoring skill and the standing documentation policy into any coding agent's instruction file (AGENTS.md, CLAUDE.md, GEMINI.md, ...).",
   "keywords": [
