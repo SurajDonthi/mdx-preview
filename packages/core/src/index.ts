@@ -48,6 +48,9 @@ export type {
 
 export { MATH_COMPONENT } from './mathSyntax';
 
+export { collectScrollAnchors, offsetForLine, lineForOffset } from './scrollSync';
+export type { ScrollAnchor, ScrollAnchorOptions } from './scrollSync';
+
 export { evaluateEstreeLiteral, createFullEstreeEvaluator } from './estreeEval';
 export type {
   EstreeNodeLike,

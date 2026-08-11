@@ -1,128 +1,33 @@
 /**
- * Mapping between a source line and a pixel offset in the preview.
+ * The webview's half of the scroll sync.
  *
- * The renderer does not stamp source positions onto the DOM, and adding them
- * would mean replacing its element overrides - which is where all of the
- * styling lives. Headings are the way in instead: `collectHeadings()` is the
- * single definition of a heading's `id`, the renderer stamps exactly those ids
- * onto the tree it renders, and the hast node each one came from still carries
- * the position the parser gave it. So a heading is a point where a line number
- * and a DOM element are known to describe the same thing, and everything
- * between two headings is interpolated.
- *
- * That makes the sync heading-accurate rather than line-accurate. For the
- * documents this is for - prose with headings every screenful - that reads as
- * correct; for a 400-line heading-free block it degrades to a linear guess
- * across the block, which is still monotonic and still lands in the region.
+ * The interpolation itself lives in `@mdxstudio/core` so that this and the
+ * Studio's editor/preview sync share one implementation; what is left here is
+ * the measuring, which is the part that differs: this preview scrolls the
+ * window, and the Studio scrolls a div.
  */
 
-import {
-  collectHeadings,
-  countLines,
-  parseFrontmatter,
-  parseMdxDocument,
-} from '@mdxstudio/core';
+import { collectScrollAnchors } from '@mdxstudio/core';
+import type { ScrollAnchor } from '@mdxstudio/core';
 
-export interface Anchor {
-  /** One-based line in the document the user is editing. */
-  line: number;
-  /** Distance from the top of the scrolling document, in pixels. */
-  top: number;
-}
+export type Anchor = ScrollAnchor;
 
-interface PositionedNode {
-  position?: { start?: { line?: number } };
-}
+export { offsetForLine, lineForOffset } from '@mdxstudio/core';
 
-/**
- * Every heading that is both in the document and on the page, in order.
- *
- * Headings inside JSX children are skipped for the same reason the table of
- * contents skips them: a component decides whether to mount its children, so
- * `<Tabs>` has at most one panel's worth of them in the DOM at a time.
- */
 export function collectAnchors(content: string, container: HTMLElement): Anchor[] {
-  const { body } = parseFrontmatter(content);
-  const lineOffset = countLines(content.slice(0, Math.max(0, content.length - body.length)));
-  const { tree } = parseMdxDocument(body, { lineOffset });
-  if (!tree) return [];
-
   const scrollTop = window.scrollY;
-  const anchors: Anchor[] = [];
 
-  for (const heading of collectHeadings(tree)) {
-    if (heading.insideJsx) continue;
-
-    const line = (heading.node as PositionedNode).position?.start?.line;
-    if (typeof line !== 'number') continue;
-
-    const element = container.querySelector(`#${cssEscape(heading.id)}`);
-    if (!(element instanceof HTMLElement)) continue;
-    if (element.offsetParent === null && element.getClientRects().length === 0) continue;
-
-    anchors.push({
-      line: line + lineOffset,
-      top: element.getBoundingClientRect().top + scrollTop,
-    });
-  }
-
-  anchors.sort((left, right) => left.line - right.line);
-
-  // Endpoints, so a position before the first heading or after the last one is
-  // interpolated rather than clamped onto it.
-  const documentLines = countLines(content) + 1;
-  const bottom = Math.max(
-    document.documentElement.scrollHeight,
-    anchors.length > 0 ? anchors[anchors.length - 1].top : 0
-  );
-
-  const result: Anchor[] = [];
-  if (anchors.length === 0 || anchors[0].line > 1) result.push({ line: 1, top: 0 });
-  result.push(...anchors);
-  const last = result[result.length - 1];
-  if (last.line < documentLines && last.top < bottom) {
-    result.push({ line: documentLines, top: bottom });
-  }
-
-  return result;
-}
-
-/** Where the preview should be scrolled to show `line` at the top. */
-export function offsetForLine(anchors: Anchor[], line: number): number {
-  if (anchors.length === 0) return 0;
-  if (line <= anchors[0].line) return anchors[0].top;
-
-  for (let index = 1; index < anchors.length; index++) {
-    const next = anchors[index];
-    if (line > next.line) continue;
-
-    const previous = anchors[index - 1];
-    const span = next.line - previous.line;
-    if (span <= 0) return next.top;
-    const ratio = (line - previous.line) / span;
-    return previous.top + ratio * (next.top - previous.top);
-  }
-
-  return anchors[anchors.length - 1].top;
-}
-
-/** The source line the preview is currently showing at the top. */
-export function lineForOffset(anchors: Anchor[], offset: number): number {
-  if (anchors.length === 0) return 1;
-  if (offset <= anchors[0].top) return anchors[0].line;
-
-  for (let index = 1; index < anchors.length; index++) {
-    const next = anchors[index];
-    if (offset > next.top) continue;
-
-    const previous = anchors[index - 1];
-    const span = next.top - previous.top;
-    if (span <= 0) return next.line;
-    const ratio = (offset - previous.top) / span;
-    return previous.line + ratio * (next.line - previous.line);
-  }
-
-  return anchors[anchors.length - 1].line;
+  return collectScrollAnchors(content, {
+    resolveTop: (headingId) => {
+      const element = container.querySelector(`#${cssEscape(headingId)}`);
+      if (!(element instanceof HTMLElement)) return null;
+      // A heading in an unmounted `<Tabs>` panel is in the tree but not on the
+      // page, and would otherwise anchor to the top of the document.
+      if (element.offsetParent === null && element.getClientRects().length === 0) return null;
+      return element.getBoundingClientRect().top + scrollTop;
+    },
+    documentHeight: document.documentElement.scrollHeight,
+  });
 }
 
 /**
