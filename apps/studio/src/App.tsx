@@ -1,4 +1,5 @@
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { useState, useMemo, useEffect, useRef, type CSSProperties } from 'react';
+import { GripVertical } from 'lucide-react';
 import { User } from 'firebase/auth';
 import { ViewMode, ThemeId } from './types';
 import { extractHeadings, calculateDocumentStats } from '@mdxstudio/core';
@@ -52,6 +53,15 @@ function recordSignature(doc: StoredDocument): string {
   return docSignature(doc.id, doc.title, doc.content, doc.driveFileId);
 }
 
+// How much of the split view the editor takes. Bounded so neither pane can be
+// dragged away entirely; the default is the width the layout used to hard-code.
+const DEFAULT_SPLIT_PERCENT = 45;
+const MIN_SPLIT_PERCENT = 20;
+const MAX_SPLIT_PERCENT = 80;
+
+const clampSplit = (percent: number): number =>
+  Math.min(MAX_SPLIT_PERCENT, Math.max(MIN_SPLIT_PERCENT, percent));
+
 export default function App() {
   const exportRootRef = useRef<HTMLDivElement | null>(null);
 
@@ -87,6 +97,11 @@ export default function App() {
 
   const [currentThemeId, setCurrentThemeId] = useState<ThemeId>('frosted-glass');
   const [viewMode, setViewMode] = useState<ViewMode>('editor');
+
+  // Split view divider
+  const splitRowRef = useRef<HTMLDivElement | null>(null);
+  const [splitPercent, setSplitPercent] = useState<number>(DEFAULT_SPLIT_PERCENT);
+  const [isDraggingSplit, setIsDraggingSplit] = useState(false);
 
   // Modal States
   const [isUploadOpen, setIsUploadOpen] = useState(false);
@@ -355,6 +370,47 @@ export default function App() {
   // Calculate live document statistics
   const stats = useMemo(() => calculateDocumentStats(mdxContent), [mdxContent]);
 
+  /**
+   * Divider drag. The pointer is captured by the divider itself, so a fast drag
+   * that outruns the pointer keeps sending its moves here instead of to whatever
+   * it happened to pass over - including the preview iframe-like subtree.
+   */
+  const handleSplitPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+    // Otherwise the drag starts a text selection across both panes.
+    event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    setIsDraggingSplit(true);
+  };
+
+  const handleSplitPointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
+    const row = splitRowRef.current;
+    if (!isDraggingSplit || !row) return;
+    const bounds = row.getBoundingClientRect();
+    if (bounds.width === 0) return;
+    setSplitPercent(clampSplit(((event.clientX - bounds.left) / bounds.width) * 100));
+  };
+
+  const handleSplitPointerUp = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+    setIsDraggingSplit(false);
+  };
+
+  const handleSplitKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    const step = event.shiftKey ? 10 : 2;
+    if (event.key === 'ArrowLeft') {
+      event.preventDefault();
+      setSplitPercent((percent) => clampSplit(percent - step));
+    } else if (event.key === 'ArrowRight') {
+      event.preventDefault();
+      setSplitPercent((percent) => clampSplit(percent + step));
+    } else if (event.key === 'Home' || event.key === 'Enter') {
+      event.preventDefault();
+      setSplitPercent(DEFAULT_SPLIT_PERCENT);
+    }
+  };
+
   // Handle header jump click
   const handleSelectHeader = (id: string) => {
     const el = document.getElementById(id);
@@ -531,47 +587,109 @@ export default function App() {
           currentUser={currentUser}
         />
 
-        {/* Editor View */}
-        {(viewMode === 'editor' || viewMode === 'split') && (
-          <div
-            className={`h-full min-h-0 min-w-0 ${
-              viewMode === 'split' ? 'w-full md:w-1/2 lg:w-[45%]' : 'w-full'
-            }`}
-          >
-            <MdxEditor
-              value={mdxContent}
-              onChange={setMdxContent}
-              isSaving={isSaving}
-              onManualSave={executeSave}
-            />
-          </div>
-        )}
-
-        {/* Live Preview & TOC Canvas Area */}
-        {(viewMode === 'preview' || viewMode === 'split') && (
-          <div
-            className={`h-full min-h-0 min-w-0 flex flex-1 overflow-hidden ${
-              viewMode === 'split' ? 'hidden md:flex' : 'flex'
-            }`}
-          >
-            {/* Scrollable Preview Container */}
-            <div className="flex-1 min-h-0 min-w-0 h-full overflow-y-auto custom-scrollbar preview-container">
-              <MdxRenderer
-                content={mdxContent}
-                themeConfig={themeConfig}
-                showFrontmatterHeader={true}
-                containerId="mdx-live-preview"
-                registry={studioMdxRegistry}
+        {/* The two panes and the divider that moves the boundary between them.
+            Their own row, so the divider's percentage is measured against the
+            space they share rather than against the sidebar as well. */}
+        <div
+          ref={splitRowRef}
+          className={`flex-1 min-h-0 min-w-0 flex overflow-hidden ${
+            isDraggingSplit ? 'select-none cursor-col-resize' : ''
+          }`}
+        >
+          {/* Editor View */}
+          {(viewMode === 'editor' || viewMode === 'split') && (
+            <div
+              className={`h-full min-h-0 min-w-0 ${
+                viewMode === 'split' ? 'w-full md:w-[var(--mdx-split-width)]' : 'w-full'
+              }`}
+              // Only the md+ class above reads this, so the single-pane mobile
+              // layout keeps its full width whatever the divider was left at.
+              style={{ '--mdx-split-width': `${splitPercent}%` } as CSSProperties}
+            >
+              <MdxEditor
+                value={mdxContent}
+                onChange={setMdxContent}
+                isSaving={isSaving}
+                onManualSave={executeSave}
               />
             </div>
+          )}
 
-            {/* Desktop Table of Contents Sidebar */}
-            <TableOfContents
-              headings={headings}
-              onSelectHeader={handleSelectHeader}
-            />
-          </div>
-        )}
+          {/* Draggable Divider */}
+          {viewMode === 'split' && (
+            <div
+              role="separator"
+              aria-orientation="vertical"
+              aria-label="Resize the editor and preview panes"
+              aria-valuenow={Math.round(splitPercent)}
+              aria-valuemin={MIN_SPLIT_PERCENT}
+              aria-valuemax={MAX_SPLIT_PERCENT}
+              tabIndex={0}
+              title="Drag to resize · double-click to reset"
+              onPointerDown={handleSplitPointerDown}
+              onPointerMove={handleSplitPointerMove}
+              onPointerUp={handleSplitPointerUp}
+              onPointerCancel={handleSplitPointerUp}
+              onKeyDown={handleSplitKeyDown}
+              onDoubleClick={() => setSplitPercent(DEFAULT_SPLIT_PERCENT)}
+              // z-10: the grip is wider than the divider and hangs over both
+              // panes, which are later siblings and would otherwise paint on top
+              // of it and shave its sides off.
+              className="group relative z-10 hidden md:flex w-2 shrink-0 items-center justify-center cursor-col-resize focus:outline-hidden"
+            >
+              {/* The seam. Wider and indigo once the divider is in play, so the
+                  boundary is legible while it is being moved. */}
+              <span
+                className={`absolute inset-y-0 left-1/2 -translate-x-1/2 rounded-full transition-all duration-150 ${
+                  isDraggingSplit
+                    ? 'w-0.5 bg-indigo-400'
+                    : 'w-px bg-slate-600 group-hover:w-0.5 group-hover:bg-indigo-400 group-focus-visible:w-0.5 group-focus-visible:bg-indigo-400'
+                }`}
+              />
+
+              {/* The grip. Out of the way until the divider is worth noticing -
+                  pointer on it, keyboard focus, or a drag under way. A dark drop
+                  shadow is invisible on this chrome, so the pill is lifted off
+                  the panes by a light ring and grounded by a deep shadow, and
+                  glows indigo while it is being dragged. */}
+              <span
+                className={`relative flex h-14 w-5 items-center justify-center rounded-full border transition-all duration-150 group-focus-visible:opacity-100 group-focus-visible:scale-100 ${
+                  isDraggingSplit
+                    ? 'opacity-100 scale-100 bg-indigo-500 border-indigo-300 text-white ring-1 ring-indigo-200/50 shadow-[0_0_20px_rgba(99,102,241,0.6),0_6px_16px_rgba(2,6,23,0.75)]'
+                    : 'opacity-0 scale-90 bg-slate-700 border-slate-500 text-slate-200 ring-1 ring-white/15 shadow-[0_6px_16px_rgba(2,6,23,0.75)] group-hover:opacity-100 group-hover:scale-100 group-hover:bg-indigo-500 group-hover:border-indigo-300 group-hover:text-white group-hover:ring-indigo-200/40 group-hover:shadow-[0_0_20px_rgba(99,102,241,0.5),0_6px_16px_rgba(2,6,23,0.75)]'
+                }`}
+              >
+                <GripVertical className="w-3.5 h-3.5" />
+              </span>
+            </div>
+          )}
+
+          {/* Live Preview & TOC Canvas Area */}
+          {(viewMode === 'preview' || viewMode === 'split') && (
+            <div
+              className={`h-full min-h-0 min-w-0 flex flex-1 overflow-hidden ${
+                viewMode === 'split' ? 'hidden md:flex' : 'flex'
+              }`}
+            >
+              {/* Scrollable Preview Container */}
+              <div className="flex-1 min-h-0 min-w-0 h-full overflow-y-auto custom-scrollbar preview-container">
+                <MdxRenderer
+                  content={mdxContent}
+                  themeConfig={themeConfig}
+                  showFrontmatterHeader={true}
+                  containerId="mdx-live-preview"
+                  registry={studioMdxRegistry}
+                />
+              </div>
+
+              {/* Desktop Table of Contents Sidebar */}
+              <TableOfContents
+                headings={headings}
+                onSelectHeader={handleSelectHeader}
+              />
+            </div>
+          )}
+        </div>
       </main>
 
       {/* Mobile Slide-over Drawer for Table of Contents */}

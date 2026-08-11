@@ -217,8 +217,10 @@ export function MdxEditor({
     { label: 'Code Block', snippet: '\n```typescript\nfunction helloMDX() {\n  console.log("Hello from MDX!");\n}\n```\n' },
   ];
 
+  // No right border on the shell: in the split view the divider beside it is the
+  // seam, and a second line next to that one reads as a mistake.
   return (
-    <div className="flex flex-col h-full bg-slate-900 text-slate-100 border-r border-slate-800 mdx-editor-container no-print">
+    <div className="flex flex-col h-full bg-slate-900 text-slate-100 mdx-editor-container no-print">
       {/* Editor Toolbar */}
       <div className="flex flex-wrap items-center justify-between gap-2 p-2.5 bg-slate-950 border-b border-slate-800 text-xs shrink-0">
         <div className="flex items-center gap-1 overflow-x-auto custom-scrollbar pb-1 sm:pb-0">
