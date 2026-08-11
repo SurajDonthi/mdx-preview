@@ -42,8 +42,11 @@ export type {
   MdxDocumentAst,
   MdxExpressionSlot,
   MdxExpressionSlotKind,
+  MdxPipelineOptions,
   ParseMdxOptions,
 } from './mdxAst';
+
+export { MATH_COMPONENT } from './mathSyntax';
 
 export { evaluateEstreeLiteral, createFullEstreeEvaluator } from './estreeEval';
 export type {

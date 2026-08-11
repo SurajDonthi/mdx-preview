@@ -52,11 +52,13 @@
   },
   "dependencies": {
     "hast-util-to-jsx-runtime": "^2.3.6",
+    "katex": "^0.16.47",
     "lucide-react": "^0.546.0",
     "prismjs": "^1.30.0"
   },
   "devDependencies": {
     "@types/hast": "^3.0.5",
+    "@types/katex": "^0.16.8",
     "@types/prismjs": "^1.26.6"
   },
   "peerDependencies": {

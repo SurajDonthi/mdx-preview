@@ -1,6 +1,7 @@
 import { load as parseYaml } from 'js-yaml';
 import { Frontmatter, HeaderItem, DocumentStats } from './types';
 import { countLines, parseMdxDocument } from './mdxAst';
+import type { MdxPipelineOptions } from './mdxAst';
 
 /**
  * Extracts YAML frontmatter and markdown body from MDX content string
@@ -143,16 +144,18 @@ export function collectHeadings(tree: unknown): DocumentHeading[] {
  * panel - so an entry for one could address an element that is not on the page.
  *
  * Parsing is shared with the renderer through {@link parseMdxDocument}'s cache,
- * so calling this on every keystroke costs one parse, not two.
+ * so calling this on every keystroke costs one parse, not two. A host that
+ * renders with extra plugins has to pass the same ones here for that to hold -
+ * a different pipeline is a different parse.
  */
-export function extractHeadings(content: string): HeaderItem[] {
+export function extractHeadings(content: string, options: MdxPipelineOptions = {}): HeaderItem[] {
   // Clean frontmatter first so headers in frontmatter aren't included
   const { body } = parseFrontmatter(content);
 
   // The renderer parses the same body with the same offset; matching it here is
   // what lets both of them share one parse.
   const lineOffset = countLines(content.slice(0, Math.max(0, content.length - body.length)));
-  const { tree } = parseMdxDocument(body, { lineOffset });
+  const { tree } = parseMdxDocument(body, { ...options, lineOffset });
 
   return collectHeadings(tree)
     .filter((heading) => !heading.insideJsx && heading.level <= MAX_TOC_LEVEL)

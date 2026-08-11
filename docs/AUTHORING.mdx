@@ -277,6 +277,69 @@ shows its description.
 
 ---
 
+## Math
+
+TeX between dollar signs. Inline, `$E = mc^2$` sets $E = mc^2$; a `$$` block on
+its own lines sets a centred equation:
+
+$$
+\int_{-\infty}^{\infty} e^{-x^2}\,dx = \sqrt{\pi}
+$$
+
+KaTeX does the typesetting, and it is fetched the first time a document contains
+an equation — a library and a stylesheet a document without math never
+downloads. Until it arrives the TeX source itself is what is on the page, so
+nothing blanks or jumps.
+
+Braces inside math are TeX, not MDX: `\frac{a}{b}` between dollar signs is safe,
+which makes math the one place in a document where a bare brace is not an
+expression.
+
+A dollar sign in prose stays a dollar sign. This sentence says it costs $5 and
+$10 and renders as written: a single-dollar span is only read as math when it
+opens on a non-space, closes on a non-space, and is not followed by a digit.
+Where that is not enough, `\$` escapes one outright.
+
+---
+
+## Alerts
+
+GitHub's alert blockquotes render as callouts:
+
+```md
+> [!NOTE]
+> Useful information a reader should notice even while skimming.
+```
+
+> [!NOTE]
+> Useful information a reader should notice even while skimming.
+
+> [!WARNING]
+> Something that could go wrong.
+
+`NOTE`, `TIP`, `IMPORTANT`, `WARNING` and `CAUTION`, in any case. The marker has
+to be alone on the first line of the quote: anything else — an unknown marker
+like `[!MAYBE]`, or a marker with text beside it — stays an ordinary blockquote,
+exactly as it does on GitHub. Alerts render through the same `Callout` you can
+write by hand, so there is one set of colours to change, not two.
+
+---
+
+## Images
+
+A markdown image opens enlarged when it is clicked:
+
+```md
+![Deployment topology](./assets/topology.png)
+```
+
+Escape, the close button, or a click outside the image closes it again. The
+image itself is focusable, so Enter or Space opens it without a mouse and focus
+comes back to it afterwards. A host that has its own viewer turns the whole
+thing off with `lightbox={false}` on `MdxRenderer`.
+
+---
+
 ## Expressions
 
 An expression in a document is evaluated against the registry, with real

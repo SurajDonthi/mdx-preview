@@ -41,10 +41,34 @@ const myPlugin = defineMdxPlugin({
   components: { Ticket },
   aliases: { Issue: 'Ticket' },
   codeFences: { graphviz: 'Graphviz' },
+  remarkPlugins: [remarkDirective],   // extends the syntax, not just the vocabulary
+  rehypePlugins: [],
 });
 
 const registry = createMdxRegistry(myPlugin);
 ```
+
+`remarkPlugins` and `rehypePlugins` are collected in source order and end up on
+the registry, which `MdxRenderer` passes to the parser. `parseMdxDocument` and
+`extractHeadings` take the same two lists directly. Pass module-level constants:
+the processor and the parse cache are keyed by the identity of the arrays, so a
+fresh array on every render re-parses the document.
+
+## What the parser understands
+
+Beyond CommonMark, GFM and MDX itself:
+
+- **Math.** `$inline$` and `$$block$$`, via `remark-math`, become
+  `<MathExpression tex="..." />` elements — a component, so a renderer can load
+  KaTeX only for documents that contain math. A single-dollar span is only read
+  as math when it opens on a non-space, closes on a non-space and is not
+  followed by a digit, so `it costs $5 and $10` stays prose.
+- **GitHub alerts.** `> [!NOTE]` and its four siblings (`TIP`, `IMPORTANT`,
+  `WARNING`, `CAUTION`, any case) become `<Callout type="..." title="..." />`.
+  An unknown marker stays an ordinary blockquote.
+
+Both produce ordinary MDX element nodes, so nothing downstream has to know they
+came from markdown rather than from a tag the author typed.
 
 ## Exports
 
@@ -52,8 +76,8 @@ Parsing (`parseMdxDocument`, `parseFrontmatter`, `collectHeadings`,
 `extractHeadings`, `calculateDocumentStats`, `formatMdxParseError`, `countLines`,
 `slugify`), expression evaluation (`evaluateEstreeLiteral`,
 `createFullEstreeEvaluator`), the registry (`defineMdxPlugin`,
-`createMdxRegistry`, `emptyMdxRegistry`), `MdxRenderContext`, and the shared
-types.
+`createMdxRegistry`, `emptyMdxRegistry`), `MdxRenderContext`, `MATH_COMPONENT`
+(the tag name math is rendered through), and the shared types.
 
 ESM only, with TypeScript declarations.
 

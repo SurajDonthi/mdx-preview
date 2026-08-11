@@ -126,8 +126,24 @@ describe('createMdxRegistry', () => {
   });
 
   it('is empty when given nothing', () => {
-    expect(createMdxRegistry()).toEqual({ components: {}, codeFences: {} });
-    expect(emptyMdxRegistry).toEqual({ components: {}, codeFences: {} });
+    const nothing = { components: {}, codeFences: {}, remarkPlugins: [], rehypePlugins: [] };
+
+    expect(createMdxRegistry()).toEqual(nothing);
+    expect(emptyMdxRegistry).toEqual(nothing);
+  });
+
+  it('collects the unified plugins its sources contribute, in order', () => {
+    const first = () => undefined;
+    const second = () => undefined;
+    const rehype = () => undefined;
+
+    const registry = createMdxRegistry(
+      defineMdxPlugin({ name: 'a', remarkPlugins: [first] }),
+      defineMdxPlugin({ name: 'b', remarkPlugins: [second], rehypePlugins: [rehype] })
+    );
+
+    expect(registry.remarkPlugins).toEqual([first, second]);
+    expect(registry.rehypePlugins).toEqual([rehype]);
   });
 
   it('keeps the sources it was given unmodified', () => {

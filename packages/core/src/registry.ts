@@ -1,4 +1,5 @@
 import type { ComponentType } from 'react';
+import type { PluggableList } from 'unified';
 
 /**
  * The MDX component registry.
@@ -57,6 +58,16 @@ export interface MdxPlugin {
    * case-insensitively.
    */
   codeFences?: Record<string, string>;
+  /**
+   * Extra remark plugins, applied to the mdast tree after the built-in ones.
+   *
+   * A plugin that introduces syntax rather than a component belongs here:
+   * registering the components is not enough if the document has to be *parsed*
+   * differently for them to appear.
+   */
+  remarkPlugins?: PluggableList;
+  /** Extra rehype plugins, applied to the hast tree the renderer consumes. */
+  rehypePlugins?: PluggableList;
 }
 
 /**
@@ -71,6 +82,13 @@ export interface MdxRegistry {
   components: MdxComponentMap;
   /** Lower-cased fence language -> component. */
   codeFences: Record<string, MdxComponent>;
+  /**
+   * Every contributed remark plugin, in source order. Optional so that a
+   * hand-built registry object stays valid; `createMdxRegistry` always sets it.
+   */
+  remarkPlugins?: PluggableList;
+  /** Every contributed rehype plugin, in source order. */
+  rehypePlugins?: PluggableList;
 }
 
 const MDX_PLUGIN = Symbol.for('mdxstudio.plugin');
@@ -118,6 +136,8 @@ export function createMdxRegistry(...sources: MdxRegistrySource[]): MdxRegistry 
   const components: MdxComponentMap = {};
   const aliases: Array<[string, string, string]> = [];
   const fences: Array<[string, string, string]> = [];
+  const remarkPlugins: PluggableList = [];
+  const rehypePlugins: PluggableList = [];
 
   for (const source of sources) {
     if (!isMdxPlugin(source)) {
@@ -125,6 +145,8 @@ export function createMdxRegistry(...sources: MdxRegistrySource[]): MdxRegistry 
       continue;
     }
     Object.assign(components, source.components);
+    remarkPlugins.push(...(source.remarkPlugins ?? []));
+    rehypePlugins.push(...(source.rehypePlugins ?? []));
     for (const [name, target] of Object.entries(source.aliases ?? {})) {
       aliases.push([name, target, source.name]);
     }
@@ -147,8 +169,13 @@ export function createMdxRegistry(...sources: MdxRegistrySource[]): MdxRegistry 
     );
   }
 
-  return { components, codeFences };
+  return { components, codeFences, remarkPlugins, rehypePlugins };
 }
 
 /** A registry with nothing in it. Useful as a default and in tests. */
-export const emptyMdxRegistry: MdxRegistry = { components: {}, codeFences: {} };
+export const emptyMdxRegistry: MdxRegistry = {
+  components: {},
+  codeFences: {},
+  remarkPlugins: [],
+  rehypePlugins: [],
+};

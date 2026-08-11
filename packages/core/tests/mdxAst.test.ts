@@ -163,6 +163,62 @@ describe('parseMdxDocument', () => {
   });
 });
 
+describe('extra pipeline plugins', () => {
+  /** Rewrites every heading's text, so the effect is visible in the tree. */
+  const shout = () => (tree: unknown) => {
+    const visit = (node: any): void => {
+      if (node.type === 'text') node.value = String(node.value).toUpperCase();
+      for (const child of node.children ?? []) visit(child);
+    };
+    visit(tree);
+  };
+
+  /** Marks the hast root, which only a rehype plugin can reach. */
+  const stamp = () => (tree: any) => {
+    tree.children.unshift({ type: 'element', tagName: 'hr', properties: { id: 'stamped' }, children: [] });
+  };
+
+  const remarkPlugins = [shout];
+  const rehypePlugins = [stamp];
+
+  it('applies a host remark plugin', () => {
+    const ast = parseMdxDocument('# quiet\n', { remarkPlugins });
+
+    expect(flattenText(ast.tree)).toContain('QUIET');
+  });
+
+  it('applies a host rehype plugin', () => {
+    const ast = parseMdxDocument('# heading\n', { rehypePlugins });
+
+    expect(findAll(ast.tree, (node) => node.properties?.id === 'stamped')).toHaveLength(1);
+  });
+
+  it('does not hand a plugin-less caller the extended tree', () => {
+    const body = '# quiet\n';
+    const plain = parseMdxDocument(body);
+    const extended = parseMdxDocument(body, { remarkPlugins });
+
+    expect(plain).not.toBe(extended);
+    expect(flattenText(plain.tree)).toContain('quiet');
+  });
+
+  it('reuses one parse for the same lists', () => {
+    const body = '# same\n';
+
+    expect(parseMdxDocument(body, { remarkPlugins })).toBe(
+      parseMdxDocument(body, { remarkPlugins })
+    );
+  });
+
+  it('treats empty lists as no plugins at all', () => {
+    const body = '# empty\n';
+
+    expect(parseMdxDocument(body, { remarkPlugins: [], rehypePlugins: [] })).toBe(
+      parseMdxDocument(body)
+    );
+  });
+});
+
 describe('countLines', () => {
   it('counts newlines, not lines', () => {
     expect(countLines('')).toBe(0);

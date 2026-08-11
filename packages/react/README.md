@@ -86,6 +86,34 @@ export const registry = createRendererRegistry(mermaidPlugin, chartsPlugin);
 Passing a component under a built-in name replaces it. Build the registry once at
 module scope: a new registry object on every render re-parses the document.
 
+### Math
+
+`$inline$` and `$$block$$` are typeset with KaTeX. Nothing to register and
+nothing to import: the parser turns math into `<MathExpression>`, which loads
+KaTeX and its stylesheet on demand, so a document with no equations downloads
+neither. Until the chunk arrives the TeX source is what is on the page.
+
+`katex` is a dependency of this package; if your bundler needs help with the
+`katex/dist/katex.min.css` import inside the lazy chunk, alias it — the CLI does
+exactly that in `packages/cli/scripts/build-client.mjs`.
+
+### Alerts
+
+GitHub's alert blockquotes render through the built-in `Callout`, so they are
+themed by the same `--mdxstudio-callout-*` properties:
+
+```md
+> [!WARNING]
+> Mind the gap.
+```
+
+### Images
+
+Clicking an image opens it enlarged over the document; Escape, the close button
+or a click outside closes it, and focus returns to the image, which is itself
+focusable and answers Enter and Space. Turn it off with `lightbox={false}`; it
+is off automatically in `renderMode="pdf"`.
+
 ### Untrusted documents
 
 `expressions="literals"` restricts `{...}` to values the syntax spells out. For a
@@ -94,11 +122,12 @@ themselves still run in your page. Use [`@mdxstudio/sandbox`](https://github.com
 
 ## Exports
 
-`MdxRenderer`, `FrontmatterHeader`, `InlineToken`, `THEMES`, `reactPlugin`,
-`createRendererRegistry`, `baseMdxRegistry`, and every built-in component
-(`Callout`, `Card`, `CardGrid`, `Stat`, `StatGrid`, `Tabs`, `Tab`, `Accordion`,
-`Steps`, `Step`, `Timeline`, `ProgressBar`, `InteractiveCounter`, `Kbd`, `Badge`,
-`Button`, `TableComponent`, `InlineCode`).
+`MdxRenderer`, `FrontmatterHeader`, `InlineToken`, `MdxImage`, `ImageLightbox`,
+`THEMES`, `reactPlugin`, `createRendererRegistry`, `baseMdxRegistry`, and every
+built-in component (`Callout`, `Card`, `CardGrid`, `Stat`, `StatGrid`, `Tabs`,
+`Tab`, `Accordion`, `Steps`, `Step`, `Timeline`, `ProgressBar`,
+`InteractiveCounter`, `Kbd`, `Badge`, `Button`, `TableComponent`, `InlineCode`,
+`MathExpression`).
 
 ESM only, with TypeScript declarations.
 

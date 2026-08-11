@@ -5,6 +5,10 @@ import { InlineToken } from './InlineToken';
 // named imports can satisfy on its own. See `./icons` for how that is served
 // without pulling the whole lucide set into the first load.
 import { DynamicIcon } from './icons';
+// `$x$` and `$$x$$` are rewritten to this tag by the parser, so it has to be in
+// the same map every other built-in is in. KaTeX itself is not: the component
+// loads it on demand.
+import { MathExpression } from './MathExpression';
 
 // 1. Callout / Alert Box
 export interface CalloutProps {
@@ -480,6 +484,7 @@ export const baseMdxComponents = {
   Button,
   Table: TableComponent,
   InlineCode,
+  MathExpression,
 };
 
 /** Extra tag names the built-in components also answer to. */

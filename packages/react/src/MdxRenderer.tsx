@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef, Component, ErrorInfo } from 'react';
+import React, { useState, useCallback, useEffect, useMemo, useRef, Component, ErrorInfo } from 'react';
 import { Fragment, jsx, jsxs } from 'react/jsx-runtime';
 import { toJsxRuntime } from 'hast-util-to-jsx-runtime';
 import Prism from 'prismjs';
@@ -38,6 +38,8 @@ import type {
 import { FrontmatterHeader } from './FrontmatterHeader';
 import { baseMdxRegistry } from './plugin';
 import { InlineToken } from './InlineToken';
+import { ImageLightbox, MdxImage } from './Lightbox';
+import type { LightboxImage, OpenLightbox } from './Lightbox';
 import { AlertTriangle, Check, Copy, HelpCircle } from 'lucide-react';
 
 /**
@@ -397,6 +399,7 @@ interface BuildOptions {
   components: MdxComponentMap;
   scope: Record<string, unknown>;
   expressions: MdxExpressionMode;
+  registry: MdxRegistry;
 }
 
 /**
@@ -406,7 +409,14 @@ interface BuildOptions {
  * `expressions` allows.
  */
 function buildDocument(options: BuildOptions): BuiltDocument {
-  const ast = parseMdxDocument(options.body, { lineOffset: options.lineOffset });
+  const ast = parseMdxDocument(options.body, {
+    lineOffset: options.lineOffset,
+    // The registry decides the syntax as well as the vocabulary: a plugin that
+    // contributes a remark transform has to reach the parse, not just the
+    // component lookup.
+    remarkPlugins: options.registry.remarkPlugins,
+    rehypePlugins: options.registry.rehypePlugins,
+  });
   const warnings: MdxDiagnostic[] = [...ast.diagnostics];
 
   if (!ast.tree) {
@@ -517,6 +527,12 @@ interface MdxRendererProps {
    * content the host does not trust in-page.
    */
   expressions?: MdxExpressionMode;
+  /**
+   * Clicking an image opens it enlarged in an overlay. On by default; turn it
+   * off for a host that has its own image viewer, or where the document is not
+   * the whole page. Always off in `pdf` mode, where nothing can be clicked.
+   */
+  lightbox?: boolean;
 }
 
 export function MdxRenderer({
@@ -528,8 +544,29 @@ export function MdxRenderer({
   renderMode = 'live',
   registry = baseMdxRegistry,
   expressions = 'full',
+  lightbox = true,
 }: MdxRendererProps) {
   const [runtimeError, setRuntimeError] = useState<string | null>(null);
+  const [zoomed, setZoomed] = useState<LightboxImage | null>(null);
+
+  // The element the overlay was opened from, so focus can go back to it. A ref
+  // rather than state: it is never read during a render.
+  const zoomOrigin = useRef<HTMLElement | null>(null);
+
+  const openZoom = useCallback<OpenLightbox>((image, origin) => {
+    zoomOrigin.current = origin;
+    setZoomed(image);
+  }, []);
+
+  const closeZoom = useCallback(() => {
+    const origin = zoomOrigin.current;
+    zoomOrigin.current = null;
+    setZoomed(null);
+    // Still in the document at this point: React removes the overlay after the
+    // handler returns, so the image is there to take focus back.
+    if (origin?.isConnected) origin.focus();
+  }, []);
+
   const renderSettings = useMemo(
     () => ({ renderMode, themeCategory: themeConfig.category }),
     [renderMode, themeConfig.category]
@@ -551,6 +588,10 @@ export function MdxRenderer({
     () => (props: any) => <CodeBlock registry={registry} {...props} />,
     [registry]
   );
+
+  // Nothing in an exported PDF can be clicked, and the overlay would be a
+  // full-page rectangle in the middle of it.
+  const zoomable = lightbox && renderMode !== 'pdf' ? openZoom : undefined;
 
   // Element overrides. Everything the document renders - markdown-derived
   // elements and lowercase JSX tags alike - is looked up here.
@@ -638,6 +679,9 @@ export function MdxRenderer({
         </td>
       ),
 
+      // Images open enlarged unless the host turned that off.
+      img: ({ node, ...props }: any) => <MdxImage {...props} onOpen={zoomable} />,
+
       // Link override
       a: ({ children, href }: any) => (
         <a
@@ -670,7 +714,7 @@ export function MdxRenderer({
       // Custom interactive component map
       ...registry.components,
     }),
-    [themeConfig, registry]
+    [themeConfig, registry, zoomable]
   );
 
   /** Names a document may reference in JSX tags and in `{...}` expressions. */
@@ -687,8 +731,9 @@ export function MdxRenderer({
         components: components as unknown as MdxComponentMap,
         scope,
         expressions,
+        registry,
       }),
-    [body, lineOffset, components, scope, expressions]
+    [body, lineOffset, components, scope, expressions, registry]
   );
 
   // A half-typed document must not blank the preview, so the last tree that did
@@ -767,6 +812,10 @@ export function MdxRenderer({
           {element}
         </MdxErrorBoundary>
       </div>
+
+      {/* Enlarged image. Inside the themed root, so it reads the same
+          properties everything else does. */}
+      {zoomed && <ImageLightbox image={zoomed} onClose={closeZoom} />}
       </div>
     </MdxRenderContext.Provider>
   );
