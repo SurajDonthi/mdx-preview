@@ -1,0 +1,57 @@
+{
+  "name": "@mdxstudio/agent-skill",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Installs the mdx-docs authoring skill and the standing documentation policy into any coding agent's instruction file (AGENTS.md, CLAUDE.md, GEMINI.md, ...).",
+  "keywords": [
+    "mdx",
+    "agents.md",
+    "agent-skills",
+    "claude-code",
+    "codex",
+    "cursor",
+    "documentation",
+    "cli"
+  ],
+  "license": "MIT",
+  "author": "Suraj Donthi",
+  "homepage": "https://github.com/SurajDonthi/mdx-preview/tree/main/packages/agent-skill#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SurajDonthi/mdx-preview.git",
+    "directory": "packages/agent-skill"
+  },
+  "bugs": {
+    "url": "https://github.com/SurajDonthi/mdx-preview/issues"
+  },
+  "sideEffects": false,
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "bin": {
+    "mdxstudio-skill": "./dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "skill"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "//skill": "`skill/` is a copy of the repository's canonical `skills/mdx-docs/`, which is the single source of truth and what `npx skills` reads. It is generated rather than committed so the two cannot drift; `prepack` regenerates it so the published tarball carries it.",
+  "scripts": {
+    "build": "node scripts/sync-skill.mjs && tsup",
+    "prepack": "node scripts/sync-skill.mjs",
+    "clean": "node -e \"const fs=require('node:fs');for(const d of ['dist','skill'])fs.rmSync(d,{recursive:true,force:true})\""
+  }
+}

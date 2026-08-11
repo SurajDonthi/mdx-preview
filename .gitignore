@@ -15,3 +15,9 @@ coverage/
 
 # Firebase project config - supplied via .env, see .env.example
 firebase-applet-config.json
+
+# Generated copy of skills/mdx-docs, made by the agent-skill build and by its
+# prepack so the published tarball carries it. The repository-root skills/
+# directory is the single source of truth; committing a second copy would let
+# the two drift.
+/packages/agent-skill/skill/

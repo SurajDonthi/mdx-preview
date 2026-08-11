@@ -70,6 +70,7 @@ not download a diagram engine to get them.
 | `@mdxstudio/flow` | `FlowGraph`, the interactive node/edge map used throughout these docs |
 | `@mdxstudio/pdf` | A4 export from a rendered DOM subtree |
 | `@mdxstudio/sandbox` | `SandboxedMdx` — render a document you did not write, in an opaque-origin frame |
+| `@mdxstudio/agent-skill` | A CLI that teaches a coding agent to write documentation in this flavour |
 
 ### Composing them
 
@@ -163,6 +164,44 @@ button** for callouts, tabs and interactive diagrams; GitHub renders them as pla
 
 ---
 
+## Writing docs with a coding agent
+
+`skills/mdx-docs/` is an [agent skill](https://agents.md) that teaches any coding
+agent this flavour — the component catalogue, the brace rule that silently deletes
+prose, when a diagram beats prose, and when a file should stay plain `.md`.
+
+There are two routes, and they do different things.
+
+**The skill only**, via the ecosystem tool. Supports far more agents than we do:
+
+```sh
+npx skills add SurajDonthi/mdx-preview --skill mdx-docs
+```
+
+**The skill plus the standing instruction**, via this repository's own CLI:
+
+```sh
+npx @mdxstudio/agent-skill add              # home directory, agents detected
+npx @mdxstudio/agent-skill add --project    # this repository
+npx @mdxstudio/agent-skill remove
+```
+
+The difference matters. `npx skills` places files; it writes no instruction file.
+A skill an agent never loads changes nothing, so `@mdxstudio/agent-skill` also
+inserts a short block into `AGENTS.md` / `CLAUDE.md` / `GEMINI.md` telling the
+agent to load it — wrapped in sentinel comments so it can be updated and removed
+exactly, and appended after whatever you already had.
+
+Two things people get wrong, both stated plainly in
+[the package README](packages/agent-skill#readme):
+
+- **There is no user-level `AGENTS.md`.** The standard defines a repository file
+  only, so a global install has no safe default and asks you to name an agent.
+- **Claude Code does not read `AGENTS.md`.** It reads `CLAUDE.md`. A repository
+  with only `AGENTS.md` needs `--agent claude-code` too.
+
+---
+
 ## Tech stack
 
 **Runtime** React 19 · TypeScript 5.8 · Vite 6 · npm workspaces. Tailwind CSS v4 styles
@@ -234,6 +273,9 @@ packages/
   flow/      FlowGraph
   pdf/       pdfExporter: A4 capture, page-break measurement, jsPDF output
   sandbox/   host component · guest runtime · wire protocol · esbuild and Vite build helpers
+  agent-skill/  the installer CLI; skill/ is generated from skills/mdx-docs at build time
+skills/
+  mdx-docs/  the agent skill itself — SKILL.md plus references/
 apps/
   studio/
     src/App.tsx              all document state; the 400ms auto-save that fans out

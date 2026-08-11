@@ -61,6 +61,16 @@ export default defineConfig({
       {
         extends: true,
         test: {
+          name: 'agent-skill',
+          root: path.resolve(root, 'packages/agent-skill'),
+          // A CLI: it edits files on disk and never touches a DOM.
+          environment: 'node',
+          include: ['tests/**/*.test.ts'],
+        },
+      },
+      {
+        extends: true,
+        test: {
           name: 'studio',
           root: path.resolve(root, 'apps/studio'),
           // storage.ts talks to localStorage.
