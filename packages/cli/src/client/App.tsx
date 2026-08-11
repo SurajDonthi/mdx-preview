@@ -1,15 +1,16 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AlertTriangle, FileText, ListOrdered, Menu, PanelLeft } from 'lucide-react';
 
 import { extractHeadings } from '@mdxstudio/core';
-import type { ThemeId } from '@mdxstudio/core';
+import type { MdxRegistry, ThemeId } from '@mdxstudio/core';
 import { MdxRenderer, THEMES } from '@mdxstudio/react';
 
 import { API_PREFIX } from '../protocol';
 import type { BootData, ChangeEvent, DocEntry, DocResponse, TreeResponse } from '../protocol';
 import { Sidebar } from './Sidebar';
 import { Toc } from './Toc';
-import { cliMdxRegistry } from './registry';
+import { loadMdxConfig } from './config';
+import { cliMdxRegistry, cliRegistryWith } from './registry';
 
 const THEME_STORAGE_KEY = 'mdxstudio-cli.theme';
 
@@ -35,6 +36,36 @@ export function App({ boot }: { boot: BootData }) {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [connected, setConnected] = useState(boot.watch);
   const [reloadedAt, setReloadedAt] = useState(0);
+
+  // `null` until the folder's config file has been imported. Rendering the
+  // built-in registry first and swapping it afterwards would parse every
+  // document twice and flash components the config meant to replace.
+  const [registry, setRegistry] = useState<MdxRegistry | null>(
+    boot.configFile ? null : cliMdxRegistry
+  );
+  const [configError, setConfigError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!boot.configFile) return;
+
+    let cancelled = false;
+    void loadMdxConfig({
+      file: boot.configFile,
+      context: { React, createElement: React.createElement, components: cliMdxRegistry.components },
+      build: cliRegistryWith,
+    }).then((loaded) => {
+      if (cancelled) return;
+      // Either way the documents render: a broken config costs its components,
+      // not the folder.
+      if (loaded.error) console.error(`[mdxstudio] ${loaded.error}`);
+      setConfigError(loaded.error);
+      setRegistry(loaded.registry);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [boot.configFile]);
 
   const [themeId, setThemeId] = useState<ThemeId>(() => {
     // A remembered choice wins - except over `--theme`, which was typed just
@@ -167,7 +198,18 @@ export function App({ boot }: { boot: BootData }) {
     return () => stream.close();
   }, [boot.watch, loadDoc, loadTree]);
 
-  const headings = useMemo(() => (content ? extractHeadings(content) : []), [content]);
+  // Parsed with the same plugins the renderer uses, so the outline is built
+  // from the tree that is on the page - and shares its parse.
+  const headings = useMemo(
+    () =>
+      content
+        ? extractHeadings(content, {
+            remarkPlugins: registry?.remarkPlugins,
+            rehypePlugins: registry?.rehypePlugins,
+          })
+        : [],
+    [content, registry]
+  );
 
   const scrollToHeading = useCallback((id: string): void => {
     const element = document.getElementById(id);
@@ -274,6 +316,12 @@ export function App({ boot }: { boot: BootData }) {
         )}
 
         <main className="mdxcli-main" ref={setScrollRoot} data-testid="doc-scroll">
+          {configError && (
+            <div className="mdxcli-config-error" role="alert" data-testid="config-error">
+              <AlertTriangle className="mdxcli-icon" aria-hidden="true" />
+              <span>{configError}</span>
+            </div>
+          )}
           {loadError ? (
             <div className="mdxcli-empty" role="alert">
               <AlertTriangle className="mdxcli-empty__icon" aria-hidden="true" />
@@ -289,7 +337,7 @@ export function App({ boot }: { boot: BootData }) {
                 Add one and it appears here - the folder is being watched.
               </p>
             </div>
-          ) : content === null ? (
+          ) : content === null || registry === null ? (
             <div className="mdxcli-empty">
               <p>Loading {current}...</p>
             </div>
@@ -299,7 +347,7 @@ export function App({ boot }: { boot: BootData }) {
                 key={current}
                 content={content}
                 themeConfig={themeConfig}
-                registry={cliMdxRegistry}
+                registry={registry}
                 expressions={boot.expressions}
                 containerId="mdxstudio-cli-document"
               />

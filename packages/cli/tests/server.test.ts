@@ -89,6 +89,36 @@ describe('the pages', () => {
   });
 });
 
+describe('the config file', () => {
+  it('says there is none when none was found', async () => {
+    expect(await (await fetch(`${origin}/`)).text()).toContain('"configFile":null');
+  });
+
+  it('names it in the boot data and serves it as a module', async () => {
+    await writeFile(path.join(root, 'mdxstudio.config.js'), 'export default {};\n', 'utf8');
+
+    const configured = createDocServer(createDirectorySource(root, { watch: false }), {
+      watch: false,
+      configFile: 'mdxstudio.config.js',
+    });
+    const port = await configured.listen(0, '127.0.0.1');
+
+    try {
+      const shell = await (await fetch(`http://127.0.0.1:${port}/`)).text();
+      expect(shell).toContain('"configFile":"mdxstudio.config.js"');
+
+      // The client imports it from the folder, so the ordinary asset route has
+      // to hand it back as JavaScript rather than as a download.
+      const module = await fetch(`http://127.0.0.1:${port}/mdxstudio.config.js`);
+      expect(module.status).toBe(200);
+      expect(module.headers.get('content-type')).toContain('text/javascript');
+    } finally {
+      await configured.close();
+      await rm(path.join(root, 'mdxstudio.config.js'), { force: true });
+    }
+  });
+});
+
 describe('a document from stdin', () => {
   it('serves one document with no folder behind it', async () => {
     const single = createDocServer(createMemorySource('stdin.mdx', '# Piped\n'), { watch: false });

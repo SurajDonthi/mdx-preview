@@ -433,6 +433,24 @@ body {
   opacity: 0.7;
 }
 
+/*
+ * A broken mdxstudio.config.js. Above the document rather than instead of it:
+ * the config is optional, so a mistake in it must not hide the folder.
+ */
+.mdxcli-config-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 12px 16px 0;
+  padding: 10px 12px;
+  border: 1px solid var(--mdxstudio-tone-warning, #f59e0b);
+  border-radius: 8px;
+  background: color-mix(in oklab, var(--mdxstudio-tone-warning, #f59e0b) 12%, transparent);
+  color: var(--mdxcli-canvas-fg);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
 /* ------------------------------------------------------------------ *
  * Outline
  * ------------------------------------------------------------------ */

@@ -58,4 +58,9 @@ export interface BootData {
   /** `--theme` was passed, so it overrides whatever the browser remembered. */
   themePinned: boolean;
   version: string;
+  /**
+   * The config file found in the served folder, relative to it, or `null`.
+   * The client imports it from there before it renders anything.
+   */
+  configFile: string | null;
 }

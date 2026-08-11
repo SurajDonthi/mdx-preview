@@ -29,6 +29,7 @@ const MIME: Record<string, string> = {
   '.ico': 'image/x-icon',
   '.woff': 'font/woff',
   '.woff2': 'font/woff2',
+  '.ttf': 'font/ttf',
   '.txt': 'text/plain; charset=utf-8',
   '.pdf': 'application/pdf',
   '.mp4': 'video/mp4',
@@ -56,6 +57,8 @@ export interface DocServerOptions {
   /** The theme was asked for by name, not defaulted. */
   themePinned?: boolean;
   version?: string;
+  /** Config file in the served folder, relative to it. See `./config`. */
+  configFile?: string | null;
   /** Live reload. The source decides whether it can actually watch. */
   watch?: boolean;
   /** Called once per change batch, after the tree has been re-read. */
@@ -261,6 +264,7 @@ export function createDocServer(source: DocSource, options: DocServerOptions = {
       theme: options.theme ?? 'github-dark',
       themePinned: options.themePinned ?? false,
       version: options.version ?? '0.0.0',
+      configFile: options.configFile ?? null,
     };
     return renderShell(boot, title);
   };

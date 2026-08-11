@@ -24,6 +24,7 @@ const FALLBACK: BootData = {
   theme: 'github-dark',
   themePinned: false,
   version: '0.0.0',
+  configFile: null,
 };
 
 function readBoot(): BootData {

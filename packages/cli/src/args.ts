@@ -213,4 +213,8 @@ Examples
 Notes
   .mdx and .md are both rendered. node_modules, dotted directories and anything
   .gitignore excludes are skipped.
+
+  A served folder may contain an mdxstudio.config.js (or .mjs) whose default
+  export registers extra components, aliases, code fences and remark/rehype
+  plugins. Without one, nothing changes. See the package README for the shape.
 `;

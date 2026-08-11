@@ -13,6 +13,7 @@ import { fileURLToPath } from 'node:url';
 
 import { DEFAULT_PORT, HELP, parseArgs, UsageError } from './args';
 import type { CliOptions } from './args';
+import { findConfigFile } from './config';
 import { createDocServer } from './server';
 import { createDirectorySource, createMemorySource } from './source';
 import type { DocSource } from './source';
@@ -196,11 +197,16 @@ async function main(argv: string[]): Promise<number> {
     return 1;
   }
 
+  // Only for a real folder: the client fetches the file over HTTP, and a
+  // document read from stdin has no folder to fetch it from.
+  const configFile = source.single ? null : await findConfigFile(source.root);
+
   const server = createDocServer(source, {
     expressions: options.expressions,
     theme: options.theme,
     themePinned: options.themeExplicit,
     version: version(),
+    configFile,
     watch: options.watch,
   });
 
@@ -239,6 +245,7 @@ async function main(argv: string[]): Promise<number> {
   console.log(
     `  Live      ${server.watching ? 'on - saved changes reload the page' : 'off'}`
   );
+  if (configFile) console.log(`  Config    ${configFile}`);
   if (options.host === null) {
     console.log('  Bound to localhost. Pass --host to read it from another device.');
   }

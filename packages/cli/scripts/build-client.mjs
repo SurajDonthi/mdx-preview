@@ -12,7 +12,8 @@
  * The `@mdxstudio/*` aliases mirror `apps/studio/vite.config.ts` exactly, so
  * the CLI renders documents with the same sources the web application does.
  */
-import { rm } from 'node:fs/promises';
+import { createRequire } from 'node:module';
+import { cp, rm } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -21,11 +22,20 @@ import { build } from 'esbuild';
 const here = path.dirname(fileURLToPath(import.meta.url));
 const packageRoot = path.resolve(here, '..');
 const workspaceRoot = path.resolve(packageRoot, '../..');
+const require_ = createRequire(import.meta.url);
 
 const source = (name) => path.resolve(workspaceRoot, `packages/${name}/src/index.ts`);
 const stylesheet = (name) => path.resolve(workspaceRoot, `packages/${name}/src/styles.css`);
 
 const outdir = path.join(packageRoot, 'dist', 'client');
+
+/**
+ * KaTeX's stylesheet and fonts are copied beside the bundle rather than pulled
+ * through it. `src/client/katexStylesheet.ts` explains why; the short version is
+ * that esbuild would otherwise duplicate the stylesheet into the entry sheet
+ * that every document loads, math or not.
+ */
+const katexDist = path.dirname(require_.resolve('katex/package.json')) + '/dist';
 
 await rm(outdir, { recursive: true, force: true });
 
@@ -54,6 +64,7 @@ const result = await build({
     // Stylesheet entries first: a bare package alias also matches its subpaths,
     // so `@mdxstudio/react/styles.css` would otherwise be rewritten to
     // `.../src/index.ts/styles.css`.
+    'katex/dist/katex.min.css': path.resolve(packageRoot, 'src/client/katexStylesheet.ts'),
     '@mdxstudio/react/styles.css': stylesheet('react'),
     '@mdxstudio/mermaid/styles.css': stylesheet('mermaid'),
     '@mdxstudio/charts/styles.css': stylesheet('charts'),
@@ -73,6 +84,11 @@ const result = await build({
   },
   logLevel: 'warning',
 });
+
+// After the bundle, so the cleaned output directory exists. The fonts keep the
+// layout the stylesheet's own relative URLs expect.
+await cp(path.join(katexDist, 'katex.min.css'), path.join(outdir, 'katex.css'));
+await cp(path.join(katexDist, 'fonts'), path.join(outdir, 'fonts'), { recursive: true });
 
 // The metafile stays in memory: it is 2 MB, and everything under dist/ ships.
 const outputs = Object.entries(result.metafile.outputs)

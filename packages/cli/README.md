@@ -37,9 +37,53 @@ cat draft.mdx | mdxstudio open -   # from stdin
 - **The full component set**: Mermaid diagrams, Recharts charts, `FlowGraph`,
   callouts, tabs, accordions, timelines, frontmatter headers, and a scroll-spy
   table of contents.
+- **The markdown you already write**: `$math$`, GitHub's `> [!NOTE]` alerts, and
+  images that open enlarged when clicked. KaTeX is fetched only by documents that
+  contain an equation.
 - **Readable on a phone** — pass `--host` and open the LAN URL it prints.
 
 Starts in about 250 ms; the client is prebuilt, so nothing compiles on startup.
+
+## Configuration
+
+A folder may contain an `mdxstudio.config.js` (or `.mjs`). Without one nothing
+changes; with one, its default export adds components, aliases, code fences and
+unified plugins to the renderer.
+
+```js
+// docs/mdxstudio.config.js
+export default ({ createElement }) => ({
+  components: {
+    Chip: ({ children }) => createElement('span', { className: 'chip' }, children),
+  },
+  aliases: { Pill: 'Chip' },
+  codeFences: { graphviz: 'Chip' },
+  remarkPlugins: [],
+  rehypePlugins: [],
+});
+```
+
+The default export is either that object or a function returning one, which may
+be `async`. Everything is optional; a component registered under a built-in name
+replaces it.
+
+The config runs **in the browser**, because that is where the renderer is — so
+it cannot `import` from `node_modules`, and there is no bundler to compile JSX.
+Two consequences:
+
+- Build elements with `createElement` rather than JSX, or import a package from
+  a URL (`import confetti from 'https://esm.sh/canvas-confetti'`).
+- A remark or rehype plugin is a plain function, so the useful ones usually need
+  no dependency at all.
+
+The function form is called with `{ React, createElement, components }`, where
+`components` is everything already registered — enough to wrap or replace a
+built-in.
+
+If the file is missing the CLI behaves exactly as it did before. If it throws,
+fails to import, or declares an alias pointing at nothing, the documents still
+render with the built-in components and the page shows one line naming the file
+and the reason.
 
 ## Expressions
 
