@@ -97,6 +97,52 @@ export function MdxEditor({
     }
   }, [value]);
 
+  /**
+   * The textarea is controlled, so any render that hands it a value the DOM does
+   * not already hold makes React reassign `textarea.value` - and assigning a
+   * textarea's value drops the caret at the end of the text. An undo, a snippet
+   * insertion and a document refreshed underneath the editor all change the
+   * value for reasons that have nothing to do with where the user is typing, so
+   * the caret has to be put back afterwards.
+   *
+   * `typedValueRef` is what the user's own keystroke produced. When the incoming
+   * value is that exact string the browser has already left the caret in the
+   * right place and touching it would fight the person typing. It is cleared as
+   * soon as it has been used, so that redoing back to a string the user once
+   * typed still counts as a change the editor made rather than the user.
+   */
+  const lastValueRef = useRef(value);
+  const typedValueRef = useRef<string | null>(null);
+
+  useLayoutEffect(() => {
+    const textarea = textareaRef.current;
+    const previous = lastValueRef.current;
+    const typed = typedValueRef.current;
+    lastValueRef.current = value;
+    typedValueRef.current = null;
+    if (!textarea || previous === value || typed === value) return;
+
+    // The end of the run of text that actually changed. For an undone insertion
+    // that is where the removed characters were; for an inserted snippet it is
+    // the far side of what was just added - in both cases where the user is
+    // looking, rather than the end of the document.
+    let prefix = 0;
+    while (prefix < previous.length && prefix < value.length && previous[prefix] === value[prefix]) {
+      prefix += 1;
+    }
+    let suffix = 0;
+    while (
+      suffix < previous.length - prefix &&
+      suffix < value.length - prefix &&
+      previous[previous.length - 1 - suffix] === value[value.length - 1 - suffix]
+    ) {
+      suffix += 1;
+    }
+
+    const caret = value.length - suffix;
+    textarea.setSelectionRange(caret, caret);
+  }, [value]);
+
   const canUndo = historyIndex > 0;
   const canRedo = historyIndex < history.length - 1;
 
@@ -383,7 +429,10 @@ export function MdxEditor({
         <textarea
           ref={textareaRef}
           value={value}
-          onChange={(e) => onChange(e.target.value)}
+          onChange={(e) => {
+            typedValueRef.current = e.target.value;
+            onChange(e.target.value);
+          }}
           onScroll={syncGutterScroll}
           onKeyDown={handleKeyDown}
           placeholder="Type or paste MDX content here..."
