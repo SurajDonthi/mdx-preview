@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useContext, useState } from 'react';
 import { Check, ChevronDown, Minus, Plus, RotateCcw, Table } from 'lucide-react';
+import { MdxRenderContext } from '@mdxstudio/core';
 import { InlineToken } from './InlineToken';
 // A document names its icons at runtime (`<Card icon="Eye">`), which no set of
 // named imports can satisfy on its own. See `./icons` for how that is served
@@ -260,7 +261,24 @@ export function InteractiveCounter({
 }
 
 // 7. Progress Bar
-const PROGRESS_COLORS = new Set(['indigo', 'emerald', 'amber', 'rose', 'purple', 'cyan']);
+//
+// The track and the fill are nothing but a background colour, and the PDF
+// exporter clears every background on its capture sheet before putting back only
+// the ones an element names through `data-pdf-swatch`. Without that attribute
+// both bars vanish from the export and the label is all that survives. The
+// values below mirror the tones in styles.css: a stylesheet cannot be read from
+// here, and the sheet's own oklch() is not what the export pass writes back.
+const PROGRESS_COLORS: Record<string, string> = {
+  indigo: '#4f46e5',
+  emerald: '#10b981',
+  amber: '#f59e0b',
+  rose: '#f43f5e',
+  purple: '#9333ea',
+  cyan: '#06b6d4',
+};
+
+/** Slate-200, the light-theme track the export sheet is styled for. */
+const PROGRESS_TRACK_PDF = '#e2e8f0';
 
 export function ProgressBar({
   progress = 50,
@@ -271,7 +289,9 @@ export function ProgressBar({
   label?: string;
   color?: string;
 }) {
-  const tone = PROGRESS_COLORS.has(color) ? color : 'indigo';
+  const { renderMode } = useContext(MdxRenderContext);
+  const isPdf = renderMode === 'pdf';
+  const tone = Object.hasOwn(PROGRESS_COLORS, color) ? color : 'indigo';
 
   return (
     <div className="mdxstudio-progress">
@@ -281,10 +301,14 @@ export function ProgressBar({
           <span>{progress}%</span>
         </div>
       )}
-      <div className="mdxstudio-progress__track">
+      <div
+        className="mdxstudio-progress__track"
+        data-pdf-swatch={isPdf ? PROGRESS_TRACK_PDF : undefined}
+      >
         <div
           className={`mdxstudio-progress__fill mdxstudio-progress__fill--${tone}`}
           style={{ width: `${Math.min(100, Math.max(0, progress))}%` }}
+          data-pdf-swatch={isPdf ? PROGRESS_COLORS[tone] : undefined}
         />
       </div>
     </div>
