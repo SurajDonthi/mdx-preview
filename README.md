@@ -30,6 +30,110 @@ browser. The server only serves static files.
 
 ---
 
+## What you get
+
+Four ways in. Same renderer underneath, so a document that works in one works in all
+of them.
+
+| | | |
+| --- | --- | --- |
+| **The library** | `npm i @mdxstudio/react` | Drop `<MdxRenderer>` into your own app |
+| **The Studio** | `npm run dev` | A full editor with live preview, themes and PDF export |
+| **The CLI** | `npx @mdxstudio/cli serve ./docs` | Read a folder of documents in your browser, no project required |
+| **VS Code** | *MDX Studio Preview* | Preview `.mdx` beside the editor, themed to match it |
+
+### Components you can write straight into a document
+
+No imports, no build step, no config. Every name below is available the moment the
+renderer mounts.
+
+```mdx
+<Callout type="warning" title="Read this first">
+  Braces in prose are parsed as JavaScript. Escape them or lose the paragraph.
+</Callout>
+
+<StatGrid cols={3}>
+  <Stat title="Bundle" value="2083 kB" change="-4664 kB" trend="down" icon="TrendingDown" />
+  <Stat title="Tests" value="320" change="+302" trend="up" icon="CheckCircle2" />
+  <Stat title="Packages" value="9" icon="Sparkles" />
+</StatGrid>
+
+<Tabs labels={["npm", "pnpm", "yarn"]}>
+  <Tab title="npm">`npm i @mdxstudio/react`</Tab>
+  <Tab title="pnpm">`pnpm add @mdxstudio/react`</Tab>
+  <Tab title="yarn">`yarn add @mdxstudio/react`</Tab>
+</Tabs>
+
+<Steps>
+  <Step title="Parse">remark-mdx builds the tree, with real source positions.</Step>
+  <Step title="Render">hast-util-to-jsx-runtime turns it into React elements.</Step>
+</Steps>
+```
+
+The full set:
+
+- **Layout** — `Card`, `CardGrid`, `Stat`, `StatGrid`, `Tabs` / `Tab`, `Accordion`,
+  `Steps` / `Step`, `Timeline`
+- **Emphasis** — `Callout` (`info`, `warning`, `success`, `error`, `note`), `Badge`,
+  `Kbd`, `InlineCode`, `Button`, `ProgressBar`
+- **Interactive** — `InteractiveCounter`, and any component you register yourself
+- **Icons** — any [lucide](https://lucide.dev) name as a string: `icon="Rocket"`.
+  Thirty-three common ones are in the bundle; the rest load on demand.
+
+### Diagrams and charts
+
+Each lives in its own package, so a document that never draws a chart never pays for
+Recharts.
+
+````mdx
+```mermaid
+graph LR
+  A[Markdown] --> B[remark-mdx]
+  B --> C[React elements]
+```
+
+<Chart type="bar" data={[{ name: 'Before', value: 6747 }, { name: 'After', value: 2083 }]} />
+
+<FlowGraph
+  nodes={[
+    { id: 'edit', label: 'Editor', kind: 'input' },
+    { id: 'parse', label: 'remark-mdx' },
+    { id: 'view', label: 'Preview', kind: 'output' },
+  ]}
+  edges={[
+    { from: 'edit', to: 'parse', label: 'on change' },
+    { from: 'parse', to: 'view' },
+  ]}
+/>
+````
+
+`FlowGraph` is the interactive one — hover a node and it highlights every path
+running through it. It lays itself out; you give it nodes and edges, not coordinates.
+
+### Frontmatter becomes a header
+
+```mdx
+---
+title: Release notes
+tags: [shipping, v0.1]
+---
+```
+
+Rendered as a titled card with the tags as pills, not printed as text.
+
+### And the things that are not components
+
+- **Math** — `$E = mc^2$` inline, `$$…$$` as a block, via KaTeX
+- **GitHub alerts** — `> [!NOTE]`, `> [!WARNING]` and the rest, which become
+  `<Callout>` rather than a parallel style. Sugar for portability: `<Callout>` is
+  still the more capable form, with any title you like
+- **Syntax highlighting** for fenced code, themed with the document
+- **PDF export** that measures real page breaks — no `window.print()`, works on mobile
+- **Sandboxed rendering** for a document you did not write: an opaque-origin iframe
+  that cannot reach your cookies, your storage or the network
+
+---
+
 ## Quick start
 
 ```bash
@@ -199,6 +303,34 @@ Two things people get wrong, both stated plainly in
   only, so a global install has no safe default and asks you to name an agent.
 - **Claude Code does not read `AGENTS.md`.** It reads `CLAUDE.md`. A repository
   with only `AGENTS.md` needs `--agent claude-code` too.
+
+### On a remote or headless machine
+
+Detection looks for instruction files that are already there, which on a fresh
+box is nothing. Name the agents instead:
+
+```sh
+npx @mdxstudio/agent-skill add --agent claude-code
+npx @mdxstudio/agent-skill add --agent claude-code,codex,opencode
+npx @mdxstudio/agent-skill add --all
+```
+
+The ids are `agents`, `claude-code`, `codex`, `gemini-cli`, `copilot`, `cursor`,
+`opencode`, `amp`, `zed` and `windsurf`. `agents` is the cross-agent `AGENTS.md`
+standard; the rest write that agent's own instruction file.
+
+`--dry-run` prints every path it would touch and changes nothing, which is the
+sane first command over SSH:
+
+```sh
+npx @mdxstudio/agent-skill add --agent claude-code --dry-run
+```
+
+The two routes also differ in what they reach for. `npx skills` fetches from the
+GitHub repository, so that machine needs to be able to reach GitHub.
+`@mdxstudio/agent-skill` carries the skill inside the published package, so it
+only needs the npm registry — which matters behind a proxy that allows one and
+not the other.
 
 ---
 
