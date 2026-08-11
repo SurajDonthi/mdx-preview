@@ -3,6 +3,7 @@ import { MdxRenderer, createRendererRegistry } from '@mdxstudio/react';
 import { mermaidPlugin } from '@mdxstudio/mermaid';
 import { chartsPlugin } from '@mdxstudio/charts';
 import { flowPlugin } from '@mdxstudio/flow';
+import { tasksPlugin } from '@mdxstudio/tasks';
 
 import type { HostMessage, PreviewState } from '../shared/protocol';
 import { collectAnchors, lineForOffset, offsetForLine, type Anchor } from './anchors';
@@ -23,6 +24,7 @@ const previewRegistry = createRendererRegistry(
   mermaidPlugin,
   chartsPlugin,
   flowPlugin,
+  tasksPlugin,
   vscodeHostPlugin
 );
 

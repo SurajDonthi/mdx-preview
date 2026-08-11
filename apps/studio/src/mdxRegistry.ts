@@ -2,6 +2,7 @@ import { createRendererRegistry } from '@mdxstudio/react';
 import { mermaidPlugin } from '@mdxstudio/mermaid';
 import { chartsPlugin } from '@mdxstudio/charts';
 import { flowPlugin } from '@mdxstudio/flow';
+import { tasksPlugin } from '@mdxstudio/tasks';
 
 /**
  * Everything a Studio document may use: the light built-ins from
@@ -13,5 +14,6 @@ import { flowPlugin } from '@mdxstudio/flow';
 export const studioMdxRegistry = createRendererRegistry(
   mermaidPlugin,
   chartsPlugin,
-  flowPlugin
+  flowPlugin,
+  tasksPlugin
 );

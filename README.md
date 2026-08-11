@@ -212,6 +212,7 @@ not download a diagram engine to get them.
 | `@mdxstudio/mermaid` | `MermaidDiagram`, plus the plugin that takes over the ` ```mermaid ` fence |
 | `@mdxstudio/charts` | `Chart` — Recharts, imported on mount rather than with the page |
 | `@mdxstudio/flow` | `FlowGraph`, the interactive node/edge map used throughout these docs |
+| `@mdxstudio/tasks` | `TaskBoard` — an implementation-plan checklist as lanes, a kanban board and a ready-now list, from a ` ```tasks ` fence |
 | `@mdxstudio/pdf` | A4 export from a rendered DOM subtree |
 | `@mdxstudio/sandbox` | `SandboxedMdx` — render a document you did not write, in an opaque-origin frame |
 | `@mdxstudio/agent-skill` | A CLI that teaches a coding agent to write documentation in this flavour |
@@ -225,9 +226,15 @@ import { createRendererRegistry } from '@mdxstudio/react';
 import { mermaidPlugin } from '@mdxstudio/mermaid';
 import { chartsPlugin } from '@mdxstudio/charts';
 import { flowPlugin } from '@mdxstudio/flow';
+import { tasksPlugin } from '@mdxstudio/tasks';
 
 // Module-level: MdxRenderer re-parses the document when the registry changes.
-export const registry = createRendererRegistry(mermaidPlugin, chartsPlugin, flowPlugin);
+export const registry = createRendererRegistry(
+  mermaidPlugin,
+  chartsPlugin,
+  flowPlugin,
+  tasksPlugin
+);
 ```
 
 ```tsx
@@ -408,6 +415,7 @@ import '@mdxstudio/react/styles.css';    // renderer, markdown elements, built-i
 import '@mdxstudio/mermaid/styles.css';  // diagram card chrome
 import '@mdxstudio/charts/styles.css';   // chart card chrome
 import '@mdxstudio/flow/styles.css';     // flow map chrome and SVG palette
+import '@mdxstudio/tasks/styles.css';    // task board chrome, lanes and cards
 ```
 
 **Theme comes from the application, not the operating system.** `MdxRenderer` stamps
@@ -443,6 +451,7 @@ packages/
   mermaid/   MermaidDiagram · the mermaid fence plugin
   charts/    Chart, backed by Recharts and loaded on demand
   flow/      FlowGraph
+  tasks/     TaskBoard · the ```tasks fence parser
   pdf/       pdfExporter: A4 capture, page-break measurement, jsPDF output
   sandbox/   host component · guest runtime · wire protocol · esbuild and Vite build helpers
   agent-skill/  the installer CLI; skill/ is generated from skills/mdx-docs at build time

@@ -115,10 +115,11 @@ every prop: [references/components.md](references/components.md).**
 | `Mermaid` / ` ```mermaid ` fence | Any standard diagram |
 | `Chart` | line / bar / area from a data array |
 | `FlowGraph` | An architecture several distinct flows run through |
+| `TaskBoard` / ` ```tasks ` fence | A plan's checklist, as lanes and a ready-now list |
 
 Which of these exist is a property of the **host application**, not of MDX.
-`@mdxstudio/react` ships the light ones; Mermaid, `Chart` and `FlowGraph` come
-from separate packages the host chooses to register. If a tag renders as
+`@mdxstudio/react` ships the light ones; Mermaid, `Chart`, `FlowGraph` and
+`TaskBoard` come from separate packages the host chooses to register. If a tag renders as
 "unknown component", the host did not register that plugin.
 
 ## Diagrams
@@ -239,9 +240,10 @@ const registry = createRendererRegistry();
 <MdxRenderer content={source} themeConfig={THEMES.light} registry={registry} />
 ```
 
-Add `@mdxstudio/mermaid`, `@mdxstudio/charts` and `@mdxstudio/flow` and pass
-`mermaidPlugin, chartsPlugin, flowPlugin` to `createRendererRegistry(...)` for
-diagrams, charts and flow maps. Each package has its own `styles.css` to import.
+Add `@mdxstudio/mermaid`, `@mdxstudio/charts`, `@mdxstudio/flow` and
+`@mdxstudio/tasks` and pass `mermaidPlugin, chartsPlugin, flowPlugin,
+tasksPlugin` to `createRendererRegistry(...)` for diagrams, charts, flow maps
+and task boards. Each package has its own `styles.css` to import.
 
 **Previewing what you write.** Two hosts exist, and neither needs the document
 to live in a JavaScript project:

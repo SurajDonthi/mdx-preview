@@ -6,7 +6,8 @@ listed is ignored.
 
 Source of truth: `packages/react/src/CustomComponents.tsx` (built-ins),
 `packages/mermaid/src/index.ts`, `packages/charts/src/index.ts`,
-`packages/flow/src/index.ts` (plugins), `apps/studio/src/mdxRegistry.ts` (what a
+`packages/flow/src/index.ts`, `packages/tasks/src/index.ts` (plugins),
+`apps/studio/src/mdxRegistry.ts` (what a
 default application registers).
 
 ## What a default application registers
@@ -16,11 +17,18 @@ import { createRendererRegistry } from '@mdxstudio/react';
 import { mermaidPlugin } from '@mdxstudio/mermaid';
 import { chartsPlugin } from '@mdxstudio/charts';
 import { flowPlugin } from '@mdxstudio/flow';
+import { tasksPlugin } from '@mdxstudio/tasks';
 
-export const registry = createRendererRegistry(mermaidPlugin, chartsPlugin, flowPlugin);
+export const registry = createRendererRegistry(
+  mermaidPlugin,
+  chartsPlugin,
+  flowPlugin,
+  tasksPlugin
+);
 ```
 
-That is: the built-ins, plus `MermaidDiagram`, `Chart` and `FlowGraph`. A host
+That is: the built-ins, plus `MermaidDiagram`, `Chart`, `FlowGraph` and
+`TaskBoard`. A host
 that registers only `createRendererRegistry()` has the built-ins and nothing
 else - `<Mermaid>` there renders an "unknown component" notice.
 
@@ -35,6 +43,7 @@ A tag and its alias are the same component.
 | `Code` | `InlineCode` | `@mdxstudio/react` |
 | `Mermaid` | `MermaidDiagram` | `@mdxstudio/mermaid` |
 | `ArchitectureMap` | `FlowGraph` | `@mdxstudio/flow` |
+| `Tasks` | `TaskBoard` | `@mdxstudio/tasks` |
 
 `Table` is itself the registered name of the component whose implementation is
 called `TableComponent`.
@@ -235,6 +244,37 @@ Prefer the fence: it needs no template literal and no brace escaping. See
 ## FlowGraph
 
 See [flowgraph.md](flowgraph.md).
+
+## TaskBoard
+
+The fence and the component are the same thing - `@mdxstudio/tasks` claims the
+`tasks` fence language. Write the checklist you would have written anyway:
+
+````md
+```tasks
+## AG - Agentic platform
+- [x] AG-0a Branch cut and pushed
+- [~] AG-0b Agentic code into git @me #infra
+- [ ] AG-1 The deletion - needs: AG-0b #risk:high [details](details/agentic.mdx)
+- [!] MX-6 TaskBoard - blocked on extension config support
+- [→] DW-4 Multi-layer contours (trigger: DW-1c)
+```
+````
+
+- Markers: `[ ]` todo, `[~]` in progress, `[x]` done, `[!]` blocked, `[→]`
+  (or `[>]`) deferred. `##` starts a group; text above the first one is its own
+  unnamed group.
+- A leading `AG-1`-shaped token is the id, `needs:` lists dependency ids,
+  `@name` is the owner, `#tag` and `#key:value` are tags, and a link at the end
+  of the line is the task's detail link. What is left is the title, as inline
+  markdown.
+- The board shows lanes with done collapsed at the bottom, a kanban toggle,
+  per-group progress, and **Ready now** - the todo tasks whose `needs:` are all
+  done.
+- A line it cannot read is kept as text rather than dropped. It is read-only:
+  edit the document, not the board.
+- Props: `title`, `subtitle`, `view` (`lanes` | `kanban`), or `source` instead
+  of the fence body.
 
 ---
 

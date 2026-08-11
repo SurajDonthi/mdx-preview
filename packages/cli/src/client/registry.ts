@@ -3,13 +3,15 @@ import type { MdxRegistry, MdxRegistrySource } from '@mdxstudio/core';
 import { mermaidPlugin } from '@mdxstudio/mermaid';
 import { chartsPlugin } from '@mdxstudio/charts';
 import { flowPlugin } from '@mdxstudio/flow';
+import { tasksPlugin } from '@mdxstudio/tasks';
 
 /** The packages the CLI bundles, in the order the registry applies them. */
-const CLI_PLUGINS = [mermaidPlugin, chartsPlugin, flowPlugin];
+const CLI_PLUGINS = [mermaidPlugin, chartsPlugin, flowPlugin, tasksPlugin];
 
 /**
  * The same set the Studio composes in `apps/studio/src/mdxRegistry.ts`: the
- * built-ins from `@mdxstudio/react` plus Mermaid, charts and flow graphs.
+ * built-ins from `@mdxstudio/react` plus Mermaid, charts, flow graphs and
+ * task boards.
  *
  * It has to be the same set. A document that renders in the web application
  * and not in the CLI - or the reverse - would make both untrustworthy, and the

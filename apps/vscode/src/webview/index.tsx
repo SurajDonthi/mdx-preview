@@ -2,13 +2,14 @@
  * The preview webview's entry point.
  *
  * The package stylesheets are imported first, exactly as `apps/studio` does, so
- * the shell sheet below can override them. esbuild collects all four into one
+ * the shell sheet below can override them. esbuild collects all five into one
  * `dist/webview/main.css`, which the HTML loads through `asWebviewUri()`.
  */
 import '@mdxstudio/react/styles.css';
 import '@mdxstudio/mermaid/styles.css';
 import '@mdxstudio/charts/styles.css';
 import '@mdxstudio/flow/styles.css';
+import '@mdxstudio/tasks/styles.css';
 import './shell.css';
 
 import { createRoot } from 'react-dom/client';

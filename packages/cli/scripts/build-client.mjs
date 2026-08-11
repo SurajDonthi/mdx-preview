@@ -69,11 +69,13 @@ const result = await build({
     '@mdxstudio/mermaid/styles.css': stylesheet('mermaid'),
     '@mdxstudio/charts/styles.css': stylesheet('charts'),
     '@mdxstudio/flow/styles.css': stylesheet('flow'),
+    '@mdxstudio/tasks/styles.css': stylesheet('tasks'),
     '@mdxstudio/core': source('core'),
     '@mdxstudio/react': source('react'),
     '@mdxstudio/mermaid': source('mermaid'),
     '@mdxstudio/charts': source('charts'),
     '@mdxstudio/flow': source('flow'),
+    '@mdxstudio/tasks': source('tasks'),
   },
   loader: {
     '.png': 'file',
