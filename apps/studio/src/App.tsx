@@ -100,6 +100,7 @@ export default function App() {
 
   // Split view divider
   const splitRowRef = useRef<HTMLDivElement | null>(null);
+  const splitGripRef = useRef<HTMLSpanElement | null>(null);
   const [splitPercent, setSplitPercent] = useState<number>(DEFAULT_SPLIT_PERCENT);
   const [isDraggingSplit, setIsDraggingSplit] = useState(false);
 
@@ -382,7 +383,23 @@ export default function App() {
     setIsDraggingSplit(true);
   };
 
+  /**
+   * The grip meets the pointer rather than sitting at the middle of a
+   * full-height divider, so it appears under the hand that is reaching for it.
+   * Written straight to the node: this fires on every move, and putting it in
+   * state would re-render the preview alongside it.
+   */
+  const positionSplitGrip = (event: React.PointerEvent<HTMLDivElement>) => {
+    const grip = splitGripRef.current;
+    if (!grip) return;
+    const bounds = event.currentTarget.getBoundingClientRect();
+    const offset = Math.min(bounds.height, Math.max(0, event.clientY - bounds.top));
+    grip.style.top = `${offset}px`;
+  };
+
   const handleSplitPointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
+    positionSplitGrip(event);
+
     const row = splitRowRef.current;
     if (!isDraggingSplit || !row) return;
     const bounds = row.getBoundingClientRect();
@@ -627,6 +644,7 @@ export default function App() {
               tabIndex={0}
               title="Drag to resize · double-click to reset"
               onPointerDown={handleSplitPointerDown}
+              onPointerEnter={positionSplitGrip}
               onPointerMove={handleSplitPointerMove}
               onPointerUp={handleSplitPointerUp}
               onPointerCancel={handleSplitPointerUp}
@@ -653,7 +671,12 @@ export default function App() {
                   the panes by a light ring and grounded by a deep shadow, and
                   glows indigo while it is being dragged. */}
               <span
-                className={`relative flex h-14 w-5 items-center justify-center rounded-full border transition-all duration-150 group-focus-visible:opacity-100 group-focus-visible:scale-100 ${
+                ref={splitGripRef}
+                style={{ top: '50%' }}
+                // `top` is written by the pointer handler and deliberately left
+                // out of the transition, so the grip tracks the cursor instead
+                // of chasing it.
+                className={`absolute left-1/2 -translate-x-1/2 -translate-y-1/2 flex h-14 w-5 items-center justify-center rounded-full border transition-[opacity,transform,background-color,border-color,box-shadow] duration-150 group-focus-visible:opacity-100 group-focus-visible:scale-100 ${
                   isDraggingSplit
                     ? 'opacity-100 scale-100 bg-indigo-500 border-indigo-300 text-white ring-1 ring-indigo-200/50 shadow-[0_0_20px_rgba(99,102,241,0.6),0_6px_16px_rgba(2,6,23,0.75)]'
                     : 'opacity-0 scale-90 bg-slate-700 border-slate-500 text-slate-200 ring-1 ring-white/15 shadow-[0_6px_16px_rgba(2,6,23,0.75)] group-hover:opacity-100 group-hover:scale-100 group-hover:bg-indigo-500 group-hover:border-indigo-300 group-hover:text-white group-hover:ring-indigo-200/40 group-hover:shadow-[0_0_20px_rgba(99,102,241,0.5),0_6px_16px_rgba(2,6,23,0.75)]'
