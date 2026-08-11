@@ -26,12 +26,19 @@ requirement, kanban, C4, and the beta types including `treeView` for directory
 trees, `sankey`, `xychart`, `block`, `architecture`, `packet`, `radar` and
 `treemap`.
 
-![A class diagram, a repo tree, a gantt chart, a sequence diagram, a state diagram and a CI flowchart](https://raw.githubusercontent.com/SurajDonthi/mdx-preview/main/assets/mermaid-gallery.png)
+![An OAuth handshake sequence diagram rendered in the preview, with its source in the editor](https://raw.githubusercontent.com/SurajDonthi/mdx-preview/main/assets/vscode-mermaid.png)
 
 Diagrams work inside `<Tabs>` too — inactive panels unmount rather than hiding,
 so each diagram mounts at full width instead of measuring a zero-width container.
 
-![Clicking across tabs, each drawing a different Mermaid diagram](https://raw.githubusercontent.com/SurajDonthi/mdx-preview/main/assets/mermaid-tabs.gif)
+![Stepping through seven tabs in the preview, each drawing a different Mermaid diagram](https://raw.githubusercontent.com/SurajDonthi/mdx-preview/main/assets/vscode-mermaid-tabs.gif)
+
+`treeView` draws a directory tree, which is worth knowing about if you document
+repository layouts:
+
+![A treeView directory tree of this repository, rendered in the preview](https://raw.githubusercontent.com/SurajDonthi/mdx-preview/main/assets/vscode-mermaid-tree.png)
+
+![A class diagram, a repo tree, a gantt chart, a sequence diagram, a state diagram and a CI flowchart](https://raw.githubusercontent.com/SurajDonthi/mdx-preview/main/assets/mermaid-gallery.png)
 
 ## Components, math and alerts
 

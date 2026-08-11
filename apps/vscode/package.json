@@ -1,7 +1,7 @@
 {
   "name": "mdxstudio-vscode",
   "displayName": "MDX Studio Preview",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "//private": "Deliberately not private. vsce refuses to publish a private package, and this one is published - to the VS Code marketplace, not to npm. There is no `npm publish --workspaces` anywhere in this repository; every package is published by name, so nothing here will push this to the npm registry by accident.",
   "description": "Preview .mdx files in VS Code with the mdxstudio renderer: callouts, tabs, charts, flow graphs and Mermaid diagrams, themed to match the editor.",
   "publisher": "surajdonthi",
