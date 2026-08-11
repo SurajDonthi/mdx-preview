@@ -28,6 +28,8 @@ isolated iframe** when the document is not yours.
 There is **no backend**. Everything — parsing, rendering, PDF generation — runs in the
 browser. The server only serves static files.
 
+![The Studio: MDX source on the left, rendered callouts, stat cards and a live chart on the right](assets/studio-hero.png)
+
 ---
 
 ## What you get
@@ -80,6 +82,8 @@ The full set:
 - **Icons** — any [lucide](https://lucide.dev) name as a string: `icon="Rocket"`.
   Thirty-three common ones are in the bundle; the rest load on demand.
 
+![Callouts, stat cards, cards, tabs, steps, a timeline, progress bars, badges and keyboard keys, all rendered](assets/components-gallery.png)
+
 ### Diagrams and charts
 
 Each lives in its own package, so a document that never draws a chart never pays for
@@ -110,6 +114,21 @@ graph LR
 `FlowGraph` is the interactive one — hover a node and it highlights every path
 running through it. It lays itself out; you give it nodes and edges, not coordinates.
 
+![Clicking across tabs, each one drawing a different Mermaid diagram](assets/mermaid-tabs.gif)
+
+**Every Mermaid diagram type renders.** All twenty-three in Mermaid 11.16 were
+tested against this renderer and none failed to parse — flowcharts, sequence,
+class, state, ER, gantt, git graph, mindmap, timeline, journey, pie, quadrant,
+requirement, kanban, C4, and the beta types including `treeView` for directory
+trees, `sankey`, `xychart`, `block`, `architecture`, `packet`, `radar` and
+`treemap`.
+
+![A class diagram, a repo tree, a gantt chart, a sequence diagram, a state diagram and a CI flowchart](assets/mermaid-gallery.png)
+
+Diagrams inside `<Tabs>` work the way you would hope: inactive panels are
+unmounted rather than hidden, so each diagram mounts at full width instead of
+measuring a zero-width container and laying itself out wrong.
+
 ### Frontmatter becomes a header
 
 ```mdx
@@ -131,6 +150,27 @@ Rendered as a titled card with the tags as pills, not printed as text.
 - **PDF export** that measures real page breaks — no `window.print()`, works on mobile
 - **Sandboxed rendering** for a document you did not write: an opaque-origin iframe
   that cannot reach your cookies, your storage or the network
+
+![Inline and block KaTeX math beside the four GitHub alert callouts](assets/math-and-alerts.png)
+
+### The other three surfaces
+
+The same renderer, in the editor and on the command line.
+
+![The extension: MDX source left, an interactive FlowGraph rendered right](assets/vscode-preview.png)
+
+*VS Code — `.mdx` previews beside the editor, themed from your colour theme, with
+headings in the outline and Ctrl/Cmd+click to jump back to the source.*
+
+![mdxstudio serve: file sidebar left, rendered document right](assets/cli-serve.png)
+
+*`npx @mdxstudio/cli serve ./docs` — a folder of documents in your browser. No
+project, no config, no build step in the folder being read.*
+
+![The same document under the Dracula and Warm Editorial themes](assets/studio-themes.png)
+
+*Eight theme presets, all driven by `--mdxstudio-*` custom properties you can
+override.*
 
 ---
 

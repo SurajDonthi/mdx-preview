@@ -9,12 +9,48 @@ Mermaid diagrams and syntax-highlighted code, themed to match the editor.
 Opening an `.mdx` file opens the preview automatically. One panel is reused for
 every document, and focus stays in the editor.
 
+![MDX source on the left, an interactive flow diagram rendered on the right](https://raw.githubusercontent.com/SurajDonthi/mdx-preview/main/assets/vscode-preview.png)
+
+## It keeps up as you type
+
+The preview follows the buffer, not the file — a GitHub alert becomes a themed
+callout and `$E = mc^2$` typesets, without saving.
+
+![Typing a heading, an alert and an equation, each appearing in the preview](https://raw.githubusercontent.com/SurajDonthi/mdx-preview/main/assets/vscode-preview.gif)
+
+## Every Mermaid diagram type
+
+All twenty-three types in Mermaid 11.16 render — flowcharts, sequence, class,
+state, ER, gantt, git graph, mindmap, timeline, journey, pie, quadrant,
+requirement, kanban, C4, and the beta types including `treeView` for directory
+trees, `sankey`, `xychart`, `block`, `architecture`, `packet`, `radar` and
+`treemap`.
+
+![A class diagram, a repo tree, a gantt chart, a sequence diagram, a state diagram and a CI flowchart](https://raw.githubusercontent.com/SurajDonthi/mdx-preview/main/assets/mermaid-gallery.png)
+
+Diagrams work inside `<Tabs>` too — inactive panels unmount rather than hiding,
+so each diagram mounts at full width instead of measuring a zero-width container.
+
+![Clicking across tabs, each drawing a different Mermaid diagram](https://raw.githubusercontent.com/SurajDonthi/mdx-preview/main/assets/mermaid-tabs.gif)
+
+## Components, math and alerts
+
+Callouts, cards, stat grids, tabs, steps, timelines, badges and progress bars are
+available without importing anything. KaTeX handles `$inline$` and `$$block$$`
+math, and GitHub's `> [!NOTE]` alerts render as the same callout component.
+
+![Inline and block KaTeX math beside the four GitHub alert callouts](https://raw.githubusercontent.com/SurajDonthi/mdx-preview/main/assets/math-and-alerts.png)
+
+## Headings in the outline
+
+![The outline view populated with a document's nested headings, with math typeset in the preview](https://raw.githubusercontent.com/SurajDonthi/mdx-preview/main/assets/vscode-outline.png)
+
 ## Building
 
 ```sh
 npm install                              # from the repository root
-npm run build -w @mdxstudio/vscode       # -> apps/vscode/dist
-npm run watch -w @mdxstudio/vscode       # rebuild on change
+npm run build -w mdxstudio-vscode        # -> apps/vscode/dist
+npm run watch -w mdxstudio-vscode        # rebuild on change
 ```
 
 The build resolves `@mdxstudio/*` to `packages/*/src`, the same way

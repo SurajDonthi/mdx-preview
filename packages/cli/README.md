@@ -10,6 +10,16 @@ npx @mdxstudio/cli serve ./docs
 No install, no config, no build step in the folder you are reading — it does not
 need to be a JavaScript project at all.
 
+![mdxstudio serve: file sidebar on the left, a rendered document with an interactive flow diagram on the right](https://raw.githubusercontent.com/SurajDonthi/mdx-preview/main/assets/cli-serve.png)
+
+Clicking between documents, with the table of contents following along:
+
+![Navigating between documents in the sidebar](https://raw.githubusercontent.com/SurajDonthi/mdx-preview/main/assets/cli-serve.gif)
+
+Every Mermaid diagram type renders, including inside `<Tabs>`:
+
+![Clicking across tabs, each drawing a different Mermaid diagram](https://raw.githubusercontent.com/SurajDonthi/mdx-preview/main/assets/mermaid-tabs.gif)
+
 ## Commands
 
 ```bash
