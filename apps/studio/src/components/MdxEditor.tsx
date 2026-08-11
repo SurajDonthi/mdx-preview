@@ -1,5 +1,25 @@
-import { useState, useRef, useEffect, useLayoutEffect, useCallback } from 'react';
+import {
+  useState,
+  useRef,
+  useEffect,
+  useLayoutEffect,
+  useCallback,
+  useImperativeHandle,
+  type Ref,
+} from 'react';
 import * as Icons from 'lucide-react';
+
+/**
+ * The editor's half of the scroll sync. Line numbers are the shared currency
+ * between the two panes, and only the editor knows how tall each of its lines
+ * ended up once the text wrapped, so the conversion belongs here.
+ */
+export interface MdxEditorHandle {
+  /** The source line, possibly fractional, currently at the top of the view. */
+  topVisibleLine(): number;
+  /** Scroll so that `line` sits at the top of the view. */
+  scrollToLine(line: number): void;
+}
 
 interface MdxEditorProps {
   value: string;
@@ -7,6 +27,9 @@ interface MdxEditorProps {
   onInsertSnippet?: (snippet: string) => void;
   isSaving?: boolean;
   onManualSave?: () => void;
+  ref?: Ref<MdxEditorHandle>;
+  /** Fired when the reader scrolls the editor, with the line now at the top. */
+  onScrollLine?: (line: number) => void;
 }
 
 export function MdxEditor({
@@ -14,6 +37,8 @@ export function MdxEditor({
   onChange,
   isSaving = false,
   onManualSave,
+  ref,
+  onScrollLine,
 }: MdxEditorProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const gutterRef = useRef<HTMLDivElement>(null);
@@ -30,6 +55,15 @@ export function MdxEditor({
   // How tall each logical line renders inside the textarea, measured from the
   // mirror below. Empty until the first layout pass.
   const [lineHeights, setLineHeights] = useState<number[]>([]);
+
+  // The same measurements, reachable from an event handler without making the
+  // scroll sync a dependency of every render that changes them.
+  const lineHeightsRef = useRef<number[]>([]);
+  lineHeightsRef.current = lineHeights;
+
+  // Fallback for lines the mirror has not measured yet, read from the textarea
+  // rather than hard-coded so it cannot drift from the stylesheet.
+  const uniformLineHeightRef = useRef(24);
 
   // Undo / Redo History Stack
   const [history, setHistory] = useState<string[]>([value]);
@@ -53,6 +87,57 @@ export function MdxEditor({
     if (gutter.scrollTop !== textarea.scrollTop) gutter.scrollTop = textarea.scrollTop;
   }, []);
 
+  /** Height of one logical line, measured where the mirror has been laid out. */
+  const heightOfLine = useCallback(
+    (index: number) => lineHeightsRef.current[index] || uniformLineHeightRef.current,
+    []
+  );
+
+  /** Distance from the top of the text to the start of `line`, one-based. */
+  const offsetOfLine = useCallback(
+    (line: number) => {
+      const whole = Math.max(0, Math.floor(line) - 1);
+      let top = 0;
+      for (let index = 0; index < whole; index += 1) top += heightOfLine(index);
+      // A fractional line comes from interpolating between two headings; carry
+      // the fraction through so the two panes do not step in whole lines.
+      return top + (line - Math.floor(line)) * heightOfLine(whole);
+    },
+    [heightOfLine]
+  );
+
+  /** The inverse: which line, possibly fractional, starts at `offset`. */
+  const lineAtOffset = useCallback(
+    (offset: number) => {
+      if (offset <= 0) return 1;
+      let top = 0;
+      const count = Math.max(1, lineHeightsRef.current.length);
+      for (let index = 0; index < count; index += 1) {
+        const height = heightOfLine(index);
+        if (top + height > offset) return index + 1 + (offset - top) / height;
+        top += height;
+      }
+      return count;
+    },
+    [heightOfLine]
+  );
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      topVisibleLine: () => lineAtOffset(textareaRef.current?.scrollTop ?? 0),
+      scrollToLine: (line: number) => {
+        const textarea = textareaRef.current;
+        if (!textarea) return;
+        const target = offsetOfLine(line);
+        if (Math.abs(target - textarea.scrollTop) < 2) return;
+        textarea.scrollTop = target;
+        syncGutterScroll();
+      },
+    }),
+    [lineAtOffset, offsetOfLine, syncGutterScroll]
+  );
+
   /**
    * A soft-wrapped line fills more than one row of the textarea, so a gutter
    * that gives every line the same height slides out of step with the text -
@@ -66,6 +151,9 @@ export function MdxEditor({
     if (!mirror || !textarea) return;
 
     const measure = () => {
+      const declared = parseFloat(window.getComputedStyle(textarea).lineHeight);
+      if (Number.isFinite(declared) && declared > 0) uniformLineHeightRef.current = declared;
+
       // clientWidth excludes the scrollbar, so the mirror wraps where the text does.
       mirror.style.width = `${textarea.clientWidth}px`;
       const heights = Array.from(mirror.children, (row) => (row as HTMLElement).offsetHeight);
@@ -499,7 +587,10 @@ export function MdxEditor({
             typedValueRef.current = e.target.value;
             onChange(e.target.value);
           }}
-          onScroll={syncGutterScroll}
+          onScroll={(e) => {
+            syncGutterScroll();
+            onScrollLine?.(lineAtOffset(e.currentTarget.scrollTop));
+          }}
           onKeyDown={handleKeyDown}
           placeholder="Type or paste MDX content here..."
           spellCheck={false}

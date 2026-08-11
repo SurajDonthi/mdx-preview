@@ -8,12 +8,12 @@
  * cannot be measured here - that half of the gutter fix is checked in a browser.
  */
 
-import React, { act, useState } from 'react';
+import React, { act, useState, useRef } from 'react';
 import { createRoot } from 'react-dom/client';
 import type { Root } from 'react-dom/client';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { MdxEditor } from '../src/components/MdxEditor';
+import { MdxEditor, type MdxEditorHandle } from '../src/components/MdxEditor';
 
 const DOCUMENT = Array.from({ length: 40 }, (_, i) => `Line ${i + 1} of the document`).join('\n');
 
@@ -128,5 +128,119 @@ describe('the line number gutter', () => {
   it('numbers every line of the document', () => {
     expect(gutter().children).toHaveLength(40);
     expect(gutter().lastElementChild!.textContent).toBe('40');
+  });
+});
+
+/**
+ * jsdom has no layout, so the mirror the gutter measures reports every line as
+ * 0px tall. Standing a height in for each of its rows is enough to drive the
+ * part that is actually ours: reading those measurements back out and turning
+ * them into row heights, line offsets and the line at a given offset.
+ */
+function withMeasuredLines(heights: number[]) {
+  const mirror = () => textarea().parentElement!.lastElementChild as HTMLElement;
+
+  return vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockImplementation(function (
+    this: HTMLElement
+  ) {
+    const rows = Array.from(mirror().children);
+    const index = rows.indexOf(this);
+    return index >= 0 ? (heights[index] ?? 24) : 0;
+  });
+}
+
+describe('a soft-wrapped line in the gutter', () => {
+  // Line 2 wraps onto three rows and line 5 onto two; the rest are single rows.
+  const HEIGHTS = [24, 72, 24, 24, 48, ...Array.from({ length: 35 }, () => 24)];
+  let spy: ReturnType<typeof withMeasuredLines>;
+
+  beforeEach(() => {
+    spy = withMeasuredLines(HEIGHTS);
+    // A fresh key remounts, so the layout effect measures against the stub;
+    // re-rendering alone would keep the harness's existing state and value.
+    act(() => root.render(<Harness key="measured" initial={DOCUMENT} />));
+  });
+
+  afterEach(() => spy.mockRestore());
+
+  it('gives its number the height the line actually renders at', () => {
+    const rows = Array.from(gutter().children) as HTMLElement[];
+
+    expect(rows[0].style.height).toBe('24px');
+    expect(rows[1].style.height).toBe('72px');
+    expect(rows[4].style.height).toBe('48px');
+  });
+
+  it('makes the gutter exactly as tall as the text, which is what keeps the two aligned', () => {
+    const rows = Array.from(gutter().children) as HTMLElement[];
+    const gutterHeight = rows.reduce((total, row) => total + parseFloat(row.style.height), 0);
+
+    expect(gutterHeight).toBe(HEIGHTS.reduce((total, height) => total + height, 0));
+  });
+});
+
+describe('the editor half of the scroll sync', () => {
+  const HEIGHTS = [24, 72, 24, 24, 48, ...Array.from({ length: 35 }, () => 24)];
+  let handle: MdxEditorHandle;
+  let reported: number[];
+  let spy: ReturnType<typeof withMeasuredLines>;
+
+  function SyncHarness() {
+    const ref = useRef<MdxEditorHandle | null>(null);
+    return (
+      <MdxEditor
+        ref={(instance) => {
+          ref.current = instance;
+          if (instance) handle = instance;
+        }}
+        value={DOCUMENT}
+        onChange={() => {}}
+        onScrollLine={(line) => reported.push(line)}
+      />
+    );
+  }
+
+  beforeEach(() => {
+    reported = [];
+    spy = withMeasuredLines(HEIGHTS);
+    act(() => root.render(<SyncHarness />));
+  });
+
+  afterEach(() => spy.mockRestore());
+
+  it('scrolls to a line past a wrapped one using its real height', () => {
+    // Lines 1-3 are 24 + 72 + 24 = 120px tall, so line 4 starts there.
+    act(() => handle.scrollToLine(4));
+
+    expect(textarea().scrollTop).toBe(120);
+  });
+
+  it('reports the line at the top when the reader scrolls', () => {
+    const element = textarea();
+    element.scrollTop = 120;
+    act(() => element.dispatchEvent(new Event('scroll', { bubbles: true })));
+
+    expect(reported.at(-1)).toBe(4);
+  });
+
+  it('round-trips a line through a scroll and back', () => {
+    for (const line of [1, 2, 5, 9, 30]) {
+      act(() => handle.scrollToLine(line));
+      expect(handle.topVisibleLine()).toBeCloseTo(line, 6);
+    }
+  });
+
+  it('carries a fractional line through, so the panes do not step whole lines', () => {
+    // Half of line 2, which is 72px tall, is 24 + 36 = 60px down.
+    act(() => handle.scrollToLine(2.5));
+
+    expect(textarea().scrollTop).toBe(60);
+    expect(handle.topVisibleLine()).toBeCloseTo(2.5, 6);
+  });
+
+  it('keeps the gutter in step when the sync does the scrolling', () => {
+    act(() => handle.scrollToLine(6));
+
+    expect(gutter().scrollTop).toBe(textarea().scrollTop);
   });
 });

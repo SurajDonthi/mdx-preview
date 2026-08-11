@@ -1,8 +1,14 @@
 import { useState, useMemo, useEffect, useRef, type CSSProperties } from 'react';
-import { GripVertical } from 'lucide-react';
 import { User } from 'firebase/auth';
 import { ViewMode, ThemeId } from './types';
-import { extractHeadings, calculateDocumentStats } from '@mdxstudio/core';
+import {
+  extractHeadings,
+  calculateDocumentStats,
+  collectScrollAnchors,
+  offsetForLine,
+  lineForOffset,
+} from '@mdxstudio/core';
+import type { ScrollAnchor } from '@mdxstudio/core';
 import { MdxRenderer, THEMES } from '@mdxstudio/react';
 import { studioMdxRegistry } from './mdxRegistry';
 import {
@@ -28,7 +34,8 @@ import { showToast } from './utils/toast';
 
 import { Navbar } from './components/Navbar';
 import { FileSidebar } from './components/FileSidebar';
-import { MdxEditor } from './components/MdxEditor';
+import { MdxEditor, type MdxEditorHandle } from './components/MdxEditor';
+import { SplitDivider, DEFAULT_SPLIT_PERCENT } from './components/SplitDivider';
 import { TableOfContents } from './components/TableOfContents';
 import { FileUploadModal } from './components/FileUploadModal';
 import { ExportModal } from './components/ExportModal';
@@ -53,14 +60,13 @@ function recordSignature(doc: StoredDocument): string {
   return docSignature(doc.id, doc.title, doc.content, doc.driveFileId);
 }
 
-// How much of the split view the editor takes. Bounded so neither pane can be
-// dragged away entirely; the default is the width the layout used to hard-code.
-const DEFAULT_SPLIT_PERCENT = 45;
-const MIN_SPLIT_PERCENT = 20;
-const MAX_SPLIT_PERCENT = 80;
-
-const clampSplit = (percent: number): number =>
-  Math.min(MAX_SPLIT_PERCENT, Math.max(MIN_SPLIT_PERCENT, percent));
+/**
+ * How long a pane ignores its own scroll events after the other one moved it.
+ * Scrolling one pane scrolls the other, whose scroll event would scroll the
+ * first one straight back; the window is per direction, so a reader dragging
+ * one pane is never blocked by the echo they are causing in the other.
+ */
+const SCROLL_ECHO_WINDOW_MS = 250;
 
 export default function App() {
   const exportRootRef = useRef<HTMLDivElement | null>(null);
@@ -100,9 +106,15 @@ export default function App() {
 
   // Split view divider
   const splitRowRef = useRef<HTMLDivElement | null>(null);
-  const splitGripRef = useRef<HTMLSpanElement | null>(null);
   const [splitPercent, setSplitPercent] = useState<number>(DEFAULT_SPLIT_PERCENT);
   const [isDraggingSplit, setIsDraggingSplit] = useState(false);
+
+  // Editor / preview scroll sync
+  const editorHandleRef = useRef<MdxEditorHandle | null>(null);
+  const previewScrollRef = useRef<HTMLDivElement | null>(null);
+  const scrollAnchorsRef = useRef<ScrollAnchor[] | null>(null);
+  const editorEchoUntilRef = useRef(0);
+  const previewEchoUntilRef = useRef(0);
 
   // Modal States
   const [isUploadOpen, setIsUploadOpen] = useState(false);
@@ -372,60 +384,57 @@ export default function App() {
   const stats = useMemo(() => calculateDocumentStats(mdxContent), [mdxContent]);
 
   /**
-   * Divider drag. The pointer is captured by the divider itself, so a fast drag
-   * that outruns the pointer keeps sending its moves here instead of to whatever
-   * it happened to pass over - including the preview iframe-like subtree.
+   * Scroll sync between the two panes.
+   *
+   * The anchors are the headings, which are the only points where a source line
+   * and a rendered element are known to describe the same thing; the mapping
+   * itself is `@mdxstudio/core`'s, shared with the VS Code preview. They are
+   * rebuilt lazily because measuring means reading layout for every heading,
+   * which is not worth doing on a keystroke that may never be followed by a
+   * scroll.
    */
-  const handleSplitPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
-    // Otherwise the drag starts a text selection across both panes.
-    event.preventDefault();
-    event.currentTarget.setPointerCapture(event.pointerId);
-    setIsDraggingSplit(true);
-  };
-
-  /**
-   * The grip meets the pointer rather than sitting at the middle of a
-   * full-height divider, so it appears under the hand that is reaching for it.
-   * Written straight to the node: this fires on every move, and putting it in
-   * state would re-render the preview alongside it.
-   */
-  const positionSplitGrip = (event: React.PointerEvent<HTMLDivElement>) => {
-    const grip = splitGripRef.current;
-    if (!grip) return;
-    const bounds = event.currentTarget.getBoundingClientRect();
-    const offset = Math.min(bounds.height, Math.max(0, event.clientY - bounds.top));
-    grip.style.top = `${offset}px`;
-  };
-
-  const handleSplitPointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
-    positionSplitGrip(event);
-
-    const row = splitRowRef.current;
-    if (!isDraggingSplit || !row) return;
-    const bounds = row.getBoundingClientRect();
-    if (bounds.width === 0) return;
-    setSplitPercent(clampSplit(((event.clientX - bounds.left) / bounds.width) * 100));
-  };
-
-  const handleSplitPointerUp = (event: React.PointerEvent<HTMLDivElement>) => {
-    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-      event.currentTarget.releasePointerCapture(event.pointerId);
+  const previewAnchors = (): ScrollAnchor[] => {
+    const container = previewScrollRef.current;
+    if (!container) return [];
+    if (!scrollAnchorsRef.current) {
+      // Heading tops are wanted relative to the scrolling box's content, not to
+      // the viewport, so the box's own position and scroll are taken back out.
+      const origin = container.getBoundingClientRect().top - container.scrollTop;
+      scrollAnchorsRef.current = collectScrollAnchors(mdxContent, {
+        resolveTop: (headingId) => {
+          const element = document.getElementById(headingId);
+          if (!element || !container.contains(element)) return null;
+          return element.getBoundingClientRect().top - origin;
+        },
+        documentHeight: container.scrollHeight,
+      });
     }
-    setIsDraggingSplit(false);
+    return scrollAnchorsRef.current;
   };
 
-  const handleSplitKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
-    const step = event.shiftKey ? 10 : 2;
-    if (event.key === 'ArrowLeft') {
-      event.preventDefault();
-      setSplitPercent((percent) => clampSplit(percent - step));
-    } else if (event.key === 'ArrowRight') {
-      event.preventDefault();
-      setSplitPercent((percent) => clampSplit(percent + step));
-    } else if (event.key === 'Home' || event.key === 'Enter') {
-      event.preventDefault();
-      setSplitPercent(DEFAULT_SPLIT_PERCENT);
-    }
+  // Anything that re-lays the preview out invalidates the measurements.
+  useEffect(() => {
+    scrollAnchorsRef.current = null;
+  }, [mdxContent, currentThemeId, viewMode, splitPercent]);
+
+  const handleEditorScrollLine = (line: number) => {
+    const container = previewScrollRef.current;
+    if (viewMode !== 'split' || !container) return;
+    if (Date.now() < editorEchoUntilRef.current) return;
+
+    const target = offsetForLine(previewAnchors(), line);
+    if (Math.abs(target - container.scrollTop) < 4) return;
+    previewEchoUntilRef.current = Date.now() + SCROLL_ECHO_WINDOW_MS;
+    container.scrollTop = target;
+  };
+
+  const handlePreviewScroll = () => {
+    const container = previewScrollRef.current;
+    if (viewMode !== 'split' || !container) return;
+    if (Date.now() < previewEchoUntilRef.current) return;
+
+    editorEchoUntilRef.current = Date.now() + SCROLL_ECHO_WINDOW_MS;
+    editorHandleRef.current?.scrollToLine(lineForOffset(previewAnchors(), container.scrollTop));
   };
 
   // Handle header jump click
@@ -624,67 +633,25 @@ export default function App() {
               style={{ '--mdx-split-width': `${splitPercent}%` } as CSSProperties}
             >
               <MdxEditor
+                ref={editorHandleRef}
                 value={mdxContent}
                 onChange={setMdxContent}
                 isSaving={isSaving}
                 onManualSave={executeSave}
+                onScrollLine={handleEditorScrollLine}
               />
             </div>
           )}
 
           {/* Draggable Divider */}
           {viewMode === 'split' && (
-            <div
-              role="separator"
-              aria-orientation="vertical"
-              aria-label="Resize the editor and preview panes"
-              aria-valuenow={Math.round(splitPercent)}
-              aria-valuemin={MIN_SPLIT_PERCENT}
-              aria-valuemax={MAX_SPLIT_PERCENT}
-              tabIndex={0}
-              title="Drag to resize · double-click to reset"
-              onPointerDown={handleSplitPointerDown}
-              onPointerEnter={positionSplitGrip}
-              onPointerMove={handleSplitPointerMove}
-              onPointerUp={handleSplitPointerUp}
-              onPointerCancel={handleSplitPointerUp}
-              onKeyDown={handleSplitKeyDown}
-              onDoubleClick={() => setSplitPercent(DEFAULT_SPLIT_PERCENT)}
-              // z-10: the grip is wider than the divider and hangs over both
-              // panes, which are later siblings and would otherwise paint on top
-              // of it and shave its sides off.
-              className="group relative z-10 hidden md:flex w-2 shrink-0 items-center justify-center cursor-col-resize focus:outline-hidden"
-            >
-              {/* The seam. Wider and indigo once the divider is in play, so the
-                  boundary is legible while it is being moved. */}
-              <span
-                className={`absolute inset-y-0 left-1/2 -translate-x-1/2 rounded-full transition-all duration-150 ${
-                  isDraggingSplit
-                    ? 'w-0.5 bg-indigo-400'
-                    : 'w-px bg-slate-600 group-hover:w-0.5 group-hover:bg-indigo-400 group-focus-visible:w-0.5 group-focus-visible:bg-indigo-400'
-                }`}
-              />
-
-              {/* The grip. Out of the way until the divider is worth noticing -
-                  pointer on it, keyboard focus, or a drag under way. A dark drop
-                  shadow is invisible on this chrome, so the pill is lifted off
-                  the panes by a light ring and grounded by a deep shadow, and
-                  glows indigo while it is being dragged. */}
-              <span
-                ref={splitGripRef}
-                style={{ top: '50%' }}
-                // `top` is written by the pointer handler and deliberately left
-                // out of the transition, so the grip tracks the cursor instead
-                // of chasing it.
-                className={`absolute left-1/2 -translate-x-1/2 -translate-y-1/2 flex h-14 w-5 items-center justify-center rounded-full border transition-[opacity,transform,background-color,border-color,box-shadow] duration-150 group-focus-visible:opacity-100 group-focus-visible:scale-100 ${
-                  isDraggingSplit
-                    ? 'opacity-100 scale-100 bg-indigo-500 border-indigo-300 text-white ring-1 ring-indigo-200/50 shadow-[0_0_20px_rgba(99,102,241,0.6),0_6px_16px_rgba(2,6,23,0.75)]'
-                    : 'opacity-0 scale-90 bg-slate-700 border-slate-500 text-slate-200 ring-1 ring-white/15 shadow-[0_6px_16px_rgba(2,6,23,0.75)] group-hover:opacity-100 group-hover:scale-100 group-hover:bg-indigo-500 group-hover:border-indigo-300 group-hover:text-white group-hover:ring-indigo-200/40 group-hover:shadow-[0_0_20px_rgba(99,102,241,0.5),0_6px_16px_rgba(2,6,23,0.75)]'
-                }`}
-              >
-                <GripVertical className="w-3.5 h-3.5" />
-              </span>
-            </div>
+            <SplitDivider
+              percent={splitPercent}
+              isDragging={isDraggingSplit}
+              onDraggingChange={setIsDraggingSplit}
+              onPercentChange={setSplitPercent}
+              rowRef={splitRowRef}
+            />
           )}
 
           {/* Live Preview & TOC Canvas Area */}
@@ -695,7 +662,11 @@ export default function App() {
               }`}
             >
               {/* Scrollable Preview Container */}
-              <div className="flex-1 min-h-0 min-w-0 h-full overflow-y-auto custom-scrollbar preview-container">
+              <div
+                ref={previewScrollRef}
+                onScroll={handlePreviewScroll}
+                className="flex-1 min-h-0 min-w-0 h-full overflow-y-auto custom-scrollbar preview-container"
+              >
                 <MdxRenderer
                   content={mdxContent}
                   themeConfig={themeConfig}
