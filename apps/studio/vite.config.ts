@@ -19,6 +19,7 @@ export default defineConfig(() => {
         '@mdxstudio/mermaid/styles.css': pkgCss('mermaid'),
         '@mdxstudio/charts/styles.css': pkgCss('charts'),
         '@mdxstudio/flow/styles.css': pkgCss('flow'),
+        '@mdxstudio/tasks/styles.css': pkgCss('tasks'),
         // Workspace packages are TypeScript source; resolve them explicitly so
         // Vite compiles them instead of treating them as prebundled deps.
         '@mdxstudio/core': pkg('core'),
@@ -26,6 +27,7 @@ export default defineConfig(() => {
         '@mdxstudio/mermaid': pkg('mermaid'),
         '@mdxstudio/charts': pkg('charts'),
         '@mdxstudio/flow': pkg('flow'),
+        '@mdxstudio/tasks': pkg('tasks'),
         '@mdxstudio/pdf': pkg('pdf'),
         '@': path.resolve(__dirname, '.'),
       },

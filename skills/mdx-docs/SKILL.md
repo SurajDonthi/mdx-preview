@@ -115,10 +115,11 @@ every prop: [references/components.md](references/components.md).**
 | `Mermaid` / ` ```mermaid ` fence | Any standard diagram |
 | `Chart` | line / bar / area from a data array |
 | `FlowGraph` | An architecture several distinct flows run through |
+| ` ```tasks ` fence | A plan checklist: statuses, owners, dependencies, rollups |
 
 Which of these exist is a property of the **host**, not of MDX.
-`@mdxstudio/react` ships the light ones; Mermaid, `Chart` and `FlowGraph` come
-from separate packages the host chooses to register. If a tag renders as
+`@mdxstudio/react` ships the light ones; Mermaid, `Chart`, `FlowGraph` and
+`TaskBoard` come from separate packages the host chooses to register. If a tag renders as
 "unknown component", the host did not register that plugin.
 
 A project can add its own on top of these, in a committed
@@ -144,6 +145,27 @@ A whole set of diagrams fits in one `<Tabs>` block. Inactive tabs are unmounted
 rather than hidden, so each diagram lays itself out at full width when selected
 - there is no zero-width measurement problem to work around. Leave blank lines
 around a fence inside a `<Tab>` or it stays literal text.
+
+## Plans
+
+A ```` ```tasks ```` fence renders as a task board: one item per line, nested by
+four-space indentation, statuses `[ ]` `[~]` `[x]` `[!]` `[→]` `[-]`, and fields
+after the title (`@ann`, `#risk`, `needs: AG-1`, `milestone: v1`, `due:`, `!p1`,
+`trigger:`, `reason:`).
+
+```tasks
+- [ ] AG-1: Delete the engine   needs: AG-0b   @me   !p1   #risk
+    Remove the runner and the trade workflows.
+    - [~] Prune the schema package
+```
+
+Write the plan; the board derives the rest. Progress, what is blocked and
+inherited owners are all computed, so writing them into the text only creates
+something to contradict. **Do not write `est:` or any other duration** - it is
+drawn nowhere, on purpose. **The exact rules - what makes an id, why an unknown
+`key:` stays in the title, and what `trigger:` swallows - are in
+[references/components.md](references/components.md).** Read that section before
+writing a `tasks` fence.
 
 ## Math
 

@@ -17,6 +17,7 @@
     "@mdxstudio/mermaid": "*",
     "@mdxstudio/pdf": "*",
     "@mdxstudio/react": "*",
+    "@mdxstudio/tasks": "*",
     "firebase": "^12.17.0",
     "lucide-react": "^0.546.0",
     "motion": "^12.23.24",

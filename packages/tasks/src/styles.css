@@ -1,0 +1,873 @@
+/*
+ * @mdxstudio/tasks — the plan checklist's chrome.
+ *
+ *   import '@mdxstudio/tasks/styles.css';
+ *
+ * Themed the same way every other package here is: `data-mdxstudio-theme` on an
+ * ancestor picks the palette, and `prefers-color-scheme` is never consulted, so
+ * the board follows the application's theme rather than the operating system's.
+ * The board stamps the attribute on its own root as well, from `themeCategory`,
+ * which means it is themed correctly even when it is mounted on its own.
+ *
+ * The token defaults repeat the ones in `@mdxstudio/react/styles.css` so this
+ * sheet also stands alone. Loading both is harmless: the values are identical.
+ */
+/* Pins the reset layer's position; see @mdxstudio/react/styles.css. */
+@layer mdxstudio-reset;
+
+:where(:root),
+:where([data-mdxstudio-theme='light']) {
+  --mdxstudio-tasks-bg: color-mix(in oklab, #fff 90%, transparent);
+  --mdxstudio-tasks-border: oklch(92.9% 0.013 255.508); /* slate-200 */
+  --mdxstudio-tasks-head-bg: oklch(98.4% 0.003 247.858); /* slate-50 */
+  --mdxstudio-tasks-fg: oklch(20.8% 0.042 265.755); /* slate-900 */
+  --mdxstudio-tasks-muted: oklch(55.4% 0.046 257.417); /* slate-500 */
+  --mdxstudio-tasks-faint: oklch(70.4% 0.04 256.788); /* slate-400 */
+  --mdxstudio-tasks-accent: oklch(51.1% 0.262 276.966); /* indigo-600 */
+  --mdxstudio-tasks-row-hover: oklch(98.4% 0.003 247.858); /* slate-50 */
+  --mdxstudio-tasks-chip-bg: oklch(96.8% 0.007 247.896); /* slate-100 */
+  --mdxstudio-tasks-chip-fg: oklch(44.6% 0.043 257.281); /* slate-600 */
+  --mdxstudio-tasks-bar-bg: oklch(92.9% 0.013 255.508); /* slate-200 */
+  --mdxstudio-tasks-bar-fill: oklch(69.6% 0.17 162.48); /* emerald-500 */
+  --mdxstudio-tasks-ready: oklch(52.7% 0.154 150.069); /* green-700 */
+  --mdxstudio-tasks-ready-bg: oklch(96.2% 0.044 156.743); /* green-100 */
+  --mdxstudio-tasks-blocked: oklch(57.7% 0.245 27.325); /* red-600 */
+  --mdxstudio-tasks-blocked-bg: oklch(93.6% 0.032 17.717); /* red-100 */
+  --mdxstudio-tasks-progress: oklch(55.5% 0.163 48.998); /* amber-700 */
+  --mdxstudio-tasks-progress-bg: oklch(96.2% 0.059 95.617); /* amber-100 */
+  --mdxstudio-tasks-done: oklch(59.6% 0.145 163.225); /* emerald-600 */
+  --mdxstudio-tasks-deferred: oklch(54.6% 0.245 262.881); /* blue-600 */
+  --mdxstudio-tasks-input-bg: #fff;
+  --mdxstudio-tasks-who-bg: oklch(93% 0.034 272.788); /* indigo-100 */
+  --mdxstudio-tasks-who-fg: oklch(45.7% 0.24 277.023); /* indigo-700 */
+  --mdxstudio-tasks-who-border: oklch(87% 0.065 274.039);
+  --mdxstudio-tasks-milestone-bg: oklch(94.6% 0.033 307.174); /* purple-100 */
+  --mdxstudio-tasks-milestone-fg: oklch(49.6% 0.265 301.924); /* purple-700 */
+  --mdxstudio-tasks-milestone-border: oklch(90.2% 0.063 306.703);
+  --mdxstudio-tasks-rule-strong: oklch(87% 0.02 255.508);
+  --mdxstudio-tasks-rule-mid: color-mix(in oklab, oklch(92.9% 0.013 255.508) 70%, transparent);
+  --mdxstudio-tasks-rule-faint: color-mix(in oklab, oklch(92.9% 0.013 255.508) 40%, transparent);
+}
+
+:where([data-mdxstudio-theme='dark']) {
+  --mdxstudio-tasks-bg: color-mix(in oklab, oklch(12.9% 0.042 264.695) 90%, transparent);
+  --mdxstudio-tasks-border: oklch(27.9% 0.041 260.031); /* slate-800 */
+  --mdxstudio-tasks-head-bg: oklch(20.8% 0.042 265.755); /* slate-900 */
+  --mdxstudio-tasks-fg: oklch(96.8% 0.007 247.896); /* slate-100 */
+  --mdxstudio-tasks-muted: oklch(70.4% 0.04 256.788); /* slate-400 */
+  --mdxstudio-tasks-faint: oklch(55.4% 0.046 257.417); /* slate-500 */
+  --mdxstudio-tasks-accent: oklch(67.3% 0.182 276.935); /* indigo-400 */
+  --mdxstudio-tasks-row-hover: color-mix(in oklab, oklch(27.9% 0.041 260.031) 50%, transparent);
+  --mdxstudio-tasks-chip-bg: color-mix(in oklab, oklch(27.9% 0.041 260.031) 70%, transparent);
+  --mdxstudio-tasks-chip-fg: oklch(86.9% 0.022 252.894); /* slate-300 */
+  --mdxstudio-tasks-bar-bg: oklch(27.9% 0.041 260.031); /* slate-800 */
+  --mdxstudio-tasks-bar-fill: oklch(69.6% 0.17 162.48); /* emerald-500 */
+  --mdxstudio-tasks-ready: oklch(79.2% 0.209 151.711); /* green-400 */
+  --mdxstudio-tasks-ready-bg: color-mix(in oklab, oklch(52.7% 0.154 150.069) 28%, transparent);
+  --mdxstudio-tasks-blocked: oklch(70.4% 0.191 22.216); /* red-400 */
+  --mdxstudio-tasks-blocked-bg: color-mix(in oklab, oklch(57.7% 0.245 27.325) 26%, transparent);
+  --mdxstudio-tasks-progress: oklch(82.8% 0.189 84.429); /* amber-400 */
+  --mdxstudio-tasks-progress-bg: color-mix(in oklab, oklch(55.5% 0.163 48.998) 30%, transparent);
+  --mdxstudio-tasks-done: oklch(76.5% 0.177 163.223); /* emerald-400 */
+  --mdxstudio-tasks-deferred: oklch(70.7% 0.165 254.624); /* blue-400 */
+  --mdxstudio-tasks-input-bg: oklch(20.8% 0.042 265.755);
+  --mdxstudio-tasks-who-bg: oklch(25.7% 0.09 281.288);
+  --mdxstudio-tasks-who-fg: oklch(78.5% 0.115 274.713);
+  --mdxstudio-tasks-who-border: oklch(39.8% 0.195 277.366);
+  --mdxstudio-tasks-milestone-bg: oklch(29.1% 0.149 302.717);
+  --mdxstudio-tasks-milestone-fg: oklch(82.7% 0.119 306.383);
+  --mdxstudio-tasks-milestone-border: oklch(43.8% 0.218 303.724);
+  --mdxstudio-tasks-rule-strong: oklch(37.2% 0.044 257.287);
+  --mdxstudio-tasks-rule-mid: color-mix(in oklab, oklch(27.9% 0.041 260.031) 80%, transparent);
+  --mdxstudio-tasks-rule-faint: color-mix(in oklab, oklch(27.9% 0.041 260.031) 45%, transparent);
+}
+
+:where(:root),
+:where([data-mdxstudio-theme]) {
+  --mdxstudio-space-1: 0.25rem;
+  --mdxstudio-space-1-5: 0.375rem;
+  --mdxstudio-space-2: 0.5rem;
+  --mdxstudio-space-2-5: 0.625rem;
+  --mdxstudio-space-3: 0.75rem;
+  --mdxstudio-space-4: 1rem;
+  --mdxstudio-space-6: 1.5rem;
+  --mdxstudio-radius-lg: 0.5rem;
+  --mdxstudio-radius-xl: 0.75rem;
+  --mdxstudio-radius-2xl: 1rem;
+  --mdxstudio-radius-full: 9999px;
+  --mdxstudio-text-2xs: 0.625rem;
+  --mdxstudio-text-2xs-plus: 0.6875rem;
+  --mdxstudio-text-xs: 0.75rem;
+  --mdxstudio-text-sm: 0.8125rem;
+  --mdxstudio-weight-medium: 500;
+  --mdxstudio-weight-semibold: 600;
+  --mdxstudio-weight-bold: 700;
+  --mdxstudio-tracking-wider: 0.05em;
+  --mdxstudio-leading-snug: 1.375;
+  --mdxstudio-shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --mdxstudio-shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+  --mdxstudio-blur-md: 12px;
+  --mdxstudio-transition-duration: 150ms;
+  --mdxstudio-transition-timing: cubic-bezier(0.4, 0, 0.2, 1);
+  --mdxstudio-font-mono:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New',
+    monospace;
+}
+
+/* ------------------------------------------------------------------ *
+ * Shell
+ * ------------------------------------------------------------------ */
+
+.mdxstudio-tasks {
+  container: mdxstudio-tasks / inline-size;
+  margin-block: var(--mdxstudio-space-6);
+  border-radius: var(--mdxstudio-radius-2xl);
+  border: 1px solid var(--mdxstudio-tasks-border);
+  background-color: var(--mdxstudio-tasks-bg);
+  backdrop-filter: blur(var(--mdxstudio-blur-md));
+  -webkit-backdrop-filter: blur(var(--mdxstudio-blur-md));
+  box-shadow: var(--mdxstudio-shadow-sm);
+  color: var(--mdxstudio-tasks-fg);
+  font-size: var(--mdxstudio-text-sm);
+}
+
+/* The export sheet is opaque, unblurred and still. */
+.mdxstudio-tasks--pdf {
+  background-color: #fff;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: none;
+}
+
+.mdxstudio-tasks__empty {
+  display: flex;
+  align-items: center;
+  gap: var(--mdxstudio-space-2);
+  padding: var(--mdxstudio-space-4);
+  font-size: var(--mdxstudio-text-xs);
+  font-family: var(--mdxstudio-font-mono);
+  color: var(--mdxstudio-tasks-muted);
+}
+
+.mdxstudio-tasks__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--mdxstudio-space-2);
+  padding: var(--mdxstudio-space-2-5) var(--mdxstudio-space-4);
+  border-bottom: 1px solid var(--mdxstudio-tasks-border);
+  background-color: var(--mdxstudio-tasks-head-bg);
+  border-top-left-radius: var(--mdxstudio-radius-2xl);
+  border-top-right-radius: var(--mdxstudio-radius-2xl);
+}
+
+.mdxstudio-tasks__heading {
+  display: flex;
+  align-items: center;
+  gap: var(--mdxstudio-space-2);
+  min-width: 0;
+}
+
+.mdxstudio-tasks__name {
+  font-size: var(--mdxstudio-text-xs);
+  font-weight: var(--mdxstudio-weight-semibold);
+}
+
+.mdxstudio-tasks__totals {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mdxstudio-space-2-5);
+  font-size: var(--mdxstudio-text-2xs-plus);
+  color: var(--mdxstudio-tasks-muted);
+}
+
+/* ------------------------------------------------------------------ *
+ * Toolbar
+ * ------------------------------------------------------------------ */
+
+.mdxstudio-tasks__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--mdxstudio-space-2);
+  padding: var(--mdxstudio-space-2) var(--mdxstudio-space-3);
+  border-bottom: 1px solid var(--mdxstudio-tasks-border);
+}
+
+.mdxstudio-tasks__spacer { flex: 1 1 auto; }
+
+.mdxstudio-tasks__group {
+  display: inline-flex;
+  border: 1px solid var(--mdxstudio-tasks-border);
+  border-radius: var(--mdxstudio-radius-lg);
+  overflow: hidden;
+}
+
+.mdxstudio-tasks__tab {
+  padding: 0.2rem var(--mdxstudio-space-2-5);
+  font-size: var(--mdxstudio-text-2xs-plus);
+  font-weight: var(--mdxstudio-weight-medium);
+  color: var(--mdxstudio-tasks-muted);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+
+.mdxstudio-tasks__group .mdxstudio-tasks__tab + .mdxstudio-tasks__tab {
+  border-left: 1px solid var(--mdxstudio-tasks-border);
+}
+
+.mdxstudio-tasks__tab:not(.mdxstudio-tasks__group .mdxstudio-tasks__tab) {
+  border: 1px solid var(--mdxstudio-tasks-border);
+  border-radius: var(--mdxstudio-radius-lg);
+}
+
+.mdxstudio-tasks__tab--on {
+  background-color: var(--mdxstudio-tasks-chip-bg);
+  color: var(--mdxstudio-tasks-fg);
+}
+
+.mdxstudio-tasks__control {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--mdxstudio-space-1);
+}
+
+.mdxstudio-tasks__control-label {
+  font-size: var(--mdxstudio-text-2xs);
+  text-transform: uppercase;
+  letter-spacing: var(--mdxstudio-tracking-wider);
+  color: var(--mdxstudio-tasks-faint);
+}
+
+.mdxstudio-tasks__select,
+.mdxstudio-tasks__search {
+  font-size: var(--mdxstudio-text-2xs-plus);
+  color: var(--mdxstudio-tasks-fg);
+  background-color: var(--mdxstudio-tasks-input-bg);
+  border: 1px solid var(--mdxstudio-tasks-border);
+  border-radius: var(--mdxstudio-radius-lg);
+  padding: 0.15rem var(--mdxstudio-space-1-5);
+}
+
+.mdxstudio-tasks__search { min-width: 8rem; }
+
+/* ------------------------------------------------------------------ *
+ * Rows
+ * ------------------------------------------------------------------ */
+
+.mdxstudio-tasks__list,
+.mdxstudio-tasks__sections {
+  padding: var(--mdxstudio-space-2) var(--mdxstudio-space-2) var(--mdxstudio-space-3);
+}
+
+/*
+ * A row is a grid, not a flex line: the fields have to land in the same place
+ * on every row, and a flex row that runs out of space rearranges itself
+ * silently - which is how the meta rail ended up interleaved with the progress
+ * summary. Narrow, the rail takes a line of its own under the title; wide, it
+ * is a column of its own.
+ */
+/*
+ * One line per row, at every level: the twisty and status, the title, the
+ * fields, the actions. Nothing wraps and nothing moves to a second line - a
+ * long title is cut with an ellipsis and kept in full in its tooltip, and the
+ * fields shrink from the right. A list whose rows change height with their
+ * contents reads as ragged, and the indentation stops being legible.
+ */
+.mdxstudio-tasks__row {
+  display: grid;
+  grid-template-columns: auto minmax(4rem, 1fr) auto auto;
+  grid-template-areas: 'rail body meta actions';
+  align-items: center;
+  gap: 0 var(--mdxstudio-space-2);
+  padding: 0.25rem var(--mdxstudio-space-2);
+  border-radius: var(--mdxstudio-radius-lg);
+  min-height: 2rem;
+}
+
+.mdxstudio-tasks__row--plain { min-height: 1.6rem; }
+
+.mdxstudio-tasks__rail { grid-area: rail; }
+.mdxstudio-tasks__body { grid-area: body; }
+.mdxstudio-tasks__meta { grid-area: meta; }
+.mdxstudio-tasks__actions { grid-area: actions; }
+
+.mdxstudio-tasks__row:hover { background-color: var(--mdxstudio-tasks-row-hover); }
+
+/*
+ * One rule between rows, the same at every level.
+ *
+ * It was weighted by depth for a while, on the theory that a fainter line reads
+ * as a continuation. In a real plan it reads as a mistake: the eye takes the
+ * change in weight for a change in kind. Depth is already said by the indent.
+ */
+.mdxstudio-tasks__row + .mdxstudio-tasks__row {
+  border-top: 1px solid var(--mdxstudio-tasks-rule-strong);
+}
+
+.mdxstudio-tasks__row--done .mdxstudio-tasks__title,
+.mdxstudio-tasks__row--canceled .mdxstudio-tasks__title {
+  color: var(--mdxstudio-tasks-muted);
+}
+
+.mdxstudio-tasks__row--canceled .mdxstudio-tasks__title { text-decoration: line-through; }
+
+/* A line the parser could not read. Dimmed, in place, and never moved. */
+.mdxstudio-tasks__row--plain {
+  color: var(--mdxstudio-tasks-faint);
+  font-family: var(--mdxstudio-font-mono);
+  font-size: var(--mdxstudio-text-2xs-plus);
+  opacity: 0.75;
+}
+
+.mdxstudio-tasks__plain-text { white-space: pre-wrap; overflow-wrap: anywhere; }
+
+.mdxstudio-tasks__rail {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.125rem;
+  padding-top: 0.15rem;
+}
+
+.mdxstudio-tasks__twisty,
+.mdxstudio-tasks__twisty-gap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1rem;
+  height: 1rem;
+  border: 0;
+  background: transparent;
+  color: var(--mdxstudio-tasks-faint);
+  cursor: pointer;
+  padding: 0;
+}
+
+.mdxstudio-tasks__twisty:hover { color: var(--mdxstudio-tasks-fg); }
+
+.mdxstudio-tasks__status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.125rem;
+  height: 1.125rem;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--mdxstudio-tasks-faint);
+}
+
+button.mdxstudio-tasks__status { cursor: pointer; }
+
+.mdxstudio-tasks__status--in-progress { color: var(--mdxstudio-tasks-progress); }
+.mdxstudio-tasks__status--done { color: var(--mdxstudio-tasks-done); }
+.mdxstudio-tasks__status--blocked { color: var(--mdxstudio-tasks-blocked); }
+.mdxstudio-tasks__status--deferred { color: var(--mdxstudio-tasks-deferred); }
+.mdxstudio-tasks__status--canceled { color: var(--mdxstudio-tasks-faint); }
+
+.mdxstudio-tasks__body { min-width: 0; }
+
+.mdxstudio-tasks__headline {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: var(--mdxstudio-space-1-5);
+  line-height: var(--mdxstudio-leading-snug);
+  min-width: 0;
+}
+
+/* A card is not a row: there a title wraps rather than being cut. */
+.mdxstudio-tasks__card .mdxstudio-tasks__headline { flex-wrap: wrap; }
+.mdxstudio-tasks__card .mdxstudio-tasks__title { white-space: normal; overflow-wrap: anywhere; }
+
+.mdxstudio-tasks__id {
+  font-family: var(--mdxstudio-font-mono);
+  font-size: var(--mdxstudio-text-2xs-plus);
+  font-weight: var(--mdxstudio-weight-semibold);
+  color: var(--mdxstudio-tasks-accent);
+}
+
+.mdxstudio-tasks__title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.mdxstudio-tasks__link {
+  font-size: var(--mdxstudio-text-2xs-plus);
+  color: var(--mdxstudio-tasks-accent);
+}
+
+.mdxstudio-tasks__code {
+  font-family: var(--mdxstudio-font-mono);
+  font-size: 0.9em;
+  background-color: var(--mdxstudio-tasks-chip-bg);
+  border-radius: var(--mdxstudio-radius-lg);
+  padding: 0 0.25em;
+}
+
+/* ------------------------------------------------------------------ *
+ * Chips
+ *
+ * Each kind of field gets its own glyph, its own tone and a border, so a row
+ * of them is scannable rather than a wall of identical grey pills. The tones
+ * are the ones `@mdxstudio/react` uses for `Badge`.
+ * ------------------------------------------------------------------ */
+
+.mdxstudio-tasks__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  max-width: 100%;
+  font-size: var(--mdxstudio-text-2xs);
+  line-height: 1.5;
+  padding: 0.05rem var(--mdxstudio-space-1-5);
+  border-radius: var(--mdxstudio-radius-full);
+  border: 1px solid transparent;
+  background-color: var(--mdxstudio-tasks-chip-bg);
+  color: var(--mdxstudio-tasks-chip-fg);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mdxstudio-tasks__chip--mono { font-family: var(--mdxstudio-font-mono); }
+
+/* A person is a circle with their initial in it. The name is in the tooltip. */
+.mdxstudio-tasks__avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.1rem;
+  height: 1.1rem;
+  border-radius: var(--mdxstudio-radius-full);
+  background-color: var(--mdxstudio-tasks-who-bg);
+  color: var(--mdxstudio-tasks-who-fg);
+  border: 1px solid var(--mdxstudio-tasks-who-border);
+  font-size: 0.5625rem;
+  font-weight: var(--mdxstudio-weight-bold);
+  flex-shrink: 0;
+}
+
+.mdxstudio-tasks__chip--milestone {
+  background-color: var(--mdxstudio-tasks-milestone-bg);
+  color: var(--mdxstudio-tasks-milestone-fg);
+  border-color: var(--mdxstudio-tasks-milestone-border);
+}
+
+/* A due date is a date: muted text, no box. */
+.mdxstudio-tasks__when {
+  font-size: var(--mdxstudio-text-2xs);
+  color: var(--mdxstudio-tasks-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mdxstudio-tasks__label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  font-size: var(--mdxstudio-text-2xs);
+  color: var(--mdxstudio-tasks-muted);
+  min-width: 0;
+}
+
+.mdxstudio-tasks__label-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mdxstudio-tasks__label-more {
+  font-size: var(--mdxstudio-text-2xs);
+  color: var(--mdxstudio-tasks-faint);
+  flex-shrink: 0;
+}
+
+.mdxstudio-tasks__dot {
+  width: 0.4rem;
+  height: 0.4rem;
+  border-radius: var(--mdxstudio-radius-full);
+  flex-shrink: 0;
+  background-color: var(--mdxstudio-tasks-faint);
+}
+
+/* Five hues, so two labels are told apart without being read. */
+.mdxstudio-tasks__dot[data-label-tone='0'] { background-color: oklch(58.5% 0.233 277.117); }
+.mdxstudio-tasks__dot[data-label-tone='1'] { background-color: oklch(69.6% 0.17 162.48); }
+.mdxstudio-tasks__dot[data-label-tone='2'] { background-color: oklch(76.9% 0.188 70.08); }
+.mdxstudio-tasks__dot[data-label-tone='3'] { background-color: oklch(65.6% 0.241 354.308); }
+.mdxstudio-tasks__dot[data-label-tone='4'] { background-color: oklch(71.5% 0.143 215.221); }
+
+.mdxstudio-tasks__chip--unmet {
+  background-color: var(--mdxstudio-tasks-blocked-bg);
+  color: var(--mdxstudio-tasks-blocked);
+  border-color: color-mix(in oklab, var(--mdxstudio-tasks-blocked) 35%, transparent);
+}
+
+.mdxstudio-tasks__chip--ready {
+  background-color: var(--mdxstudio-tasks-ready-bg);
+  color: var(--mdxstudio-tasks-ready);
+  border-color: color-mix(in oklab, var(--mdxstudio-tasks-ready) 30%, transparent);
+}
+
+.mdxstudio-tasks__chip--urgent {
+  background-color: var(--mdxstudio-tasks-blocked-bg);
+  color: var(--mdxstudio-tasks-blocked);
+  border-color: color-mix(in oklab, var(--mdxstudio-tasks-blocked) 35%, transparent);
+  font-weight: var(--mdxstudio-weight-bold);
+}
+
+.mdxstudio-tasks__chip--high {
+  background-color: var(--mdxstudio-tasks-progress-bg);
+  color: var(--mdxstudio-tasks-progress);
+  border-color: color-mix(in oklab, var(--mdxstudio-tasks-progress) 30%, transparent);
+  font-weight: var(--mdxstudio-weight-semibold);
+}
+
+.mdxstudio-tasks__chip--low {
+  background-color: transparent;
+  border-color: var(--mdxstudio-tasks-border);
+  color: var(--mdxstudio-tasks-faint);
+}
+
+/* ------------------------------------------------------------------ *
+ * The meta rail: one column per kind of field
+ * ------------------------------------------------------------------ */
+
+.mdxstudio-tasks__meta {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--mdxstudio-space-1);
+  min-width: 0;
+  /* The fields are short and fixed, so they never shrink: the title is the
+     elastic one, and it has an ellipsis and a tooltip to degrade into. */
+  flex-shrink: 0;
+}
+
+/* A card is the one place fields wrap: it is a box, not a line. */
+.mdxstudio-tasks__meta--wrap { flex-wrap: wrap; justify-content: flex-start; max-width: 100%; }
+
+.mdxstudio-tasks__slot {
+  display: flex;
+  align-items: center;
+  gap: var(--mdxstudio-space-1);
+  min-width: 0;
+}
+
+/*
+ * Wide enough for six columns: every field kind takes the same position on
+ * every row, and an empty slot holds its place, because a gap where the owner
+ * would be is itself worth seeing. Keyed off the board's own width, not the
+ * display's - the same board is a full window in the Studio and a side panel
+ * in VS Code.
+ */
+/*
+ * Wide enough for columns: each kind of field takes the same position on every
+ * row, and an empty slot holds its place, because a gap where the owner would
+ * be is itself worth seeing. Keyed off the board's own width, not the
+ * display's - the same board is a full window in the Studio and a side panel in
+ * VS Code.
+ */
+@container mdxstudio-tasks (min-width: 46rem) {
+  .mdxstudio-tasks__meta:not(.mdxstudio-tasks__meta--wrap) {
+    display: grid;
+    grid-template-columns: 6.5rem 7rem 7rem 4rem;
+    align-items: center;
+    max-width: none;
+  }
+
+  .mdxstudio-tasks__meta:not(.mdxstudio-tasks__meta--wrap) .mdxstudio-tasks__slot {
+    overflow: hidden;
+  }
+}
+
+/*
+ * Everything stays on one line, so when the line runs out the least important
+ * field leaves it rather than every field being cut to a stub. Labels go first
+ * - they are the one field nothing depends on - and the milestone and due date
+ * follow. The dependency mark, the owner and the progress ring never leave.
+ */
+@container mdxstudio-tasks (max-width: 46rem) {
+  .mdxstudio-tasks__slot--labels { display: none; }
+}
+
+@container mdxstudio-tasks (max-width: 32rem) {
+  .mdxstudio-tasks__slot--when { display: none; }
+}
+
+/* ------------------------------------------------------------------ *
+ * Rollup summary
+ * ------------------------------------------------------------------ */
+
+.mdxstudio-tasks__summary {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--mdxstudio-space-1-5);
+  white-space: nowrap;
+}
+
+.mdxstudio-tasks__ring {
+  flex-shrink: 0;
+  transform: rotate(-90deg);
+}
+
+.mdxstudio-tasks__ring-track {
+  fill: none;
+  stroke: var(--mdxstudio-tasks-bar-bg);
+  stroke-width: 3.5;
+}
+
+.mdxstudio-tasks__ring-fill {
+  fill: none;
+  stroke: var(--mdxstudio-tasks-bar-fill);
+  stroke-width: 3.5;
+  stroke-linecap: round;
+}
+
+/* The count itself only appears when the row is under the pointer. */
+.mdxstudio-tasks__ring-label {
+  font-size: var(--mdxstudio-text-2xs);
+  color: var(--mdxstudio-tasks-faint);
+  opacity: 0;
+  transition: opacity var(--mdxstudio-transition-duration) var(--mdxstudio-transition-timing);
+}
+
+.mdxstudio-tasks__row:hover .mdxstudio-tasks__ring-label,
+.mdxstudio-tasks__row:focus-within .mdxstudio-tasks__ring-label { opacity: 1; }
+
+@media (hover: none) {
+  .mdxstudio-tasks__ring-label { opacity: 1; }
+}
+
+.mdxstudio-tasks__summary-text {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+  font-size: var(--mdxstudio-text-2xs);
+  color: var(--mdxstudio-tasks-muted);
+}
+
+.mdxstudio-tasks__summary-text--ready { color: var(--mdxstudio-tasks-ready); }
+.mdxstudio-tasks__summary-text--blocked { color: var(--mdxstudio-tasks-blocked); }
+
+/* ------------------------------------------------------------------ *
+ * Description
+ * ------------------------------------------------------------------ */
+
+.mdxstudio-tasks__description {
+  margin: var(--mdxstudio-space-1) 0 var(--mdxstudio-space-2);
+  padding-left: var(--mdxstudio-space-2-5);
+  border-left: 2px solid var(--mdxstudio-tasks-border);
+  color: var(--mdxstudio-tasks-muted);
+  font-size: var(--mdxstudio-text-xs);
+  line-height: 1.6;
+}
+
+.mdxstudio-tasks__description p { margin: 0 0 var(--mdxstudio-space-1); }
+.mdxstudio-tasks__description p:last-child { margin-bottom: 0; }
+.mdxstudio-tasks__note { color: var(--mdxstudio-tasks-muted); }
+
+/* ------------------------------------------------------------------ *
+ * Actions
+ * ------------------------------------------------------------------ */
+
+.mdxstudio-tasks__actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.125rem;
+  flex-shrink: 0;
+}
+
+/*
+ * Copying and moving are things the reader goes looking for, so those buttons
+ * wait until the row is under the pointer. Whether a row *has* notes is
+ * information rather than an action - that one is always drawn, quietly, or a
+ * description nobody can see they have is a description nobody opens.
+ */
+.mdxstudio-tasks__action--quiet {
+  opacity: 0;
+  transition: opacity var(--mdxstudio-transition-duration) var(--mdxstudio-transition-timing);
+}
+
+.mdxstudio-tasks__row:hover .mdxstudio-tasks__action--quiet,
+.mdxstudio-tasks__row:focus-within .mdxstudio-tasks__action--quiet,
+.mdxstudio-tasks__card:hover .mdxstudio-tasks__action--quiet,
+.mdxstudio-tasks__card:focus-within .mdxstudio-tasks__action--quiet {
+  opacity: 1;
+}
+
+/* A phone has no hover to reveal anything with. */
+@media (hover: none) {
+  .mdxstudio-tasks__action--quiet { opacity: 1; }
+}
+
+.mdxstudio-tasks__action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  border: 0;
+  padding: 0;
+  border-radius: var(--mdxstudio-radius-lg);
+  background: transparent;
+  color: var(--mdxstudio-tasks-faint);
+  cursor: pointer;
+}
+
+.mdxstudio-tasks__action:hover {
+  color: var(--mdxstudio-tasks-fg);
+  background-color: var(--mdxstudio-tasks-chip-bg);
+}
+
+/* Holds a notes button's place on a row that has no notes. */
+.mdxstudio-tasks__action-gap {
+  display: inline-block;
+  width: 1.25rem;
+  height: 1.25rem;
+  flex-shrink: 0;
+}
+
+.mdxstudio-tasks__action--on { color: var(--mdxstudio-tasks-accent); }
+.mdxstudio-tasks__action--notes { opacity: 0.65; }
+.mdxstudio-tasks__action--notes:hover,
+.mdxstudio-tasks__action--on { opacity: 1; }
+
+/* ------------------------------------------------------------------ *
+ * Board and grouped sections
+ * ------------------------------------------------------------------ */
+
+.mdxstudio-tasks__columns {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  gap: var(--mdxstudio-space-3);
+  padding: var(--mdxstudio-space-3);
+  align-items: start;
+}
+
+.mdxstudio-tasks__column {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mdxstudio-space-2);
+  min-width: 0;
+}
+
+.mdxstudio-tasks__column-head,
+.mdxstudio-tasks__section-head {
+  display: flex;
+  align-items: center;
+  gap: var(--mdxstudio-space-1-5);
+  width: 100%;
+  font-size: var(--mdxstudio-text-2xs);
+  font-weight: var(--mdxstudio-weight-bold);
+  text-transform: uppercase;
+  letter-spacing: var(--mdxstudio-tracking-wider);
+  color: var(--mdxstudio-tasks-muted);
+}
+
+.mdxstudio-tasks__column-title { flex: 1 1 auto; text-align: left; }
+
+/* A column heading is also its own disclosure. */
+.mdxstudio-tasks__column-toggle {
+  border: 0;
+  background: transparent;
+  padding: var(--mdxstudio-space-1) 0;
+  cursor: pointer;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  color: inherit;
+}
+
+.mdxstudio-tasks__column-toggle:hover { color: var(--mdxstudio-tasks-fg); }
+
+.mdxstudio-tasks__section-head {
+  margin: var(--mdxstudio-space-3) 0 var(--mdxstudio-space-1);
+  padding-bottom: var(--mdxstudio-space-1);
+  border-bottom: 1px solid var(--mdxstudio-tasks-border);
+}
+
+.mdxstudio-tasks__column-count { color: var(--mdxstudio-tasks-faint); }
+
+.mdxstudio-tasks__card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mdxstudio-space-1);
+  padding: var(--mdxstudio-space-2) var(--mdxstudio-space-2-5);
+  border: 1px solid var(--mdxstudio-tasks-border);
+  border-radius: var(--mdxstudio-radius-xl);
+  background-color: var(--mdxstudio-tasks-head-bg);
+}
+
+.mdxstudio-tasks__card--done .mdxstudio-tasks__title,
+.mdxstudio-tasks__card--canceled .mdxstudio-tasks__title { color: var(--mdxstudio-tasks-muted); }
+
+/* Where a lifted row came from, greyed: the tree it belongs to, not its title. */
+.mdxstudio-tasks__context {
+  font-size: var(--mdxstudio-text-2xs);
+  color: var(--mdxstudio-tasks-faint);
+  overflow-wrap: anywhere;
+}
+
+.mdxstudio-tasks__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mdxstudio-space-1);
+}
+
+/*
+ * Work in flight, pinned to the top with a real gap under it. The gap is the
+ * whole point: without it the two zones read as one list and the pinning is
+ * invisible.
+ */
+.mdxstudio-tasks__flight {
+  padding-bottom: var(--mdxstudio-space-3);
+  margin-bottom: var(--mdxstudio-space-3);
+  border-bottom: 1px solid var(--mdxstudio-tasks-border);
+}
+
+/* Settled work, folded away at the foot of the list. */
+.mdxstudio-tasks__bucket { margin-top: var(--mdxstudio-space-2); }
+
+.mdxstudio-tasks__more {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--mdxstudio-space-1-5);
+  margin: var(--mdxstudio-space-2) 0 var(--mdxstudio-space-1) var(--mdxstudio-space-2);
+  padding: 0.15rem var(--mdxstudio-space-2);
+  border: 1px solid var(--mdxstudio-tasks-border);
+  border-radius: var(--mdxstudio-radius-full);
+  background: transparent;
+  color: var(--mdxstudio-tasks-muted);
+  font-size: var(--mdxstudio-text-2xs-plus);
+  cursor: pointer;
+}
+
+.mdxstudio-tasks__more:hover {
+  color: var(--mdxstudio-tasks-fg);
+  background-color: var(--mdxstudio-tasks-chip-bg);
+}
+
+.mdxstudio-tasks__none,
+.mdxstudio-tasks__footnote {
+  padding: var(--mdxstudio-space-3);
+  font-size: var(--mdxstudio-text-xs);
+  color: var(--mdxstudio-tasks-muted);
+}
+
+/* ------------------------------------------------------------------ *
+ * Icons
+ * ------------------------------------------------------------------ */
+
+.mdxstudio-tasks__icon-10 { width: 0.625rem; height: 0.625rem; flex-shrink: 0; opacity: 0.85; }
+.mdxstudio-tasks__icon-12 { width: 0.75rem; height: 0.75rem; }
+.mdxstudio-tasks__icon-14 { width: 0.875rem; height: 0.875rem; }
+.mdxstudio-tasks__icon-16 { width: 1rem; height: 1rem; }
+.mdxstudio-tasks__icon-accent { color: var(--mdxstudio-tasks-accent); flex-shrink: 0; }

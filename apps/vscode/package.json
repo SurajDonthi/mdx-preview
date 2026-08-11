@@ -263,6 +263,7 @@
     "@mdxstudio/flow": "*",
     "@mdxstudio/mermaid": "*",
     "@mdxstudio/react": "*",
+    "@mdxstudio/tasks": "*",
     "react": "^19.0.1",
     "react-dom": "^19.0.1"
   },

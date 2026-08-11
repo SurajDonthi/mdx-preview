@@ -6,8 +6,8 @@ listed is ignored.
 
 Source of truth: `packages/react/src/CustomComponents.tsx` (built-ins),
 `packages/mermaid/src/index.ts`, `packages/charts/src/index.ts`,
-`packages/flow/src/index.ts` (plugins), `apps/studio/src/mdxRegistry.ts` (what a
-default application registers).
+`packages/flow/src/index.ts`, `packages/tasks/src/index.ts` (plugins),
+`apps/studio/src/mdxRegistry.ts` (what a default application registers).
 
 ## What a default application registers
 
@@ -16,13 +16,20 @@ import { createRendererRegistry } from '@mdxstudio/react';
 import { mermaidPlugin } from '@mdxstudio/mermaid';
 import { chartsPlugin } from '@mdxstudio/charts';
 import { flowPlugin } from '@mdxstudio/flow';
+import { tasksPlugin } from '@mdxstudio/tasks';
 
-export const registry = createRendererRegistry(mermaidPlugin, chartsPlugin, flowPlugin);
+export const registry = createRendererRegistry(
+  mermaidPlugin,
+  chartsPlugin,
+  flowPlugin,
+  tasksPlugin
+);
 ```
 
-That is: the built-ins, plus `MermaidDiagram`, `Chart` and `FlowGraph`. A host
-that registers only `createRendererRegistry()` has the built-ins and nothing
-else - `<Mermaid>` there renders an "unknown component" notice.
+That is: the built-ins, plus `MermaidDiagram`, `Chart`, `FlowGraph` and
+`TaskBoard`. A host that registers only `createRendererRegistry()` has the
+built-ins and nothing else - `<Mermaid>` there renders an "unknown component"
+notice.
 
 ## Aliases
 
@@ -35,6 +42,7 @@ A tag and its alias are the same component.
 | `Code` | `InlineCode` | `@mdxstudio/react` |
 | `Mermaid` | `MermaidDiagram` | `@mdxstudio/mermaid` |
 | `ArchitectureMap` | `FlowGraph` | `@mdxstudio/flow` |
+| `Tasks` | `TaskBoard` | `@mdxstudio/tasks` |
 
 `Table` is itself the registered name of the component whose implementation is
 called `TableComponent`.
@@ -235,6 +243,112 @@ Prefer the fence: it needs no template literal and no brace escaping. See
 ## FlowGraph
 
 See [flowgraph.md](flowgraph.md).
+
+## TaskBoard — the `tasks` fence
+
+The fence and the component are the same thing: `@mdxstudio/tasks` claims the
+`tasks` fence language, so the block renders as a plan rather than as code.
+**Write the fence, not the component** — the fence needs no escaping, and it
+leaves the plan as plain text that you can diff and rewrite line by line.
+
+````md
+```tasks
+- [ ] AG-1: Delete the engine   needs: AG-0b, AG-6a   @me   !p1   #risk
+    Remove the runner, the trade workflows and the trade machinery.
+    The API must still boot and serve the frontend routes.
+    - [ ] Prune the schema package
+- [→] Multi-layer contours   trigger: DW-1c
+- [-] Typed checklist subsystem   reason: rejected as over-engineering
+```
+````
+
+One line is one item. **Indent four spaces to nest**, to any depth. There is no
+epic or subtask syntax — depth is depth.
+
+### Statuses
+
+`[ ]` to do · `[~]` in progress · `[x]` done · `[!]` blocked · `[→]` (or `[>]`)
+deferred · `[-]` canceled.
+
+Any other marker is **not a task**: the line is kept exactly where it is, dimmed,
+rather than being given a guessed status. So do not invent markers.
+
+### Ids
+
+`- [ ] AG-1: Delete the engine` has the id `AG-1`. **The colon is what makes it
+an id.** `- [ ] Multi-layer contours` has no id, and `- [ ] Fix the parser: it
+drops rows` has none either — a colon inside a sentence is a sentence. Ids are
+what `needs:` resolves against, case-insensitively.
+
+Give an item an id when something else depends on it, and not otherwise.
+
+### Fields, after the title
+
+| Field | Written | Inherits down? |
+| --- | --- | --- |
+| Assignee | `@ann` | yes |
+| Label | `#risk` | yes |
+| Milestone | `milestone: v1` | yes |
+| Dependencies | `needs: AG-1, AG-6a` | no |
+| ~~Estimate~~ | `est: 3d` | **do not write it** - see below |
+| Due | `due: 2026-04-01` | no |
+| Priority | `!p1`…`!p4` (`!urgent` `!high` `!med` `!low`) | no |
+| Trigger | `trigger: when DW-1c lands` | no |
+| Reason | `reason: rejected as over-engineered` | no |
+
+Three rules that decide whether a line reads the way you meant:
+
+1. **Title first, fields last.** A value stops at the next field, so words
+   written after `milestone: v1` become part of the milestone.
+2. **`trigger:` and `reason:` run to the end of the line.** Put them last of all;
+   anything after them, sigils included, is swallowed into their text.
+3. **An unknown `key: value` is not a field** — it stays in the title. Only the
+   nine above are fields. This is why titles with colons survive.
+
+A trailing markdown link is taken off before tags are read, so
+`- [ ] Read it [spec](doc.mdx#ids)` is a link and `#ids` is not a label. Only
+`http`, `https`, `mailto` and relative targets are linked.
+
+### Descriptions
+
+Indented lines that are **not** bullets, deeper than the bullet above them, are
+that item's description. Blank lines separate paragraphs. Inline markdown works.
+Prose is a node's description and belongs under its node — do not collect notes
+at the bottom of the fence, and do not put headings inside it: structure comes
+from indentation and ids.
+
+### What you must not write
+
+Everything below is **derived and displayed already**, so writing it by hand only
+creates something to contradict:
+
+- progress or counts on a parent (`3/7 done`) — rolled up from descendants,
+  canceled work excluded from the divisor
+- "blocked" or "ready" as text — read from `[!]` and from `needs:` (a dependency
+  the document does not contain counts as satisfied)
+- estimate totals — summed over the subtree in days and points separately, so
+  put `est:` on leaves or it counts twice
+- the owner of every child of an owned parent — `@`, `#` and `milestone:` flow
+  down until a descendant declares its own
+
+A parent marked `[x]` over children that are not is reported on the row as an
+inconsistency and left alone. If that is not what you meant, fix the markers.
+
+### How it reads
+
+Children are collapsed on load, top level included, except the path down to any
+`[~]`, which opens. The list starts at the head of the plan - everything in
+flight plus the next few items - with `View N more` for the rest, and top-level
+work that is finished, canceled or deferred sinks into a folded bucket at the
+bottom. Each row copies its **verbatim source line**, which is how a reader
+hands you an exact line to edit. The component never writes to the file.
+
+That is why order matters when you write one: put the work that is next near the
+top, and let finished work stay where it was rather than deleting it.
+
+The reader can scope the board to one **epic** — a top-level item that has
+children. That is the only sense in which epics exist here, so put the work that
+belongs together under one top-level line and it becomes filterable for free.
 
 ---
 

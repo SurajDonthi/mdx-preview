@@ -8,6 +8,7 @@ import '@mdxstudio/react/styles.css';
 import '@mdxstudio/mermaid/styles.css';
 import '@mdxstudio/charts/styles.css';
 import '@mdxstudio/flow/styles.css';
+import '@mdxstudio/tasks/styles.css';
 import './index.css';
 
 createRoot(document.getElementById('root')!).render(

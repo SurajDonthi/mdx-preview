@@ -129,6 +129,28 @@ Diagrams inside `<Tabs>` work the way you would hope: inactive panels are
 unmounted rather than hidden, so each diagram mounts at full width instead of
 measuring a zero-width container and laying itself out wrong.
 
+### Plans that stay plain text
+
+A ```` ```tasks ```` fence is a checklist an agent can read, diff and rewrite line
+by line — and a board a person can actually navigate.
+
+````mdx
+```tasks
+- [ ] AG-1: Delete the engine   needs: AG-0b   @me   !p1   #risk
+    Remove the runner, the trade workflows and the trade machinery.
+    - [~] Prune the schema package
+- [→] Multi-layer contours   trigger: DW-1c
+```
+````
+
+Indentation is the only structure. Statuses are `[ ]`, `[~]`, `[x]`, `[!]`, `[→]`
+and `[-]`; everything else on the line — owner, labels, dependencies, milestone,
+priority — becomes progress rollups, a blocked reading and filters. Work in
+flight is pinned to the top, finished work folds into a bucket at the bottom, and
+each row copies its **verbatim source line**, so a plan can go from the preview
+straight back into an agent's prompt. The component never edits the file: a tick
+only becomes an edit if the host wires `onToggleStatus`.
+
 ### Frontmatter becomes a header
 
 ```mdx
@@ -212,6 +234,7 @@ not download a diagram engine to get them.
 | `@mdxstudio/mermaid` | `MermaidDiagram`, plus the plugin that takes over the ` ```mermaid ` fence |
 | `@mdxstudio/charts` | `Chart` — Recharts, imported on mount rather than with the page |
 | `@mdxstudio/flow` | `FlowGraph`, the interactive node/edge map used throughout these docs |
+| `@mdxstudio/tasks` | `TaskBoard`, plus the plugin that takes over the ` ```tasks ` fence — a plan checklist that stays a plain-text plan |
 | `@mdxstudio/pdf` | A4 export from a rendered DOM subtree |
 | `@mdxstudio/sandbox` | `SandboxedMdx` — render a document you did not write, in an opaque-origin frame |
 | `@mdxstudio/agent-skill` | A CLI that teaches a coding agent to write documentation in this flavour |
@@ -442,6 +465,7 @@ import '@mdxstudio/react/styles.css';    // renderer, markdown elements, built-i
 import '@mdxstudio/mermaid/styles.css';  // diagram card chrome
 import '@mdxstudio/charts/styles.css';   // chart card chrome
 import '@mdxstudio/flow/styles.css';     // flow map chrome and SVG palette
+import '@mdxstudio/tasks/styles.css';    // task board chrome
 ```
 
 **Theme comes from the application, not the operating system.** `MdxRenderer` stamps
@@ -477,6 +501,7 @@ packages/
   mermaid/   MermaidDiagram · the mermaid fence plugin
   charts/    Chart, backed by Recharts and loaded on demand
   flow/      FlowGraph
+  tasks/     TaskBoard · the tasks fence parser
   pdf/       pdfExporter: A4 capture, page-break measurement, jsPDF output
   sandbox/   host component · guest runtime · wire protocol · esbuild and Vite build helpers
   agent-skill/  the installer CLI; skill/ is generated from skills/mdx-docs at build time

@@ -9,6 +9,7 @@ import type {
 import { mermaidPlugin } from '@mdxstudio/mermaid';
 import { chartsPlugin } from '@mdxstudio/charts';
 import { flowPlugin } from '@mdxstudio/flow';
+import { tasksPlugin } from '@mdxstudio/tasks';
 
 import { vscodeHostPlugin } from './documentBase';
 
@@ -18,7 +19,7 @@ import { vscodeHostPlugin } from './documentBase';
  * `vscodeHostPlugin` comes last so its `img` and `a` replace the built-ins -
  * without them a relative `src` is a path the webview is not allowed to read.
  */
-const PREVIEW_PLUGINS = [mermaidPlugin, chartsPlugin, flowPlugin, vscodeHostPlugin];
+const PREVIEW_PLUGINS = [mermaidPlugin, chartsPlugin, flowPlugin, tasksPlugin, vscodeHostPlugin];
 
 /**
  * Everything a previewed document may name.

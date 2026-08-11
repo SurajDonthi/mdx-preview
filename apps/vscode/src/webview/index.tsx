@@ -9,6 +9,7 @@ import '@mdxstudio/react/styles.css';
 import '@mdxstudio/mermaid/styles.css';
 import '@mdxstudio/charts/styles.css';
 import '@mdxstudio/flow/styles.css';
+import '@mdxstudio/tasks/styles.css';
 import './shell.css';
 
 import { createRoot } from 'react-dom/client';

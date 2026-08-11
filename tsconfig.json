@@ -32,6 +32,9 @@
       "@mdxstudio/flow": [
         "./packages/flow/src/index.ts"
       ],
+      "@mdxstudio/tasks": [
+        "./packages/tasks/src/index.ts"
+      ],
       "@mdxstudio/pdf": [
         "./packages/pdf/src/index.ts"
       ],
