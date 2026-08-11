@@ -172,9 +172,36 @@ GitHub's alert blockquotes work, and become the same `<Callout>` component:
 on its first line, and anything else - `> [!MAYBE]` - stays an ordinary
 blockquote, exactly as on GitHub.
 
-Prefer `<Callout>` when the document only ever lives here: it takes any title
-you want rather than the five fixed ones. Prefer the alert syntax when the same
-file also has to render on GitHub.
+### Alert or `<Callout>` - the alert, unless you need otherwise
+
+**Default to the alert syntax.** It is two lines of markdown, it reads as prose
+in the source, it renders identically because it *is* a `<Callout>` underneath,
+and the same file still works on GitHub. Reaching for the component to say
+"here is a note" buys nothing and costs a JSX tag in the middle of the prose.
+
+```md
+> [!NOTE]
+> The parser memoises the last four documents.
+```
+
+Write `<Callout>` only when you need something the alert cannot express:
+
+- **A title other than the five.** Alerts give you *Note*, *Tip*, *Important*,
+  *Warning*, *Caution* and nothing else. `<Callout type="warning" title="This
+  deletes your branch">` is a real reason.
+- **No title at all** - `<Callout type="info">` with a bare body.
+- **Block content inside**: a code fence, a table, a list of more than a line or
+  two, another component. An alert is prose.
+- **A type the markers do not reach**: `error` is only reachable through the
+  word *Caution*, and `success` only through *Tip*.
+
+A rough test: if what you are writing would read fine as a sentence in a
+blockquote, it is an alert. If you find yourself wanting a heading for it, it is
+a `<Callout>` - or, more often, it is not an aside at all and belongs in the
+body of the document.
+
+**Do not stack them.** Three consecutive callouts is a list wearing a costume.
+Two asides in a row usually means the surrounding prose is not doing its job.
 
 ## House style
 
