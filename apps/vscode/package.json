@@ -1,7 +1,7 @@
 {
   "name": "mdxstudio-vscode",
   "displayName": "MDX Studio Preview",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "//private": "Deliberately not private. vsce refuses to publish a private package, and this one is published - to the VS Code marketplace, not to npm. There is no `npm publish --workspaces` anywhere in this repository; every package is published by name, so nothing here will push this to the npm registry by accident.",
   "description": "Preview .mdx files in VS Code with the mdxstudio renderer: callouts, tabs, charts, flow graphs and Mermaid diagrams, themed to match the editor.",
   "publisher": "surajdonthi",
@@ -33,14 +33,15 @@
     "onLanguage:mdx",
     "onWebviewPanel:mdxstudio.preview"
   ],
-  "//capabilities": "The preview evaluates the document's own `{...}` expressions with `new Function`, which is why the webview's CSP normally grants 'unsafe-eval'. In an untrusted workspace that would mean a freshly cloned repository executing its own JavaScript in the editor as soon as an .mdx file is clicked, so the extension pins itself to the non-evaluating literal walker and drops 'unsafe-eval' from the policy until trust is granted. Everything else - rendering, scroll sync, the outline - works untrusted.",
+  "//capabilities": "The preview evaluates the document's own `{...}` expressions with `new Function`, which is why the webview's CSP normally grants 'unsafe-eval'. In an untrusted workspace that would mean a freshly cloned repository executing its own JavaScript in the editor as soon as an .mdx file is clicked, so the extension pins itself to the non-evaluating literal walker and drops 'unsafe-eval' from the policy until trust is granted. `mdxstudio.config` is the same decision with nothing to fall back to - loading a workspace's mdxstudio.config.js runs a module of that workspace's own code - so an untrusted workspace loads none at all. Everything else - rendering, scroll sync, the outline - works untrusted.",
   "capabilities": {
     "untrustedWorkspaces": {
       "supported": "limited",
-      "description": "The preview renders, but MDX `{...}` expressions are only read literally: evaluating them needs 'unsafe-eval' in the webview, which would let an untrusted repository run its own code in the editor. Grant trust to enable them.",
+      "description": "The preview renders, but MDX `{...}` expressions are only read literally and the workspace's mdxstudio.config.js is not loaded: both would let an untrusted repository run its own code in the editor. Grant trust to enable them.",
       "restrictedConfigurations": [
         "mdxstudio.expressions",
-        "mdxstudio.customCss"
+        "mdxstudio.customCss",
+        "mdxstudio.config"
       ]
     }
   },
@@ -226,6 +227,11 @@
           "type": "string",
           "default": "",
           "markdownDescription": "A `.css` file loaded into the preview after the shipped stylesheet, so it can override the `--mdxstudio-*` variables. Workspace-relative (`.vscode/preview.css`) or absolute. The preview reloads when the file changes on disk."
+        },
+        "mdxstudio.config": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Where the preview looks for `mdxstudio.config.js` — the file that registers your own components with the renderer, the same file `npx @mdxstudio/cli` reads. Empty (the default) looks for `mdxstudio.config.js` then `mdxstudio.config.mjs` in the workspace folder the document belongs to; a path (workspace-relative or absolute) names one file; `off` never loads one. **Loading a config runs that project's JavaScript in the preview, so it is never loaded in a workspace you have not trusted, whatever this says.** The preview reloads when the file changes on disk."
         },
         "mdxstudio.preview.showFrontmatterHeader": {
           "type": "boolean",

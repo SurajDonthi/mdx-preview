@@ -1,6 +1,6 @@
 {
   "name": "@mdxstudio/core",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "type": "module",
   "description": "Shared types, render context, MDX parsing and the component registry for mdxstudio.",
   "keywords": [

@@ -1,10 +1,18 @@
 # Extending the component set
 
-A document can only use what the **host application** registered. Adding a
-component is a change to the application, never to the document - there is no
-`import` a document can reach for.
+A document can only use what the **host** registered. Adding a component is a
+change to the host, never to the document - there is no `import` a document can
+reach for.
 
-Source of truth: `packages/core/src/registry.ts`.
+"The host" is an application when you are building one. For the two hosts a
+reader is more likely to be running - the CLI and the VS Code extension - it is
+a file in the project: `mdxstudio.config.js`. Same registry, same plugin shape,
+composed from a file instead of from code. **[How a reader actually sees your
+component](#how-a-reader-actually-sees-your-component)** at the end of this file
+covers all three; read it before you decide where to put anything.
+
+Source of truth: `packages/core/src/registry.ts`, and
+`packages/core/src/mdxConfig.ts` for the config file.
 
 ## The registry
 
@@ -110,8 +118,87 @@ knowing:
   interactivity, and render inline whatever a button would otherwise have
   revealed (the exporter strips every `button` element).
 
+## How a reader actually sees your component
+
+A registry only matters once something renders with it. There are three
+deliveries, and the one you need depends on who is reading.
+
+### 1. Your own application
+
+Compose the registry in code and pass it to the renderer. This is the case the
+sections above describe.
+
+```tsx
+// mdxRegistry.ts - module scope, so the identity is stable
+export const registry = createRendererRegistry(mermaidPlugin, myPlugin);
+
+// somewhere in the tree
+<MdxRenderer content={source} themeConfig={theme} registry={registry} />
+```
+
+### 2. `npx @mdxstudio/cli serve ./docs`
+
+Put an `mdxstudio.config.js` (or `.mjs`) in the folder being served. Its default
+export is turned into one more registry source and applied after the CLI's own,
+so it can add components or replace them.
+
+### 3. The VS Code extension
+
+Put the same file in the workspace folder. The extension finds
+`mdxstudio.config.js` then `mdxstudio.config.mjs` in the workspace folder the
+document belongs to - in a multi-root workspace, that folder only - and applies
+it after its own built-ins, exactly as the CLI does. `mdxstudio.config` in
+settings points somewhere else or turns it off with `off`.
+
+**One file serves both.** Same two names, same default export, same argument:
+
+```js
+// mdxstudio.config.js, in the root of the repository
+export default ({ React, createElement, components }) => ({
+  components: {
+    PriceTable: ({ rows }) => createElement('table', null, /* ... */),
+  },
+  aliases: { Prices: 'PriceTable' },
+  codeFences: { csv: 'PriceTable' },
+  remarkPlugins: [],
+  rehypePlugins: [],
+});
+```
+
+The default export is that object or a function returning one, which may be
+`async`. Everything is optional. Four things follow from *where* it runs - in
+the page, because that is where the renderer is:
+
+- **No bare imports.** There is no `node_modules` in a browser. Import from a
+  URL (`https://esm.sh/...`) if you need a package.
+- **No JSX**, because nothing compiles the file. Use `createElement`; the
+  function form is handed the page's own `React` and `createElement`, which is
+  also the only React the component may use.
+- `components` in the argument is everything already registered, so a config can
+  wrap or replace a built-in rather than only adding to it.
+- A remark or rehype plugin is a plain function and usually needs no dependency
+  at all, so syntax-level extensions travel well here.
+
+Nothing about the file is fatal. A missing default export, a throw on import, an
+alias pointing at nothing: each becomes one line naming the file, and the
+documents render with the host's built-ins regardless.
+
+### The caveat that matters in VS Code
+
+**A workspace you have not trusted loads no config at all.** The file is a
+module of that repository's code and running it is what Restricted Mode exists
+to prevent, so the setting cannot re-enable it - not even from the repository's
+own `.vscode/settings.json`. The preview says so in a line at the top, naming the
+file it skipped. Granting trust loads it immediately.
+
+So when you hand work back to someone: if you added an `mdxstudio.config.js`,
+tell them to trust the workspace, or their components will render as "unknown
+component" notices and they will assume you wrote the document wrong.
+
 ## Documenting an extension
 
 When a project registers extra components, document them next to the project's
 own docs, not here. A document written against a custom registry will not render
-in a host that lacks it - say so at the top of the document if it matters.
+in a host that lacks it - say so at the top of the document if it matters, and
+prefer an `mdxstudio.config.js` committed to the repository so that "the host
+that lacks it" stops being the common case.

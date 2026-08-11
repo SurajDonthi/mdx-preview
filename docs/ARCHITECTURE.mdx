@@ -162,6 +162,43 @@ of them load-bearing and each covered by `packages/core/tests/registry.test.ts`:
 a component map, and `name` and `components` become tag names — which is exactly
 the failure the brand exists to prevent.
 
+### Where a registry comes from
+
+Composing one in code is what an application does. The two hosts a repository's
+*reader* is likely to be running compose theirs from a file in the repository
+instead — `mdxstudio.config.js`, one contract in
+`packages/core/src/mdxConfig.ts`, so a project writes it once:
+
+| Host | Composes from | Where |
+| --- | --- | --- |
+| `apps/studio` | Code | `apps/studio/src/mdxRegistry.ts` |
+| `@mdxstudio/cli` | The served folder's config | `packages/cli/src/client/registry.ts` |
+| The VS Code extension | The workspace folder's config | `apps/vscode/src/webview/registry.tsx` |
+
+The config is loaded **in the browser**, by `loadMdxConfig`, because a component
+is a React component in the page and not something that survives being read in a
+server or an extension host and posted across. Its default export becomes one
+more registry source, applied last so a project can replace anything the host
+shipped. Every way it can be wrong — missing default export, throwing on import,
+an alias pointing at nothing — resolves to a message naming the file, and the
+host renders with its built-ins regardless.
+
+Two things are true only of the extension, both in
+`apps/vscode/src/extension/policy.ts`:
+
+- **Workspace trust decides.** An untrusted workspace loads no config at all,
+  whatever `mdxstudio.config` says. It is the same floor `resolveExpressionMode`
+  applies to expressions, with no reduced form to fall back to.
+- **A page that loads one adds `webview.cspSource` to `script-src`,** and only
+  such a page. That is the narrowest grant that lets the webview import a module
+  off disk; the extension's readme sets out why the alternatives were worse.
+
+The webview also wraps each component a config contributes in its own error
+boundary. `MdxRenderer`'s boundary covers the whole tree, which is the right
+scope for a half-typed document and the wrong one for a component someone is in
+the middle of writing: without it, one throwing tag replaces the document the
+reader is trying to read.
+
 ---
 
 ## The render pipeline

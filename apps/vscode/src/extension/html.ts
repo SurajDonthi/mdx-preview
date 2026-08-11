@@ -26,6 +26,11 @@ export interface PreviewHtmlOptions {
   /** The user's `mdxstudio.customCss` file, already resolved to disk, or null. */
   customCssUri: vscode.Uri | null;
   /**
+   * Whether this page will import the workspace's config file. Decided by
+   * `policy.ts`; the only thing it changes here is the policy.
+   */
+  loadsConfig: boolean;
+  /**
    * Bumped whenever the page is rebuilt. Appended to the stylesheet URLs so a
    * custom stylesheet that changed on disk is actually re-read rather than
    * served out of the webview's cache.
@@ -51,6 +56,7 @@ export function buildPreviewHtml(options: PreviewHtmlOptions): string {
     nonce,
     cspSource: webview.cspSource,
     expressions: options.expressions,
+    loadsConfig: options.loadsConfig,
   });
 
   const customCssLink = customCssUri

@@ -16,6 +16,12 @@ import path from 'node:path';
  * `.js` first because a folder that has one is almost never an ESM package as
  * well; `.mjs` is there for the folder that is, where a `.js` file would be
  * read as CommonJS by everything else in the toolchain.
+ *
+ * The same two names in the same order as `@mdxstudio/core`'s
+ * `MDX_CONFIG_FILENAMES`, which is what the VS Code extension looks for -
+ * written out again rather than imported because this half of the CLI is the
+ * half that has no runtime dependencies, and pulling in core for two strings
+ * costs the whole MDX parser chain. `tests/config.test.ts` fails if they drift.
  */
 export const CONFIG_FILENAMES = ['mdxstudio.config.js', 'mdxstudio.config.mjs'] as const;
 

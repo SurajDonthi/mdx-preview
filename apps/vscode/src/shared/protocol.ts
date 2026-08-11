@@ -32,6 +32,19 @@ export interface PreviewState {
    * tell a document that renders nothing from one that is being held back.
    */
   restriction: string | null;
+  /**
+   * The workspace's `mdxstudio.config.js`, as a URL the webview may import, or
+   * `null` when there is none to load - including when there is one but the
+   * workspace is not trusted, in which case `restriction` says so.
+   *
+   * A URL rather than the file's contents: the config contributes React
+   * components and unified plugins, which are not values that survive a
+   * `postMessage`. The webview imports it as a module, which is why the page's
+   * `script-src` names `webview.cspSource` when this is set. See `policy.ts`.
+   */
+  configUri: string | null;
+  /** The config's file name, for the message a broken one produces. */
+  configFile: string | null;
   showFrontmatterHeader: boolean;
   /** Whether the webview should report its scroll position back to the editor. */
   scrollEditorWithPreview: boolean;

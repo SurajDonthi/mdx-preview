@@ -1,30 +1,26 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { MdxRenderer, createRendererRegistry } from '@mdxstudio/react';
-import { mermaidPlugin } from '@mdxstudio/mermaid';
-import { chartsPlugin } from '@mdxstudio/charts';
-import { flowPlugin } from '@mdxstudio/flow';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { MdxRenderer } from '@mdxstudio/react';
+import { loadMdxConfig } from '@mdxstudio/core';
+import type { MdxRegistry } from '@mdxstudio/core';
 
 import type { HostMessage, PreviewState } from '../shared/protocol';
 import { collectAnchors, lineForOffset, offsetForLine, type Anchor } from './anchors';
 import { blockAt, markerRect, type BlockRect } from './blocks';
-import { DocumentBaseProvider, vscodeHostPlugin } from './documentBase';
+import { DocumentBaseProvider } from './documentBase';
 import { serialiseForExport } from './exportDom';
+import { previewRegistry, previewRegistryWith } from './registry';
 import { buildThemeConfig, observeThemeKind, readThemeKind } from './vscodeTheme';
 import { post, rememberDocument } from './vscodeApi';
 
-/**
- * Everything a previewed document may name. Module-level, because `MdxRenderer`
- * re-parses whenever the registry's identity changes - a registry rebuilt per
- * render would re-parse the document on every keystroke *and* on every scroll.
- *
- * `vscodeHostPlugin` comes last so its `img` and `a` replace the built-ins.
- */
-const previewRegistry = createRendererRegistry(
-  mermaidPlugin,
-  chartsPlugin,
-  flowPlugin,
-  vscodeHostPlugin
-);
+/** What the config load settled on, for one `configUri`. */
+interface LoadedConfig {
+  /** The URL that produced this, so a stale result is never rendered. */
+  uri: string | null;
+  registry: MdxRegistry;
+  error: string | null;
+}
+
+const NO_CONFIG: LoadedConfig = { uri: null, registry: previewRegistry, error: null };
 
 /** Scroll reports are worth at most this often. */
 const SCROLL_REPORT_INTERVAL_MS = 120;
@@ -47,6 +43,7 @@ export function PreviewApp() {
   const [generation, setGeneration] = useState(0);
   const [marker, setMarker] = useState<BlockRect | null>(null);
   const [zoom, setZoom] = useState(1);
+  const [config, setConfig] = useState<LoadedConfig>(NO_CONFIG);
 
   const containerRef = useRef<HTMLDivElement | null>(null);
   const anchorsRef = useRef<Anchor[]>([]);
@@ -61,6 +58,52 @@ export function PreviewApp() {
   const themeConfig = useMemo(() => buildThemeConfig(themeKind), [themeKind]);
 
   useEffect(() => observeThemeKind(setThemeKind), []);
+
+  /* ---------------------------------------------------------------- *
+   * The workspace's mdxstudio.config.js
+   *
+   * The host has already decided whether there is one to load and whether the
+   * workspace is trusted enough to run it; by the time a `configUri` arrives
+   * the only question left is what it exports. It is imported here rather than
+   * read over there because a React component is not something that survives a
+   * postMessage - see `@mdxstudio/core`'s `mdxConfig.ts`.
+   *
+   * A config that throws costs its own components and nothing else: the load
+   * resolves with a message naming the file, and the built-in registry renders
+   * the document anyway.
+   * ---------------------------------------------------------------- */
+  const configUri = state?.configUri ?? null;
+  const configFile = state?.configFile ?? null;
+
+  useEffect(() => {
+    if (!configUri) {
+      setConfig(NO_CONFIG);
+      return;
+    }
+
+    let cancelled = false;
+    void loadMdxConfig({
+      file: configFile ?? 'mdxstudio.config.js',
+      specifier: configUri,
+      context: {
+        React,
+        createElement: React.createElement,
+        components: previewRegistry.components,
+      },
+      build: previewRegistryWith,
+    }).then((loaded) => {
+      if (cancelled) return;
+      // Into the host's log as well as onto the page: the stack trace of a
+      // config that threw is worth more in the developer tools than in a
+      // one-line banner.
+      if (loaded.error) post({ type: 'error', message: loaded.error });
+      setConfig({ uri: configUri, registry: loaded.registry, error: loaded.error });
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [configUri, configFile]);
 
   const anchors = useCallback((): Anchor[] => {
     const current = stateRef.current;
@@ -331,6 +374,10 @@ export function PreviewApp() {
     );
   }
 
+  // Rendering the built-ins first and swapping the registry in afterwards would
+  // show every component the config provides as an unknown tag for a frame.
+  const configPending = configUri !== null && config.uri !== configUri;
+
   return (
     <DocumentBaseProvider
       value={{ baseUri: state.baseUri, workspaceUri: state.workspaceUri }}
@@ -341,6 +388,12 @@ export function PreviewApp() {
           {state.restriction}
         </div>
       )}
+      {config.error && (
+        <div className="mdxstudio-vscode-config-error" role="alert">
+          <span className="mdxstudio-vscode-restricted__dot" aria-hidden="true" />
+          {config.error}
+        </div>
+      )}
       {marker && (
         <div
           className="mdxstudio-vscode-current-line"
@@ -348,16 +401,22 @@ export function PreviewApp() {
           aria-hidden="true"
         />
       )}
-      <MdxRenderer
-        key={`${state.uri}#${generation}`}
-        content={state.content}
-        themeConfig={themeConfig}
-        registry={previewRegistry}
-        expressions={state.expressions}
-        showFrontmatterHeader={state.showFrontmatterHeader}
-        containerId="mdxstudio-vscode-preview"
-        containerRef={containerRef}
-      />
+      {configPending ? (
+        <div className="mdxstudio-vscode-empty">
+          <p>Loading {configFile ?? 'mdxstudio.config.js'}...</p>
+        </div>
+      ) : (
+        <MdxRenderer
+          key={`${state.uri}#${generation}`}
+          content={state.content}
+          themeConfig={themeConfig}
+          registry={config.registry}
+          expressions={state.expressions}
+          showFrontmatterHeader={state.showFrontmatterHeader}
+          containerId="mdxstudio-vscode-preview"
+          containerRef={containerRef}
+        />
+      )}
     </DocumentBaseProvider>
   );
 }

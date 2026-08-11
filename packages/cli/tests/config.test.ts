@@ -14,6 +14,8 @@ import path from 'node:path';
 
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
+import { MDX_CONFIG_FILENAMES } from '@mdxstudio/core';
+
 import { CONFIG_FILENAMES, findConfigFile } from '../src/config';
 import { configSource, loadMdxConfig } from '../src/client/config';
 import type { MdxConfigContext } from '../src/client/config';
@@ -43,6 +45,13 @@ afterAll(async () => {
 });
 
 describe('findConfigFile', () => {
+  it('looks for the names the VS Code extension looks for', () => {
+    // Spelled out in `src/config.ts` rather than imported, because this half of
+    // the CLI ships with no runtime dependencies. This is the guard that keeps
+    // one config file working in both hosts.
+    expect([...CONFIG_FILENAMES]).toEqual([...MDX_CONFIG_FILENAMES]);
+  });
+
   it('finds nothing in a folder without one', async () => {
     expect(await findConfigFile(empty)).toBeNull();
   });

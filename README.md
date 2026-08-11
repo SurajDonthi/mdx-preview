@@ -239,6 +239,40 @@ A plugin contributes components, extra names for them (`Mermaid` for
 order and the last one wins, so passing your own component under a built-in name
 replaces it. See `docs/ARCHITECTURE.mdx`.
 
+### Your own components, in all three readers
+
+A registry is something a *host application* composes, which leaves the question of
+how a component you wrote reaches a reader who is not running your application. One
+file answers it for both of the readers you did not build:
+
+```js
+// mdxstudio.config.js, in the root of your repository
+export default ({ createElement }) => ({
+  components: {
+    ReleaseBadge: ({ version }) => createElement('span', { className: 'badge' }, `v${version}`),
+  },
+  aliases: { Badge: 'ReleaseBadge' },
+});
+```
+
+| Where | How it gets in |
+| --- | --- |
+| **Your own app** | `createRendererRegistry(myPlugin)`, passed to `<MdxRenderer registry={...}>` |
+| **The CLI** | `mdxstudio.config.js` in the folder being served |
+| **VS Code** | `mdxstudio.config.js` in the workspace folder — the same file |
+
+The default export is that object or a function returning one, which may be `async`.
+It runs in the browser, where the renderer is, so build elements with `createElement`
+rather than JSX and import anything you need from a URL. It is applied after the
+built-ins, so registering a component under a built-in name replaces it.
+
+**The extension will not load one in a workspace you have not trusted** — the file is a
+module of that repository's code, and running it is exactly what Restricted Mode
+exists to prevent. It says so in the preview when it skips one.
+[The extension's readme](apps/vscode/README.md#your-own-components) has the details;
+[the CLI's](packages/cli/README.md#configuration) has the same contract from the other
+side.
+
 ### Rendering something you did not write
 
 `MdxRenderer` evaluates a document's expressions **in your page, with your origin**.

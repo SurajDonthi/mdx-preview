@@ -14,13 +14,18 @@
  * the tree rather than from whatever was last compiled.
  *
  * **The webview bundle is a single IIFE with code splitting off.** A VS Code
- * webview's CSP is a nonce policy, and a nonce is only checked against script
- * *elements* - a chunk pulled in later by `import()` is fetched without one and
- * is refused. Splitting off makes esbuild inline every dynamic import
- * (`import('mermaid')` in @mdxstudio/mermaid, `import('./ChartCanvas')` in
- * @mdxstudio/charts) into the one file the HTML loads with the nonce. It costs
- * a large bundle, which for a local file the webview reads off disk is a
+ * webview's CSP is a nonce policy, and whether a chunk pulled in later by
+ * `import()` inherits that nonce depends on the Chromium build inside the
+ * reader's VS Code - not something to bet the whole preview on. Splitting off
+ * makes esbuild inline every dynamic import (`import('mermaid')` in
+ * @mdxstudio/mermaid, `import('./ChartCanvas')` in @mdxstudio/charts) into the
+ * one file the HTML loads with the nonce, so the question never arises. It
+ * costs a large bundle, which for a local file the webview reads off disk is a
  * trade worth making.
+ *
+ * The workspace's `mdxstudio.config.js` is the one module that cannot be
+ * inlined - it is not there at build time - so the page that loads one names
+ * `webview.cspSource` in `script-src` instead. See `src/extension/policy.ts`.
  */
 
 import { createRequire } from 'node:module';

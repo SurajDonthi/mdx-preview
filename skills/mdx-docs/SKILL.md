@@ -116,10 +116,15 @@ every prop: [references/components.md](references/components.md).**
 | `Chart` | line / bar / area from a data array |
 | `FlowGraph` | An architecture several distinct flows run through |
 
-Which of these exist is a property of the **host application**, not of MDX.
+Which of these exist is a property of the **host**, not of MDX.
 `@mdxstudio/react` ships the light ones; Mermaid, `Chart` and `FlowGraph` come
 from separate packages the host chooses to register. If a tag renders as
 "unknown component", the host did not register that plugin.
+
+A project can add its own on top of these, in a committed
+`mdxstudio.config.js` that both the CLI and the VS Code extension read - see
+[references/extending.md](references/extending.md). If a repository has one,
+its documents may use tags that are in no list here.
 
 ## Diagrams
 
@@ -253,6 +258,17 @@ have one.
 Do not default to "start a dev server" when someone is reading. That is the
 answer for the third case and the wrong shape of effort for the first.
 
+**The project needs components of its own.** This cuts across all three. Write
+one `mdxstudio.config.js` in the repository root: the CLI reads it from the
+folder it serves and the extension reads it from the workspace folder, so the
+same custom components render in the terminal-adjacent case and the
+nobody-has-it-open case without being written twice. Your own application still
+composes its registry in code. **[references/extending.md](references/extending.md)**
+has the file's contract and its one catch: **the extension will not load a
+config in a workspace the user has not trusted**, so if you add one, say so when
+you hand the work back - untrusted, the components render as "unknown component"
+and the document looks broken.
+
 ## Previewing
 
 The packages are published, so any React app can render these documents:
@@ -292,5 +308,7 @@ not remove the need to write carefully either - the two rules above are still
 where documents actually break, and a preview only shows you the damage after
 the fact.
 
-To extend the component set for a project, see
+Both hosts also read an `mdxstudio.config.js` from the folder, which is how a
+project's own components reach a reader who is not running your application. To
+extend the component set for a project, see
 **[references/extending.md](references/extending.md)**.

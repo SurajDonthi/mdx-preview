@@ -8,10 +8,11 @@ import type {
   PreviewState,
   WebviewMessage,
 } from '../shared/protocol';
+import { configLocations, type ConfigLocation } from './config';
 import { buildExportDocument } from './exportHtml';
 import { buildPreviewHtml } from './html';
 import { isExternalLink, isMarkdownPath, resolveLinkPath, splitFragment } from './links';
-import { RESTRICTED_REASON } from './policy';
+import { restrictionMessage, type ConfigPolicy } from './policy';
 import { affectsPreviewDocument, readSettings } from './settings';
 
 export const PREVIEW_VIEW_TYPE = 'mdxstudio.preview';
@@ -89,6 +90,15 @@ export class MdxPreview {
   private customCssWatcher: vscode.FileSystemWatcher | null = null;
   /** The last unusable `mdxstudio.customCss` complained about, to complain once. */
   private reportedBadCustomCss: string | null = null;
+  /** The config file this document was built around, found or not loaded. */
+  private configUri: vscode.Uri | null = null;
+  /** Whether that file is actually being imported - trust has a say. */
+  private configLoads = false;
+  private configWatcher: vscode.FileSystemWatcher | null = null;
+  /** The pattern the watcher was built for, so it is only rebuilt when it moves. */
+  private configWatchKey: string | null = null;
+  /** The last unusable `mdxstudio.config` complained about, to complain once. */
+  private reportedBadConfig: string | null = null;
   private pendingExport: ((payload: ExportPayload | null) => void) | null = null;
 
   private constructor(
@@ -271,18 +281,44 @@ export class MdxPreview {
 
   /** Rebuilds the whole document, which is the only way to change its CSP. */
   private reload(): void {
+    void this.rebuild();
+  }
+
+  /**
+   * The rebuild itself, which has to look at the disk before it can write the
+   * page: whether a config file is there decides whether `script-src` names the
+   * webview's own origin, and a document's policy is fixed once it has loaded.
+   *
+   * `documentGeneration` doubles as the race guard. Two reloads in flight - a
+   * keystroke in the settings file while a watcher fires, say - would otherwise
+   * be free to finish in either order and leave the page describing the older
+   * of the two.
+   */
+  private async rebuild(): Promise<void> {
+    const generation = (this.documentGeneration += 1);
     const settings = readSettings(this.document.uri);
+    const configUri = await this.findConfig(settings.config);
+    if (this.disposed || this.documentGeneration !== generation) return;
+
     const customCssUri = this.resolveCustomCss(settings.customCss);
+    this.configUri = configUri;
+    this.configLoads = settings.config.enabled && configUri !== null;
 
     // The stylesheet's folder has to be a resource root before the webview will
-    // read it, and the document may have moved since the panel was created.
+    // read it, and the document may have moved since the panel was created. So
+    // does the config's, for the same reason and with more at stake.
     this.panel.webview.options = {
       enableScripts: true,
-      localResourceRoots: localRootsFor(this.document.uri, this.extensionUri, customCssUri),
+      localResourceRoots: localRootsFor(
+        this.document.uri,
+        this.extensionUri,
+        customCssUri,
+        this.configLoads ? configUri : null
+      ),
     };
     this.watchCustomCss(customCssUri);
+    this.watchConfig(settings.config);
 
-    this.documentGeneration += 1;
     this.webviewReady = false;
     this.lastHighlightedLine = -1;
     this.pendingState = this.buildState();
@@ -293,7 +329,8 @@ export class MdxPreview {
       expressions: settings.expressions,
       title: previewTitle(this.document.uri),
       customCssUri,
-      cacheBust: this.documentGeneration,
+      loadsConfig: this.configLoads,
+      cacheBust: generation,
     });
   }
 
@@ -319,6 +356,8 @@ export class MdxPreview {
     const anchor = this.pendingAnchor;
     this.pendingAnchor = null;
 
+    const configFile = this.configUri ? basename(this.configUri) : null;
+
     return {
       uri: uri.toString(),
       fileName: basename(uri),
@@ -328,7 +367,19 @@ export class MdxPreview {
         ? `${this.panel.webview.asWebviewUri(folder.uri).toString()}/`
         : null,
       expressions: settings.expressions,
-      restriction: settings.restricted ? RESTRICTED_REASON : null,
+      restriction: restrictionMessage({
+        expressions: settings.restricted,
+        // Only a config that is actually sitting there is worth a banner: a
+        // workspace that has none is not having anything withheld from it.
+        configFile: settings.config.restricted ? configFile : null,
+      }),
+      // The generation the page was built with, so a config edited on disk is
+      // re-imported rather than served out of the webview's module cache.
+      configUri:
+        this.configLoads && this.configUri
+          ? `${this.panel.webview.asWebviewUri(this.configUri).toString()}?v=${this.documentGeneration}`
+          : null,
+      configFile: this.configLoads ? configFile : null,
       showFrontmatterHeader: settings.showFrontmatterHeader,
       scrollEditorWithPreview: settings.scrollEditorWithPreview,
       highlightCurrentLine: settings.highlightCurrentLine,
@@ -643,6 +694,106 @@ export class MdxPreview {
   }
 
   /* ---------------------------------------------------------------- *
+   * The workspace's mdxstudio.config.js
+   * ---------------------------------------------------------------- */
+
+  /**
+   * The config file this document should be rendered with, or null.
+   *
+   * Looked for whatever trust says, because the file's *existence* is what the
+   * restricted banner has to report - "this workspace has one and it is not
+   * being loaded" is the message worth showing, and a stat is not an execution.
+   * Whether it is loaded is `ConfigPolicy.enabled`, decided in `policy.ts`.
+   */
+  private async findConfig(policy: ConfigPolicy): Promise<vscode.Uri | null> {
+    const folder = vscode.workspace.getWorkspaceFolder(this.document.uri) ?? null;
+
+    for (const location of configLocations(policy, folder !== null)) {
+      const uri = this.configUriFor(location, folder);
+      try {
+        const stat = await vscode.workspace.fs.stat(uri);
+        if (stat.type !== vscode.FileType.Directory) {
+          if (policy.path) this.reportedBadConfig = null;
+          return uri;
+        }
+      } catch {
+        // Not there. Try the next name - or, for a file the setting named,
+        // fall through and say so, because that one was asked for by name.
+      }
+    }
+
+    if (policy.path && this.reportedBadConfig !== policy.path) {
+      this.reportedBadConfig = policy.path;
+      void vscode.window.showWarningMessage(
+        `MDX Studio: mdxstudio.config points at "${policy.path}", which could not be read.`
+      );
+    }
+    return null;
+  }
+
+  /** Where one candidate from `configLocations` actually lives. */
+  private configUriFor(
+    location: ConfigLocation,
+    folder: vscode.WorkspaceFolder | null
+  ): vscode.Uri {
+    if (location.base === 'absolute') return vscode.Uri.file(location.path);
+    if (location.base === 'folder' && folder) {
+      return vscode.Uri.joinPath(folder.uri, location.path);
+    }
+    const uri = this.document.uri;
+    return vscode.Uri.joinPath(uri.with({ path: uri.path.replace(/\/[^/]*$/, '') }), location.path);
+  }
+
+  /**
+   * Reloads the preview when the config changes on disk.
+   *
+   * Watches the *names*, not the file that was found, so writing an
+   * `mdxstudio.config.js` into a folder that had none brings its components in
+   * without a reopen - and deleting one takes them away again. Running even
+   * while untrusted is deliberate: adding a config there changes the banner,
+   * and a banner that only appears if you reopen the file is a banner nobody
+   * reads.
+   */
+  private watchConfig(policy: ConfigPolicy): void {
+    const target = this.configWatchTarget(policy);
+    const key = target ? `${target.baseUri.toString()}/${target.pattern}` : null;
+    if (key === this.configWatchKey && (key === null || this.configWatcher)) return;
+
+    this.configWatcher?.dispose();
+    this.configWatcher = null;
+    this.configWatchKey = key;
+    if (!target) return;
+
+    const watcher = vscode.workspace.createFileSystemWatcher(target);
+    const onChange = () => {
+      if (!this.disposed) this.reload();
+    };
+    watcher.onDidChange(onChange, null, this.disposables);
+    watcher.onDidCreate(onChange, null, this.disposables);
+    watcher.onDidDelete(onChange, null, this.disposables);
+    this.configWatcher = watcher;
+    this.disposables.push(watcher);
+  }
+
+  private configWatchTarget(policy: ConfigPolicy): vscode.RelativePattern | null {
+    const folder = vscode.workspace.getWorkspaceFolder(this.document.uri) ?? null;
+    const [first] = configLocations(policy, folder !== null);
+    if (!first) return null;
+
+    if (policy.path) {
+      const uri = this.configUriFor(first, folder);
+      return new vscode.RelativePattern(
+        uri.with({ path: uri.path.replace(/\/[^/]*$/, '') }),
+        basename(uri)
+      );
+    }
+
+    // Discovery: both names at once, so neither appearing goes unnoticed.
+    if (!folder) return null;
+    return new vscode.RelativePattern(folder, 'mdxstudio.config.{js,mjs}');
+  }
+
+  /* ---------------------------------------------------------------- *
    * Export
    * ---------------------------------------------------------------- */
 
@@ -768,6 +919,7 @@ export class MdxPreview {
       }
     }
     this.customCssWatcher = null;
+    this.configWatcher = null;
     this.panel.dispose();
   }
 }
@@ -776,7 +928,8 @@ export class MdxPreview {
 function localRootsFor(
   uri: vscode.Uri,
   extensionUri: vscode.Uri,
-  customCssUri?: vscode.Uri | null
+  customCssUri?: vscode.Uri | null,
+  configUri?: vscode.Uri | null
 ): vscode.Uri[] {
   const roots = [extensionUri, uri.with({ path: uri.path.replace(/\/[^/]*$/, '') })];
   for (const folder of vscode.workspace.workspaceFolders ?? []) {
@@ -786,6 +939,12 @@ function localRootsFor(
   // Its folder is granted rather than the CSP being loosened.
   if (customCssUri) {
     roots.push(customCssUri.with({ path: customCssUri.path.replace(/\/[^/]*$/, '') }));
+  }
+  // Same for a config named by absolute path. A config inside the workspace is
+  // already covered by the folder above; this is the only reason the grant is
+  // ever wider than the workspace, and it takes the user typing the path.
+  if (configUri) {
+    roots.push(configUri.with({ path: configUri.path.replace(/\/[^/]*$/, '') }));
   }
   return roots;
 }

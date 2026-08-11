@@ -25,6 +25,14 @@ export type {
   MdxRegistry,
 } from './registry';
 
+export { MDX_CONFIG_FILENAMES, configSource, loadMdxConfig } from './mdxConfig';
+export type {
+  MdxConfigContext,
+  MdxConfigShape,
+  LoadedMdxConfig,
+  LoadMdxConfigOptions,
+} from './mdxConfig';
+
 export {
   parseFrontmatter,
   slugify,

@@ -86,6 +86,24 @@ export const registry = createRendererRegistry(mermaidPlugin, chartsPlugin);
 Passing a component under a built-in name replaces it. Build the registry once at
 module scope: a new registry object on every render re-parses the document.
 
+That is how *your application* gets your components. A reader who is not running
+your application — someone browsing the repository with
+`npx @mdxstudio/cli serve ./docs`, or previewing a file in VS Code with the *MDX
+Studio Preview* extension — reaches the same components through an
+`mdxstudio.config.js` in the folder, whose default export those two hosts turn
+into a registry source and apply after their own built-ins:
+
+```js
+// mdxstudio.config.js
+export default ({ createElement }) => ({
+  components: { Ticket: ({ id }) => createElement('code', null, `#${id}`) },
+  aliases: { Issue: 'Ticket' },
+});
+```
+
+It runs in the browser, so `createElement` rather than JSX and no bare imports.
+The extension will not load one in a workspace you have not trusted.
+
 ### Math
 
 `$inline$` and `$$block$$` are typeset with KaTeX. Nothing to register and

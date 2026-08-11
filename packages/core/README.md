@@ -54,6 +54,23 @@ the registry, which `MdxRenderer` passes to the parser. `parseMdxDocument` and
 the processor and the parse cache are keyed by the identity of the arrays, so a
 fresh array on every render re-parses the document.
 
+### Who consumes a registry
+
+A registry is only useful once something renders with it, and there are three
+somethings:
+
+- **Your own application** passes it to `<MdxRenderer registry={...}>` — see
+  [`@mdxstudio/react`](https://www.npmjs.com/package/@mdxstudio/react).
+- **`npx @mdxstudio/cli serve`** builds one from the served folder's
+  `mdxstudio.config.js`.
+- **The VS Code extension** builds one from the workspace folder's
+  `mdxstudio.config.js`, the same file, when the workspace is trusted.
+
+`loadMdxConfig` and `configSource`, exported here, are what the last two use:
+they turn a config file's default export into an `MdxRegistrySource` and turn
+every way it can be wrong into a message naming the file rather than a throw.
+`MDX_CONFIG_FILENAMES` is the pair of names both of them look for.
+
 ## What the parser understands
 
 Beyond CommonMark, GFM and MDX itself:
@@ -76,8 +93,9 @@ Parsing (`parseMdxDocument`, `parseFrontmatter`, `collectHeadings`,
 `extractHeadings`, `calculateDocumentStats`, `formatMdxParseError`, `countLines`,
 `slugify`), expression evaluation (`evaluateEstreeLiteral`,
 `createFullEstreeEvaluator`), the registry (`defineMdxPlugin`,
-`createMdxRegistry`, `emptyMdxRegistry`), `MdxRenderContext`, `MATH_COMPONENT`
-(the tag name math is rendered through), and the shared types.
+`createMdxRegistry`, `emptyMdxRegistry`), the config-file contract
+(`loadMdxConfig`, `configSource`, `MDX_CONFIG_FILENAMES`), `MdxRenderContext`,
+`MATH_COMPONENT` (the tag name math is rendered through), and the shared types.
 
 ESM only, with TypeScript declarations.
 

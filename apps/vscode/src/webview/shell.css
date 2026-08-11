@@ -90,6 +90,52 @@ body {
 }
 
 /*
+ * A broken mdxstudio.config.js.
+ *
+ * The same shape as the restricted notice and the editor's error colours
+ * instead of its warning ones, because it is a different kind of news: the
+ * document below it is rendering without the components that file was meant to
+ * provide, and the file names itself in the message.
+ */
+.mdxstudio-vscode-config-error {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.9rem;
+  font-family: var(--vscode-font-family);
+  font-size: var(--vscode-font-size, 13px);
+  color: var(--vscode-editorError-foreground, var(--vscode-foreground));
+  background-color: var(
+    --vscode-inputValidation-errorBackground,
+    var(--vscode-editorWidget-background)
+  );
+  border-bottom: 1px solid
+    var(--vscode-inputValidation-errorBorder, var(--vscode-panel-border, transparent));
+}
+
+/*
+ * One component from the workspace's config throwing.
+ *
+ * Inline, because the component it stands in for may have been inline - a
+ * badge in the middle of a sentence - and a block element there would break the
+ * paragraph it was written into.
+ */
+.mdxstudio-vscode-component-error {
+  display: inline-block;
+  padding: 0.05rem 0.45rem;
+  border-radius: var(--mdxstudio-radius-md, 0.375rem);
+  font-family: var(--vscode-editor-font-family, monospace);
+  font-size: 0.9em;
+  color: var(--vscode-editorError-foreground, var(--vscode-foreground));
+  background-color: var(
+    --vscode-inputValidation-errorBackground,
+    var(--vscode-editorWidget-background)
+  );
+  border: 1px solid
+    var(--vscode-inputValidation-errorBorder, var(--vscode-panel-border, transparent));
+}
+
+/*
  * The block the editor's cursor is in.
  *
  * A left-edge rule rather than a background wash: the document already uses

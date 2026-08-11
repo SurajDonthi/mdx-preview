@@ -110,6 +110,7 @@ all three buttons land in the same group.
 | `mdxstudio.updateMode` | `onType` | When the preview re-renders: `onType`, `onSave`, or `manual` (only `MDX Studio: Refresh Preview`). |
 | `mdxstudio.highlightCurrentLine` | `true` | Mark the block the editor's cursor is in with a rule down its left edge. |
 | `mdxstudio.customCss` | `""` | A `.css` file loaded after the shipped stylesheet. Workspace-relative or absolute. |
+| `mdxstudio.config` | `""` | Where to look for `mdxstudio.config.js`. Empty searches the workspace folder; a path names one file; `off` loads none. Never loaded in an untrusted workspace. See below. |
 | `mdxstudio.preview.delay` | `300` | Milliseconds after the last keystroke before re-rendering. `onType` only. |
 | `mdxstudio.preview.showFrontmatterHeader` | `true` | Render YAML frontmatter as a header card. |
 | `mdxstudio.preview.scrollPreviewWithEditor` | `true` | Editor scrolls the preview. |
@@ -152,6 +153,73 @@ policy is not loosened for it — its folder is added to the webview's resource
 roots instead. Editing it reloads the preview. A path that cannot be read is
 reported once, not on every render.
 
+## Your own components
+
+Put an `mdxstudio.config.js` (or `.mjs`) in the workspace folder and the preview
+renders the components it registers. It is the same file, with the same
+contract, that `npx @mdxstudio/cli serve` reads — write it once and both show
+the same document.
+
+```js
+// mdxstudio.config.js, in the root of your repository
+export default ({ createElement }) => ({
+  components: {
+    ReleaseBadge: ({ version, status = 'stable' }) =>
+      createElement(
+        'span',
+        { className: 'release-badge', 'data-status': status },
+        `v${version} · ${status}`
+      ),
+  },
+  aliases: { Badge: 'ReleaseBadge' },
+  codeFences: {},
+  remarkPlugins: [],
+  rehypePlugins: [],
+});
+```
+
+```mdx
+<!-- docs/release.mdx -->
+# Release notes
+
+<ReleaseBadge version="0.1.3" status="stable" />
+
+`<Badge>` is the alias the same file declares:
+
+<Badge version="0.0.9" status="beta" />
+```
+
+The default export is that object or a function returning one, which may be
+`async`. Everything is optional, and a component registered under a name the
+extension already ships replaces it — the config is applied last.
+
+The config runs **in the preview**, because that is where the renderer is: a
+component has to be a real React component in the page, so it cannot be read in
+the extension host and posted across. So it cannot `import` from `node_modules`
+and there is no bundler to compile JSX. Build elements with `createElement`, or
+import a package from a URL (`import confetti from 'https://esm.sh/canvas-confetti'`).
+A remark or rehype plugin is a plain function and usually needs nothing at all.
+The function form is called with `{ React, createElement, components }`, where
+`components` is everything already registered.
+
+Editing the file reloads the preview. If it throws, fails to import, or declares
+an alias pointing at nothing, the document still renders with the built-in
+components and a line at the top of the preview names the file and the reason.
+A single component that throws while rendering becomes a marker where it would
+have been, and the rest of the document is unaffected.
+
+`mdxstudio.config` points somewhere else — `.vscode/preview.config.js`, or an
+absolute path to a config shared between repositories — or turns the whole thing
+off with `off`.
+
+**In a multi-root workspace each folder gets its own.** A document is rendered
+with the config of the workspace folder it lives in, and never with a sibling
+folder's: adding a folder to a workspace must not change how an unrelated
+folder's documents render. A file opened without a workspace folder gets no
+config unless `mdxstudio.config` names one.
+
+**None of this happens in a workspace you have not trusted.** See below.
+
 ## Outline and breadcrumbs
 
 `.mdx` files get a heading tree in the outline view and in the breadcrumbs. The
@@ -170,7 +238,7 @@ from a layout pass. The shipped stylesheet is inlined, the editor theme's
 resolved colours travel with it, and local images become `data:` URIs, so the
 file opens in any browser with no VS Code and no network.
 
-## `unsafe-eval`, workspace trust, and why the defaults are what they are
+## `unsafe-eval`, config files, workspace trust, and why the defaults are what they are
 
 A webview enforces exactly the content security policy its meta tag declares.
 `@mdxstudio/core`'s full expression evaluator serialises each `{...}` back to
@@ -199,13 +267,50 @@ page is rebuilt without `'unsafe-eval'`. Every attribute in this repository's
 documents still works; what you lose is expressions in the document *body*
 (`{2 + 2}`, `{items.map(...)}`).
 
-Nothing else is granted, in either mode: `default-src 'none'`, no `connect-src`
-at all, scripts must carry the nonce, and images, fonts and media come from
+`mdxstudio.config.js` answers to the same rule, more bluntly. Loading one runs a
+module of the workspace's own code inside the preview, and unlike an expression
+there is no reduced form of that to fall back to — so an untrusted workspace
+loads **none at all**, whatever `mdxstudio.config` says, including a value
+committed into the repository's own `.vscode/settings.json`. The file is still
+*looked for*, because a stat is not an execution and "this workspace has one and
+it is not being loaded" is the line worth showing; that is what the banner says,
+naming the file. Granting trust loads it immediately.
+
+### What the config costs the policy, exactly
+
+One source, in one directive, on the pages that actually load a config:
+
+```
+script-src 'nonce-<random>' <webview.cspSource>
+```
+
+`webview.cspSource` is the origin the preview's own bundle and the user's custom
+stylesheet are already served from, narrowed further by `localResourceRoots` to
+the extension's folder, the document's folder and the workspace folders. It is
+there because the config is a module on disk and the preview imports it as one:
+without the origin in `script-src` that import is refused. It also means a config
+split across several files works, because its own relative imports come from the
+same origin.
+
+It is added **only** when a config file was found *and* the workspace is trusted
+*and* the setting did not turn it off. A trusted workspace with no config file
+gets today's policy unchanged, and an untrusted workspace always does.
+
+The alternatives were each worse. `blob:` or `data:` in `script-src` is a
+general-purpose code channel — `'unsafe-eval'` by another name — and would let
+anything in the page assemble a script. Relying on the nonce being inherited by
+a dynamic import is a bet on the Chromium build inside whichever VS Code the
+reader is running, and this extension supports 1.85 onwards.
+
+Nothing else is granted, in any mode: `default-src 'none'`, no `connect-src` at
+all, no `'unsafe-inline'` for scripts, and images, fonts and media come from
 `webview.cspSource`, `https:` or `data:`. A custom stylesheet is a `<link>`
 through `asWebviewUri`, which the policy already covers — its folder is added to
-the webview's resource roots rather than the policy being widened.
+the webview's resource roots rather than the policy being widened, and a config
+named by absolute path is granted the same way.
 
-`tests/policy.test.ts` pins all of the above down.
+`tests/policy.test.ts` pins all of the above down, including the setting × trust
+matrix and the exact shape of `script-src` in each case.
 
 ## Packaging
 

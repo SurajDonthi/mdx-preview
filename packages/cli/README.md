@@ -60,6 +60,11 @@ A folder may contain an `mdxstudio.config.js` (or `.mjs`). Without one nothing
 changes; with one, its default export adds components, aliases, code fences and
 unified plugins to the renderer.
 
+It is the same file the *MDX Studio Preview* extension for VS Code reads out of
+a workspace folder — same two names, same default export, same
+`{ React, createElement, components }` argument — so a repository writes it once
+and its documents look the same on the command line and in the editor.
+
 ```js
 // docs/mdxstudio.config.js
 export default ({ createElement }) => ({
@@ -95,6 +100,10 @@ fails to import, or declares an alias pointing at nothing, the documents still
 render with the built-in components and the page shows one line naming the file
 and the reason.
 
+One difference worth knowing if you also use the extension: the CLI loads the
+config for any folder you point it at, because you typed the path. VS Code will
+not load one in a workspace you have not trusted.
+
 ## Expressions
 
 MDX documents can contain JavaScript expressions, and rendering them means
@@ -112,6 +121,7 @@ once `--host` puts it on your network.
 ## Related
 
 - [`@mdxstudio/react`](https://www.npmjs.com/package/@mdxstudio/react) — the renderer this is built on
+- [*MDX Studio Preview*](https://marketplace.visualstudio.com/items?itemName=surajdonthi.mdxstudio-vscode) — the same renderer in VS Code, reading the same `mdxstudio.config.js`
 - [`@mdxstudio/agent-skill`](https://www.npmjs.com/package/@mdxstudio/agent-skill) — teach a coding agent to write documents in this flavour
 
 MIT.

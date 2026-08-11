@@ -4,8 +4,10 @@ import type { MdxExpressionMode } from '@mdxstudio/core';
 import {
   configuredExpressionMode,
   isRestrictedByTrust,
+  resolveConfigPolicy,
   resolveExpressionMode,
 } from './policy';
+import type { ConfigPolicy } from './policy';
 
 /** When the preview re-renders. See `mdxstudio.updateMode`. */
 export type MdxUpdateMode = 'onType' | 'onSave' | 'manual';
@@ -25,6 +27,8 @@ export interface MdxPreviewSettings {
   highlightCurrentLine: boolean;
   /** `mdxstudio.customCss` verbatim: empty, workspace-relative or absolute. */
   customCss: string;
+  /** `mdxstudio.config` after trust has had its say. See `policy.ts`. */
+  config: ConfigPolicy;
 }
 
 /** Whether opening an `.mdx` file should open the preview beside it. */
@@ -58,6 +62,7 @@ export function readSettings(resource?: vscode.Uri): MdxPreviewSettings {
     scrollEditorWithPreview: config.get<boolean>('preview.scrollEditorWithPreview', true),
     highlightCurrentLine: config.get<boolean>('highlightCurrentLine', true),
     customCss: (config.get<string>('customCss', '') ?? '').trim(),
+    config: resolveConfigPolicy(config.get<string>('config', ''), isTrusted),
   };
 }
 
@@ -77,7 +82,9 @@ function clamp(value: number, low: number, high: number): number {
  * `mdxstudio.expressions` decides whether the CSP grants `'unsafe-eval'`, and a
  * CSP is fixed for the lifetime of a document. `mdxstudio.customCss` is a
  * `<link>` in the same `<head>`, and changing it also changes which folders the
- * webview is allowed to read. Callers rebuild the HTML when this returns true.
+ * webview is allowed to read. `mdxstudio.config` does both: it decides whether
+ * `script-src` names the webview's own origin, and which file may be imported
+ * from it. Callers rebuild the HTML when this returns true.
  */
 export function affectsPreviewDocument(
   event: vscode.ConfigurationChangeEvent,
@@ -85,6 +92,7 @@ export function affectsPreviewDocument(
 ): boolean {
   return (
     event.affectsConfiguration('mdxstudio.expressions', resource) ||
-    event.affectsConfiguration('mdxstudio.customCss', resource)
+    event.affectsConfiguration('mdxstudio.customCss', resource) ||
+    event.affectsConfiguration('mdxstudio.config', resource)
   );
 }
