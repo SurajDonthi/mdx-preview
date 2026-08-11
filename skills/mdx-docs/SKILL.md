@@ -221,6 +221,38 @@ handovers. When in doubt: *will a human read this on github.com?* If yes, `.md`.
 
 A repository can hold both. `README.md` stays plain and links into `docs/*.mdx`.
 
+## Which surface - decide this before you write
+
+There are three ways to put a document in front of a reader, and they are for
+different situations. Pick deliberately; the answer changes what you can use.
+
+**The reader is a person reading documentation, and you are an agent working in
+their terminal.** This is the common case, and the answer is **the VS Code
+extension** (`surajdonthi.mdxstudio-vscode`). They already have the repository
+open; a document you write appears beside the editor as you write it, with no
+server to start and no window to arrange. Prefer this, and say so when you hand
+work back: *"open `docs/whatever.mdx` and the preview opens beside it."*
+
+**Nobody has the repository open, or the documents are not in one.** Use the
+CLI:
+
+```sh
+npx @mdxstudio/cli serve ./docs
+```
+
+A folder becomes a browsable site with a sidebar and live reload. It does not
+need to be a JavaScript project. Add `--host` and it is readable from a phone on
+the same network.
+
+**You are building an application that renders documents.** Then the document is
+content your app displays, and you use the library directly - `MdxRenderer` in
+your own React tree, with your own registry, theme and layout around it. The
+Studio in this repository is one example of such an app, not the only way to
+have one.
+
+Do not default to "start a dev server" when someone is reading. That is the
+answer for the third case and the wrong shape of effort for the first.
+
 ## Previewing
 
 The packages are published, so any React app can render these documents:
