@@ -1,0 +1,61 @@
+{
+  "name": "@mdxstudio/tasks",
+  "version": "0.2.2",
+  "type": "module",
+  "description": "TaskBoard component and ```tasks fence plugin for mdxstudio: turns an implementation-plan checklist into lanes, a kanban board and a ready-now list.",
+  "keywords": [
+    "mdx",
+    "tasks",
+    "checklist",
+    "kanban",
+    "board",
+    "react",
+    "markdown",
+    "planning"
+  ],
+  "license": "MIT",
+  "author": "Suraj Donthi",
+  "homepage": "https://github.com/SurajDonthi/mdx-preview/tree/main/packages/tasks#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SurajDonthi/mdx-preview.git",
+    "directory": "packages/tasks"
+  },
+  "bugs": {
+    "url": "https://github.com/SurajDonthi/mdx-preview/issues"
+  },
+  "sideEffects": [
+    "**/*.css"
+  ],
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./styles.css": "./dist/styles.css",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsup",
+    "clean": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\""
+  },
+  "dependencies": {
+    "lucide-react": "^0.546.0"
+  },
+  "peerDependencies": {
+    "@mdxstudio/core": "^0.2.2",
+    "react": "^19.0.0"
+  }
+}

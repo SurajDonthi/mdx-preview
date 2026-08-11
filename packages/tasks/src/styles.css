@@ -1,0 +1,560 @@
+/*
+ * @mdxstudio/tasks — the board's chrome, lanes and cards.
+ *
+ *   import '@mdxstudio/tasks/styles.css';
+ *
+ * Theme comes from `data-mdxstudio-theme` on an ancestor, never from
+ * `prefers-color-scheme`: the application decides, the operating system does
+ * not. The five statuses each own one accent property, and everything that
+ * shows a status — the icon, the lane rule, the card edge — reads it from the
+ * card's `data-status`, so retinting a status is one line.
+ *
+ * The token defaults repeat the ones in `@mdxstudio/react/styles.css` so this
+ * sheet also stands alone. Loading both is harmless: the values are identical.
+ */
+/* Pins the reset layer's position; see @mdxstudio/react/styles.css. */
+@layer mdxstudio-reset;
+
+
+:where(:root),
+:where([data-mdxstudio-theme='light']) {
+  --mdxstudio-tasks-bg: color-mix(in oklab, #fff 90%, transparent);
+  --mdxstudio-tasks-border: oklch(92.9% 0.013 255.508); /* slate-200 */
+  --mdxstudio-tasks-header-bg: oklch(98.4% 0.003 247.858); /* slate-50 */
+  --mdxstudio-tasks-title-fg: oklch(27.9% 0.041 260.031); /* slate-800 */
+  --mdxstudio-tasks-subtitle-fg: oklch(55.4% 0.046 257.417); /* slate-500 */
+  --mdxstudio-tasks-fg: oklch(20.8% 0.042 265.755); /* slate-900 */
+  --mdxstudio-tasks-muted-fg: oklch(55.4% 0.046 257.417); /* slate-500 */
+  --mdxstudio-tasks-faint-fg: oklch(70.4% 0.04 256.788); /* slate-400 */
+  --mdxstudio-tasks-card-bg: #fff;
+  --mdxstudio-tasks-card-border: oklch(92.9% 0.013 255.508); /* slate-200 */
+  --mdxstudio-tasks-chip-bg: oklch(96.8% 0.007 247.896); /* slate-100 */
+  --mdxstudio-tasks-chip-fg: oklch(37.2% 0.044 257.287); /* slate-700 */
+  --mdxstudio-tasks-track-bg: oklch(92.9% 0.013 255.508); /* slate-200 */
+  --mdxstudio-tasks-accent: oklch(51.1% 0.262 276.966); /* indigo-600 */
+  --mdxstudio-tasks-ready-bg: oklch(95% 0.052 163.051); /* emerald-100 */
+  --mdxstudio-tasks-ready-border: oklch(90.5% 0.093 164.15); /* emerald-200 */
+  --mdxstudio-tasks-ready-fg: oklch(43.2% 0.095 166.913); /* emerald-800 */
+
+  --mdxstudio-tasks-status-in-progress: oklch(58.5% 0.233 277.117); /* indigo-500 */
+  --mdxstudio-tasks-status-todo: oklch(70.4% 0.04 256.788); /* slate-400 */
+  --mdxstudio-tasks-status-blocked: oklch(58.6% 0.222 17.585); /* rose-500 */
+  --mdxstudio-tasks-status-deferred: oklch(66.6% 0.179 58.318); /* amber-500 */
+  --mdxstudio-tasks-status-done: oklch(59.6% 0.145 163.225); /* emerald-500 */
+}
+
+:where([data-mdxstudio-theme='dark']) {
+  --mdxstudio-tasks-bg: color-mix(in oklab, oklch(12.9% 0.042 264.695) 90%, transparent);
+  --mdxstudio-tasks-border: oklch(27.9% 0.041 260.031); /* slate-800 */
+  --mdxstudio-tasks-header-bg: oklch(20.8% 0.042 265.755); /* slate-900 */
+  --mdxstudio-tasks-title-fg: oklch(92.9% 0.013 255.508); /* slate-200 */
+  --mdxstudio-tasks-subtitle-fg: oklch(70.4% 0.04 256.788); /* slate-400 */
+  --mdxstudio-tasks-fg: oklch(96.8% 0.007 247.896); /* slate-100 */
+  --mdxstudio-tasks-muted-fg: oklch(70.4% 0.04 256.788); /* slate-400 */
+  --mdxstudio-tasks-faint-fg: oklch(55.4% 0.046 257.417); /* slate-500 */
+  --mdxstudio-tasks-card-bg: oklch(20.8% 0.042 265.755); /* slate-900 */
+  --mdxstudio-tasks-card-border: oklch(27.9% 0.041 260.031); /* slate-800 */
+  --mdxstudio-tasks-chip-bg: oklch(27.9% 0.041 260.031); /* slate-800 */
+  --mdxstudio-tasks-chip-fg: oklch(86.9% 0.022 252.894); /* slate-300 */
+  --mdxstudio-tasks-track-bg: oklch(27.9% 0.041 260.031); /* slate-800 */
+  --mdxstudio-tasks-accent: oklch(67.3% 0.182 276.935); /* indigo-400 */
+  --mdxstudio-tasks-ready-bg: color-mix(in oklab, oklch(59.6% 0.145 163.225) 18%, transparent);
+  --mdxstudio-tasks-ready-border: color-mix(in oklab, oklch(59.6% 0.145 163.225) 40%, transparent);
+  --mdxstudio-tasks-ready-fg: oklch(84.5% 0.143 164.978); /* emerald-300 */
+
+  --mdxstudio-tasks-status-in-progress: oklch(67.3% 0.182 276.935); /* indigo-400 */
+  --mdxstudio-tasks-status-todo: oklch(55.4% 0.046 257.417); /* slate-500 */
+  --mdxstudio-tasks-status-blocked: oklch(64.5% 0.246 16.439); /* rose-400 */
+  --mdxstudio-tasks-status-deferred: oklch(76.9% 0.188 70.08); /* amber-400 */
+  --mdxstudio-tasks-status-done: oklch(69.6% 0.17 162.48); /* emerald-400 */
+}
+
+:where(:root),
+:where([data-mdxstudio-theme]) {
+  --mdxstudio-space-1: 0.25rem;
+  --mdxstudio-space-1-5: 0.375rem;
+  --mdxstudio-space-2: 0.5rem;
+  --mdxstudio-space-2-5: 0.625rem;
+  --mdxstudio-space-3: 0.75rem;
+  --mdxstudio-space-4: 1rem;
+  --mdxstudio-space-6: 1.5rem;
+  --mdxstudio-radius-lg: 0.5rem;
+  --mdxstudio-radius-xl: 0.75rem;
+  --mdxstudio-radius-2xl: 1rem;
+  --mdxstudio-radius-full: 9999px;
+  --mdxstudio-text-2xs: 0.625rem;
+  --mdxstudio-text-2xs-plus: 0.6875rem;
+  --mdxstudio-text-xs: 0.75rem;
+  --mdxstudio-text-sm: 0.875rem;
+  --mdxstudio-weight-medium: 500;
+  --mdxstudio-weight-semibold: 600;
+  --mdxstudio-tracking-wider: 0.05em;
+  --mdxstudio-leading-snug: 1.375;
+  --mdxstudio-shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --mdxstudio-blur-md: 12px;
+  --mdxstudio-transition-duration: 150ms;
+  --mdxstudio-transition-timing: cubic-bezier(0.4, 0, 0.2, 1);
+  --mdxstudio-font-mono:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New',
+    monospace;
+}
+
+/* ------------------------------------------------------------------ *
+ * Shell
+ * ------------------------------------------------------------------ */
+
+.mdxstudio-tasks {
+  margin-block: var(--mdxstudio-space-6);
+  border: 1px solid var(--mdxstudio-tasks-border);
+  border-radius: var(--mdxstudio-radius-2xl);
+  background-color: var(--mdxstudio-tasks-bg);
+  backdrop-filter: blur(var(--mdxstudio-blur-md));
+  -webkit-backdrop-filter: blur(var(--mdxstudio-blur-md));
+  color: var(--mdxstudio-tasks-fg);
+  overflow: hidden;
+}
+
+.mdxstudio-tasks__empty {
+  display: flex;
+  align-items: center;
+  gap: var(--mdxstudio-space-2);
+  padding: var(--mdxstudio-space-4);
+  font-size: var(--mdxstudio-text-xs);
+  color: var(--mdxstudio-tasks-muted-fg);
+}
+
+.mdxstudio-tasks__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--mdxstudio-space-2) var(--mdxstudio-space-3);
+  padding: var(--mdxstudio-space-3) var(--mdxstudio-space-4);
+  border-bottom: 1px solid var(--mdxstudio-tasks-border);
+  background-color: var(--mdxstudio-tasks-header-bg);
+}
+
+.mdxstudio-tasks__heading {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--mdxstudio-space-1-5);
+}
+
+.mdxstudio-tasks__board-title {
+  font-size: var(--mdxstudio-text-sm);
+  font-weight: var(--mdxstudio-weight-semibold);
+  color: var(--mdxstudio-tasks-title-fg);
+}
+
+.mdxstudio-tasks__subtitle,
+.mdxstudio-tasks__summary {
+  font-size: var(--mdxstudio-text-2xs-plus);
+  color: var(--mdxstudio-tasks-subtitle-fg);
+}
+
+.mdxstudio-tasks__summary {
+  margin-inline-start: auto;
+  font-variant-numeric: tabular-nums;
+}
+
+.mdxstudio-tasks__bar {
+  display: block;
+  flex: 1 1 100%;
+  height: 4px;
+  border-radius: var(--mdxstudio-radius-full);
+  background-color: var(--mdxstudio-tasks-track-bg);
+  overflow: hidden;
+}
+
+.mdxstudio-tasks__bar-fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background-color: var(--mdxstudio-tasks-status-done);
+  transition: width var(--mdxstudio-transition-duration) var(--mdxstudio-transition-timing);
+}
+
+/* ------------------------------------------------------------------ *
+ * Controls
+ * ------------------------------------------------------------------ */
+
+.mdxstudio-tasks__controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--mdxstudio-space-2);
+  padding: var(--mdxstudio-space-2) var(--mdxstudio-space-4);
+  border-bottom: 1px solid var(--mdxstudio-tasks-border);
+}
+
+.mdxstudio-tasks__views {
+  display: inline-flex;
+  border: 1px solid var(--mdxstudio-tasks-border);
+  border-radius: var(--mdxstudio-radius-lg);
+  overflow: hidden;
+}
+
+.mdxstudio-tasks__view {
+  padding: var(--mdxstudio-space-1) var(--mdxstudio-space-2-5);
+  font-size: var(--mdxstudio-text-2xs-plus);
+  font-weight: var(--mdxstudio-weight-medium);
+  color: var(--mdxstudio-tasks-muted-fg);
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+.mdxstudio-tasks__view[aria-pressed='true'] {
+  color: #fff;
+  background-color: var(--mdxstudio-tasks-accent);
+}
+
+.mdxstudio-tasks__search,
+.mdxstudio-tasks__select {
+  padding: var(--mdxstudio-space-1) var(--mdxstudio-space-2);
+  font-size: var(--mdxstudio-text-2xs-plus);
+  color: inherit;
+  background-color: var(--mdxstudio-tasks-card-bg);
+  border: 1px solid var(--mdxstudio-tasks-border);
+  border-radius: var(--mdxstudio-radius-lg);
+}
+
+.mdxstudio-tasks__search {
+  flex: 1 1 8rem;
+  min-width: 6rem;
+}
+
+/* ------------------------------------------------------------------ *
+ * Ready now
+ * ------------------------------------------------------------------ */
+
+.mdxstudio-tasks__ready {
+  margin: var(--mdxstudio-space-3) var(--mdxstudio-space-4) 0;
+  padding: var(--mdxstudio-space-2-5) var(--mdxstudio-space-3);
+  border: 1px solid var(--mdxstudio-tasks-ready-border);
+  border-radius: var(--mdxstudio-radius-xl);
+  background-color: var(--mdxstudio-tasks-ready-bg);
+}
+
+.mdxstudio-tasks__ready-head {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--mdxstudio-space-1-5);
+  font-size: var(--mdxstudio-text-2xs);
+  font-weight: var(--mdxstudio-weight-semibold);
+  letter-spacing: var(--mdxstudio-tracking-wider);
+  text-transform: uppercase;
+  color: var(--mdxstudio-tasks-ready-fg);
+}
+
+.mdxstudio-tasks__ready-list {
+  margin: var(--mdxstudio-space-1-5) 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--mdxstudio-space-1);
+}
+
+.mdxstudio-tasks__ready-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--mdxstudio-space-1-5);
+  font-size: var(--mdxstudio-text-xs);
+  line-height: var(--mdxstudio-leading-snug);
+}
+
+/* ------------------------------------------------------------------ *
+ * Groups, lanes and columns
+ * ------------------------------------------------------------------ */
+
+.mdxstudio-tasks__group {
+  padding: var(--mdxstudio-space-3) var(--mdxstudio-space-4);
+}
+
+.mdxstudio-tasks__group + .mdxstudio-tasks__group {
+  border-top: 1px solid var(--mdxstudio-tasks-border);
+}
+
+.mdxstudio-tasks__group-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--mdxstudio-space-2);
+  margin-bottom: var(--mdxstudio-space-2);
+}
+
+.mdxstudio-tasks__group-title {
+  margin: 0;
+  font-size: var(--mdxstudio-text-sm);
+  font-weight: var(--mdxstudio-weight-semibold);
+  color: var(--mdxstudio-tasks-title-fg);
+}
+
+.mdxstudio-tasks__group-count {
+  margin-inline-start: auto;
+  font-size: var(--mdxstudio-text-2xs-plus);
+  font-variant-numeric: tabular-nums;
+  color: var(--mdxstudio-tasks-muted-fg);
+}
+
+.mdxstudio-tasks__note {
+  margin: 0 0 var(--mdxstudio-space-2);
+  font-size: var(--mdxstudio-text-xs);
+  line-height: var(--mdxstudio-leading-snug);
+  color: var(--mdxstudio-tasks-muted-fg);
+}
+
+.mdxstudio-tasks__lane + .mdxstudio-tasks__lane {
+  margin-top: var(--mdxstudio-space-3);
+}
+
+.mdxstudio-tasks__lane-title {
+  display: flex;
+  align-items: center;
+  gap: var(--mdxstudio-space-1-5);
+  margin: 0 0 var(--mdxstudio-space-1-5);
+  font-size: var(--mdxstudio-text-2xs);
+  font-weight: var(--mdxstudio-weight-semibold);
+  letter-spacing: var(--mdxstudio-tracking-wider);
+  text-transform: uppercase;
+  color: var(--mdxstudio-tasks-muted-fg);
+}
+
+.mdxstudio-tasks__lane-count {
+  padding: 0 var(--mdxstudio-space-1-5);
+  border-radius: var(--mdxstudio-radius-full);
+  background-color: var(--mdxstudio-tasks-chip-bg);
+  color: var(--mdxstudio-tasks-chip-fg);
+  font-variant-numeric: tabular-nums;
+}
+
+.mdxstudio-tasks__columns {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: var(--mdxstudio-space-3);
+  padding: var(--mdxstudio-space-3) var(--mdxstudio-space-4);
+}
+
+.mdxstudio-tasks__disclosure {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--mdxstudio-space-1);
+  padding: var(--mdxstudio-space-1) 0;
+  font-size: var(--mdxstudio-text-2xs);
+  font-weight: var(--mdxstudio-weight-semibold);
+  letter-spacing: var(--mdxstudio-tracking-wider);
+  text-transform: uppercase;
+  color: var(--mdxstudio-tasks-muted-fg);
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+.mdxstudio-tasks__none {
+  margin: 0;
+  padding: var(--mdxstudio-space-4);
+  font-size: var(--mdxstudio-text-xs);
+  color: var(--mdxstudio-tasks-muted-fg);
+}
+
+/* ------------------------------------------------------------------ *
+ * Cards
+ * ------------------------------------------------------------------ */
+
+.mdxstudio-tasks__cards {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--mdxstudio-space-1-5);
+}
+
+.mdxstudio-tasks__card {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--mdxstudio-space-2);
+  padding: var(--mdxstudio-space-2) var(--mdxstudio-space-2-5);
+  border: 1px solid var(--mdxstudio-tasks-card-border);
+  border-inline-start: 2px solid var(--mdxstudio-tasks-status-todo);
+  border-radius: var(--mdxstudio-radius-lg);
+  background-color: var(--mdxstudio-tasks-card-bg);
+  box-shadow: var(--mdxstudio-shadow-xs);
+}
+
+.mdxstudio-tasks__card[data-status='in-progress'] {
+  border-inline-start-color: var(--mdxstudio-tasks-status-in-progress);
+}
+.mdxstudio-tasks__card[data-status='blocked'] {
+  border-inline-start-color: var(--mdxstudio-tasks-status-blocked);
+}
+.mdxstudio-tasks__card[data-status='deferred'] {
+  border-inline-start-color: var(--mdxstudio-tasks-status-deferred);
+}
+.mdxstudio-tasks__card[data-status='done'] {
+  border-inline-start-color: var(--mdxstudio-tasks-status-done);
+}
+
+.mdxstudio-tasks__card[data-status='done'] .mdxstudio-tasks__title {
+  color: var(--mdxstudio-tasks-muted-fg);
+  text-decoration: line-through;
+}
+
+.mdxstudio-tasks__card-body {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.mdxstudio-tasks__card-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--mdxstudio-space-1-5);
+  font-size: var(--mdxstudio-text-xs);
+  line-height: var(--mdxstudio-leading-snug);
+}
+
+.mdxstudio-tasks__icon {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  margin-top: 1px;
+  color: var(--mdxstudio-tasks-status-todo);
+}
+
+.mdxstudio-tasks__card[data-status='in-progress'] > .mdxstudio-tasks__icon,
+.mdxstudio-tasks__lane[data-status='in-progress'] .mdxstudio-tasks__lane-title > .mdxstudio-tasks__icon,
+.mdxstudio-tasks__column[data-status='in-progress'] .mdxstudio-tasks__lane-title > .mdxstudio-tasks__icon {
+  color: var(--mdxstudio-tasks-status-in-progress);
+}
+.mdxstudio-tasks__card[data-status='blocked'] > .mdxstudio-tasks__icon,
+.mdxstudio-tasks__lane[data-status='blocked'] .mdxstudio-tasks__lane-title > .mdxstudio-tasks__icon,
+.mdxstudio-tasks__column[data-status='blocked'] .mdxstudio-tasks__lane-title > .mdxstudio-tasks__icon {
+  color: var(--mdxstudio-tasks-status-blocked);
+}
+.mdxstudio-tasks__card[data-status='deferred'] > .mdxstudio-tasks__icon,
+.mdxstudio-tasks__lane[data-status='deferred'] .mdxstudio-tasks__lane-title > .mdxstudio-tasks__icon,
+.mdxstudio-tasks__column[data-status='deferred'] .mdxstudio-tasks__lane-title > .mdxstudio-tasks__icon {
+  color: var(--mdxstudio-tasks-status-deferred);
+}
+.mdxstudio-tasks__card[data-status='done'] > .mdxstudio-tasks__icon,
+.mdxstudio-tasks__lane[data-status='done'] .mdxstudio-tasks__lane-title > .mdxstudio-tasks__icon,
+.mdxstudio-tasks__column[data-status='done'] .mdxstudio-tasks__lane-title > .mdxstudio-tasks__icon {
+  color: var(--mdxstudio-tasks-status-done);
+}
+
+.mdxstudio-tasks__icon-12 {
+  width: 12px;
+  height: 12px;
+}
+
+.mdxstudio-tasks__icon-14 {
+  width: 14px;
+  height: 14px;
+}
+
+.mdxstudio-tasks__icon-16 {
+  width: 16px;
+  height: 16px;
+}
+
+.mdxstudio-tasks__icon-accent {
+  color: var(--mdxstudio-tasks-accent);
+}
+
+.mdxstudio-tasks__id {
+  flex: none;
+  font-family: var(--mdxstudio-font-mono);
+  font-size: var(--mdxstudio-text-2xs-plus);
+  font-weight: var(--mdxstudio-weight-semibold);
+  color: var(--mdxstudio-tasks-accent);
+}
+
+.mdxstudio-tasks__title {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.mdxstudio-tasks__title code {
+  padding: 0 0.25em;
+  border-radius: var(--mdxstudio-radius-lg);
+  font-family: var(--mdxstudio-font-mono);
+  font-size: 0.9em;
+  background-color: var(--mdxstudio-tasks-chip-bg);
+}
+
+.mdxstudio-tasks__flag {
+  padding: 0 var(--mdxstudio-space-1-5);
+  border: 1px solid var(--mdxstudio-tasks-ready-border);
+  border-radius: var(--mdxstudio-radius-full);
+  background-color: var(--mdxstudio-tasks-ready-bg);
+  color: var(--mdxstudio-tasks-ready-fg);
+  font-size: var(--mdxstudio-text-2xs);
+  font-weight: var(--mdxstudio-weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: var(--mdxstudio-tracking-wider);
+}
+
+.mdxstudio-tasks__meta,
+.mdxstudio-tasks__needs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--mdxstudio-space-1) var(--mdxstudio-space-1-5);
+  margin-top: var(--mdxstudio-space-1);
+  font-size: var(--mdxstudio-text-2xs-plus);
+  color: var(--mdxstudio-tasks-muted-fg);
+}
+
+.mdxstudio-tasks__owner,
+.mdxstudio-tasks__tag,
+.mdxstudio-tasks__meta-group,
+.mdxstudio-tasks__need {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--mdxstudio-space-1);
+  padding: 0 var(--mdxstudio-space-1-5);
+  border-radius: var(--mdxstudio-radius-full);
+  background-color: var(--mdxstudio-tasks-chip-bg);
+  color: var(--mdxstudio-tasks-chip-fg);
+}
+
+.mdxstudio-tasks__needs-label {
+  text-transform: uppercase;
+  letter-spacing: var(--mdxstudio-tracking-wider);
+  font-size: var(--mdxstudio-text-2xs);
+  color: var(--mdxstudio-tasks-faint-fg);
+}
+
+.mdxstudio-tasks__need[data-met='false'] {
+  color: var(--mdxstudio-tasks-status-blocked);
+}
+
+.mdxstudio-tasks__need-id {
+  font-family: var(--mdxstudio-font-mono);
+  font-weight: var(--mdxstudio-weight-medium);
+}
+
+.mdxstudio-tasks__need-title {
+  color: var(--mdxstudio-tasks-muted-fg);
+}
+
+.mdxstudio-tasks__link {
+  color: var(--mdxstudio-tasks-accent);
+  text-decoration: underline;
+}
+
+/* ------------------------------------------------------------------ *
+ * The PDF pass: flat, expanded, and printed on white
+ * ------------------------------------------------------------------ */
+
+.mdxstudio-tasks--pdf {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.mdxstudio-tasks--pdf .mdxstudio-tasks__card {
+  box-shadow: none;
+  break-inside: avoid;
+}

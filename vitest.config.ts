@@ -16,6 +16,7 @@ const alias = {
   '@mdxstudio/mermaid': pkg('mermaid'),
   '@mdxstudio/charts': pkg('charts'),
   '@mdxstudio/flow': pkg('flow'),
+  '@mdxstudio/tasks': pkg('tasks'),
   '@mdxstudio/pdf': pkg('pdf'),
 };
 
@@ -45,6 +46,17 @@ export default defineConfig({
           // which only runs client-side.
           environment: 'jsdom',
           include: ['tests/**/*.test.tsx'],
+        },
+      },
+      {
+        extends: true,
+        test: {
+          name: 'tasks',
+          root: path.resolve(root, 'packages/tasks'),
+          // The parser is environment-free, but the board is mounted for real
+          // in the same project, and a component test needs a DOM.
+          environment: 'jsdom',
+          include: ['tests/**/*.test.ts', 'tests/**/*.test.tsx'],
         },
       },
       {
