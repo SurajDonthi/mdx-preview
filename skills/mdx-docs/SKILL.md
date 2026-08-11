@@ -135,6 +135,42 @@ routes through *one* architecture - it draws the graph once and lets the reader
 light up a named path at a time, which three near-identical Mermaid flowcharts
 do badly.
 
+A whole set of diagrams fits in one `<Tabs>` block. Inactive tabs are unmounted
+rather than hidden, so each diagram lays itself out at full width when selected
+- there is no zero-width measurement problem to work around. Leave blank lines
+around a fence inside a `<Tab>` or it stays literal text.
+
+## Math
+
+TeX between dollar signs. `$E = mc^2$` inline, `$$` on its own lines for a
+centred block. KaTeX does the typesetting and loads only for a document that
+actually contains math.
+
+Two things worth knowing:
+
+- **Braces inside math are TeX, not MDX.** `$\frac{a}{b}$` is safe. Math is the
+  one place in a document where a bare brace is not an expression.
+- **A dollar sign in prose stays a dollar sign.** "it costs $5 and $10" renders
+  as written; a single-dollar span only reads as math when it opens and closes
+  on a non-space and is not followed by a digit. `\$` escapes one outright.
+
+## Alerts
+
+GitHub's alert blockquotes work, and become the same `<Callout>` component:
+
+```md
+> [!NOTE]
+> Useful information.
+```
+
+`NOTE`, `TIP`, `IMPORTANT`, `WARNING` and `CAUTION`. The marker has to be alone
+on its first line, and anything else - `> [!MAYBE]` - stays an ordinary
+blockquote, exactly as on GitHub.
+
+Prefer `<Callout>` when the document only ever lives here: it takes any title
+you want rather than the five fixed ones. Prefer the alert syntax when the same
+file also has to render on GitHub.
+
 ## House style
 
 Apply this unless the project says otherwise, so documents read the same
@@ -207,10 +243,22 @@ Add `@mdxstudio/mermaid`, `@mdxstudio/charts` and `@mdxstudio/flow` and pass
 `mermaidPlugin, chartsPlugin, flowPlugin` to `createRendererRegistry(...)` for
 diagrams, charts and flow maps. Each package has its own `styles.css` to import.
 
-**Be aware:** there is no CLI renderer and no editor extension. Without a host
-application there is no preview - VS Code's built-in MDX support will not know
-these components. Writing carefully is the substitute; the two rules above are
-where documents actually break.
+**Previewing what you write.** Two hosts exist, and neither needs the document
+to live in a JavaScript project:
+
+```sh
+npx @mdxstudio/cli serve ./docs      # a folder, in the browser, with live reload
+```
+
+or the **MDX Studio Preview** extension for VS Code
+(`surajdonthi.mdxstudio-vscode`), which previews an `.mdx` file beside the
+editor as you type.
+
+Note that this is the extension doing the work, not VS Code: the built-in MDX
+support does not know these components and will not render them. Preview does
+not remove the need to write carefully either - the two rules above are still
+where documents actually break, and a preview only shows you the damage after
+the fact.
 
 To extend the component set for a project, see
 **[references/extending.md](references/extending.md)**.
