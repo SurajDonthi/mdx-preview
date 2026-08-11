@@ -25,3 +25,6 @@ firebase-applet-config.json
 # Packaged extensions. Built on demand by `vsce package`; the marketplace is
 # the distribution channel, not the repository.
 *.vsix
+
+# Cygwin/MSYS crash dumps, which land in whatever directory was current.
+*.stackdump

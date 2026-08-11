@@ -30,3 +30,6 @@ media/icon-128.png
 **/*.map
 **/*.tsbuildinfo
 *.vsix
+
+# Cygwin/MSYS crash dumps. One of these reached media/ and was packaged.
+**/*.stackdump
