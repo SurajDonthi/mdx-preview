@@ -1,6 +1,6 @@
 {
   "name": "@mdxstudio/react",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "type": "module",
   "description": "MdxRenderer and the built-in MDX components: callouts, cards, stats, tabs, steps and the rest.",
   "keywords": [

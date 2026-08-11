@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useMemo, useRef, useState } from 'react';
-import * as Icons from 'lucide-react';
+import { Network, RotateCcw } from 'lucide-react';
 import { MdxRenderContext } from '@mdxstudio/core';
 
 /* ------------------------------------------------------------------ *
@@ -691,7 +691,7 @@ export function FlowGraph(props: FlowGraphProps) {
     return (
       <div ref={shellRef} className={`${shellClass} ${props.className || ''}`.trim()}>
         <div className="mdxstudio-flow__empty">
-          <Icons.Network className="mdxstudio-flow__icon-16 mdxstudio-flow__icon-accent" />
+          <Network className="mdxstudio-flow__icon-16 mdxstudio-flow__icon-accent" />
           <span>FlowGraph: no nodes to draw. Pass nodes, edges and flows to render the map.</span>
         </div>
       </div>
@@ -714,7 +714,7 @@ export function FlowGraph(props: FlowGraphProps) {
       {/* Header */}
       <div className="mdxstudio-flow__header">
         <span className="mdxstudio-flow__heading">
-          <Icons.Network className="mdxstudio-flow__icon-14 mdxstudio-flow__icon-accent" />
+          <Network className="mdxstudio-flow__icon-14 mdxstudio-flow__icon-accent" />
           <span className="mdxstudio-flow__title">{props.title || 'Architecture map'}</span>
         </span>
         {props.subtitle && <span className="mdxstudio-flow__subtitle">{props.subtitle}</span>}
@@ -988,7 +988,7 @@ export function FlowGraph(props: FlowGraphProps) {
                   onClick={() => setSelectedId(null)}
                   className="mdxstudio-flow__reset"
                 >
-                  <Icons.RotateCcw className="mdxstudio-flow__icon-12" />
+                  <RotateCcw className="mdxstudio-flow__icon-12" />
                   Show all
                 </button>
               ) : (

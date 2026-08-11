@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useId, useMemo, useState } from 'react';
-import * as Icons from 'lucide-react';
+import { AlertTriangle, Check, Copy, GitFork, Loader2 } from 'lucide-react';
 import { MdxRenderContext } from '@mdxstudio/core';
 import type { MdxRenderMode, MdxThemeCategory } from '@mdxstudio/core';
 
@@ -175,7 +175,7 @@ export function MermaidDiagram({ chart, children, className = '', renderMode, th
     >
       <div className="mdxstudio-mermaid__header">
         <span className="mdxstudio-mermaid__title">
-          <Icons.GitFork className="mdxstudio-mermaid__icon-14 mdxstudio-mermaid__title-icon" />
+          <GitFork className="mdxstudio-mermaid__icon-14 mdxstudio-mermaid__title-icon" />
           <span>Mermaid Diagram</span>
         </span>
         {!isPdf && <button
@@ -185,12 +185,12 @@ export function MermaidDiagram({ chart, children, className = '', renderMode, th
         >
           {copied ? (
             <>
-              <Icons.Check className="mdxstudio-mermaid__icon-14 mdxstudio-mermaid__copied" />
+              <Check className="mdxstudio-mermaid__icon-14 mdxstudio-mermaid__copied" />
               <span className="mdxstudio-mermaid__copied">Copied</span>
             </>
           ) : (
             <>
-              <Icons.Copy className="mdxstudio-mermaid__icon-14" />
+              <Copy className="mdxstudio-mermaid__icon-14" />
               <span>Copy Code</span>
             </>
           )}
@@ -201,7 +201,7 @@ export function MermaidDiagram({ chart, children, className = '', renderMode, th
         {error ? (
           <div data-mermaid-error-message="true" role="alert" className="mdxstudio-mermaid__error">
             <div className="mdxstudio-mermaid__error-title">
-              <Icons.AlertTriangle className="mdxstudio-mermaid__icon-16" />
+              <AlertTriangle className="mdxstudio-mermaid__icon-16" />
               <span>Mermaid Diagram Error</span>
             </div>
             <pre className="mdxstudio-mermaid__error-detail">{error}</pre>
@@ -217,7 +217,7 @@ export function MermaidDiagram({ chart, children, className = '', renderMode, th
           />
         ) : (
           <div className="mdxstudio-mermaid__pending">
-            <Icons.Loader2
+            <Loader2
               className={`mdxstudio-mermaid__icon-16 mdxstudio-mermaid__spinner${
                 isPdf ? '' : ' mdxstudio-mermaid__spinner--busy'
               }`}

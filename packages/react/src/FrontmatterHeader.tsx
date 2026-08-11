@@ -2,7 +2,7 @@ import { useContext } from 'react';
 import { MdxRenderContext } from '@mdxstudio/core';
 import type { Frontmatter, MdxRenderMode, MdxThemeCategory } from '@mdxstudio/core';
 import { InlineToken } from './InlineToken';
-import * as Icons from 'lucide-react';
+import { Calendar, Clock, Tag, User } from 'lucide-react';
 
 /** Helper to convert camelCase, snake_case, or kebab-case keys into Title Case labels */
 function formatKeyToLabel(key: string): string {
@@ -136,7 +136,7 @@ export function FrontmatterHeader({
         )}
         {readTime && (
           <span className="mdxstudio-frontmatter__readtime">
-            <Icons.Clock className="mdxstudio-icon-14 mdxstudio-frontmatter__icon" />
+            <Clock className="mdxstudio-icon-14 mdxstudio-frontmatter__icon" />
             {formatValue(readTime)}
           </span>
         )}
@@ -166,13 +166,13 @@ export function FrontmatterHeader({
             )}
             {displayAuthor && (
               <div className="mdxstudio-frontmatter__author">
-                <Icons.User className="mdxstudio-icon-14 mdxstudio-frontmatter__icon" />
+                <User className="mdxstudio-icon-14 mdxstudio-frontmatter__icon" />
                 <span>{displayAuthor}</span>
               </div>
             )}
             {displayDate && (
               <div className="mdxstudio-frontmatter__date">
-                <Icons.Calendar className="mdxstudio-icon-14 mdxstudio-frontmatter__icon" />
+                <Calendar className="mdxstudio-icon-14 mdxstudio-frontmatter__icon" />
                 <span>{displayDate}</span>
               </div>
             )}
@@ -181,7 +181,7 @@ export function FrontmatterHeader({
           {tagList.length > 0 && (
             <div className="mdxstudio-frontmatter__tags">
               <span className="mdxstudio-frontmatter__tags-icon" aria-hidden="true">
-                <Icons.Tag className="mdxstudio-icon-14 mdxstudio-frontmatter__icon" />
+                <Tag className="mdxstudio-icon-14 mdxstudio-frontmatter__icon" />
               </span>
               <div className="mdxstudio-frontmatter__tags-list">
                 {tagList.map((tag, i) => (

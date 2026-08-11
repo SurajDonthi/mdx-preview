@@ -38,7 +38,7 @@ import type {
 import { FrontmatterHeader } from './FrontmatterHeader';
 import { baseMdxRegistry } from './plugin';
 import { InlineToken } from './InlineToken';
-import * as Icons from 'lucide-react';
+import { AlertTriangle, Check, Copy, HelpCircle } from 'lucide-react';
 
 /**
  * Catches errors thrown by a component while the document renders.
@@ -79,7 +79,7 @@ class MdxErrorBoundary extends Component<
       return (
         <div className="mdxstudio-alert mdxstudio-alert--boundary">
           <div className="mdxstudio-alert__title">
-            <Icons.AlertTriangle className="mdxstudio-icon-16 mdxstudio-alert__icon" />
+            <AlertTriangle className="mdxstudio-icon-16 mdxstudio-alert__icon" />
             <span>MDX Component Error</span>
           </div>
           <div>{this.state.error?.message || 'A component threw while rendering.'}</div>
@@ -140,12 +140,12 @@ function CodeBlock({
         <button onClick={handleCopy} className="mdxstudio-code__copy">
           {copied ? (
             <>
-              <Icons.Check className="mdxstudio-icon-14 mdxstudio-code__copied" />
+              <Check className="mdxstudio-icon-14 mdxstudio-code__copied" />
               <span className="mdxstudio-code__copied">Copied</span>
             </>
           ) : (
             <>
-              <Icons.Copy className="mdxstudio-icon-14" />
+              <Copy className="mdxstudio-icon-14" />
               <span>Copy</span>
             </>
           )}
@@ -238,7 +238,7 @@ function getUnknownComponent(name: string): React.ComponentType<any> {
   const UnknownMdxComponent = ({ children }: { children?: React.ReactNode }) => (
     <>
       <span data-mdx-unknown-component={name} className="mdxstudio-unknown">
-        <Icons.HelpCircle className="mdxstudio-icon-14 mdxstudio-shrink-0" />
+        <HelpCircle className="mdxstudio-icon-14 mdxstudio-shrink-0" />
         <span>
           Unknown component <strong>{`<${name}>`}</strong>
         </span>
@@ -752,7 +752,7 @@ export function MdxRenderer({
       {banner && (
         <div className="mdxstudio-alert mdxstudio-alert--banner">
           <div className="mdxstudio-alert__body">
-            <Icons.AlertTriangle className="mdxstudio-icon-16 mdxstudio-alert__body-icon" />
+            <AlertTriangle className="mdxstudio-icon-16 mdxstudio-alert__body-icon" />
             <span className="mdxstudio-alert__message">MDX: {banner.split('\n')[0]}</span>
           </div>
           <span className="mdxstudio-alert__meta">

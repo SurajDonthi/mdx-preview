@@ -1,13 +1,10 @@
 import React, { useState } from 'react';
-import * as Icons from 'lucide-react';
+import { Check, ChevronDown, Minus, Plus, RotateCcw, Table } from 'lucide-react';
 import { InlineToken } from './InlineToken';
-
-// Helper to render Lucide icon dynamically
-function DynamicIcon({ name, className = 'mdxstudio-icon-20' }: { name?: string; className?: string }) {
-  if (!name) return null;
-  const IconComponent = (Icons as Record<string, any>)[name] || Icons.HelpCircle;
-  return <IconComponent className={className} />;
-}
+// A document names its icons at runtime (`<Card icon="Eye">`), which no set of
+// named imports can satisfy on its own. See `./icons` for how that is served
+// without pulling the whole lucide set into the first load.
+import { DynamicIcon } from './icons';
 
 // 1. Callout / Alert Box
 export interface CalloutProps {
@@ -196,7 +193,7 @@ export function Accordion({ items = [] }: { items?: AccordionItem[] }) {
               className="mdxstudio-accordion__trigger"
             >
               <span>{item.title}</span>
-              <Icons.ChevronDown
+              <ChevronDown
                 className={`mdxstudio-icon-16 mdxstudio-accordion__chevron${
                   isOpen ? ' mdxstudio-accordion__chevron--open' : ''
                 }`}
@@ -240,7 +237,7 @@ export function InteractiveCounter({
           disabled={count <= min}
           className="mdxstudio-counter__button"
         >
-          <Icons.Minus className="mdxstudio-icon-16" />
+          <Minus className="mdxstudio-icon-16" />
         </button>
         <span className="mdxstudio-counter__value">{count}</span>
         <button
@@ -248,10 +245,10 @@ export function InteractiveCounter({
           disabled={count >= max}
           className="mdxstudio-counter__button"
         >
-          <Icons.Plus className="mdxstudio-icon-16" />
+          <Plus className="mdxstudio-icon-16" />
         </button>
         <button onClick={() => setCount(initial)} title="Reset" className="mdxstudio-counter__reset">
-          <Icons.RotateCcw className="mdxstudio-icon-14" />
+          <RotateCcw className="mdxstudio-icon-14" />
         </button>
       </div>
     </div>
@@ -398,7 +395,7 @@ export function Button({
     <button onClick={handleClick} className={`mdxstudio-button mdxstudio-button--${tone}`}>
       {icon && <DynamicIcon name={icon} className="mdxstudio-icon-16" />}
       {children}
-      {clicked && <Icons.Check className="mdxstudio-icon-16 mdxstudio-button__done" />}
+      {clicked && <Check className="mdxstudio-icon-16 mdxstudio-button__done" />}
     </button>
   );
 }
@@ -422,7 +419,7 @@ export function TableComponent({
     <div className="mdxstudio-datatable">
       {title && (
         <div className="mdxstudio-datatable__caption">
-          <Icons.Table className="mdxstudio-icon-16 mdxstudio-datatable__caption-icon" />
+          <Table className="mdxstudio-icon-16 mdxstudio-datatable__caption-icon" />
           <span>{title}</span>
         </div>
       )}
