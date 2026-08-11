@@ -50,12 +50,12 @@
       {
         "command": "mdxstudio.showPreview",
         "title": "MDX Studio: Open Preview",
-        "icon": "$(preview)"
+        "icon": "$(book)"
       },
       {
         "command": "mdxstudio.showPreviewToSide",
         "title": "MDX Studio: Open Preview to the Side",
-        "icon": "$(preview)"
+        "icon": "$(book)"
       },
       {
         "command": "mdxstudio.refreshPreview",
@@ -63,7 +63,7 @@
         "icon": "$(refresh)"
       }
     ],
-    "//menus": "`$(preview)` rather than `$(open-preview)`: the built-in markdown preview owns the latter, and on a .md file both buttons are in this same group. Markdown gets the button - render it through this pipeline when you want components and diagrams - but never the auto-open.",
+    "//menus": "`$(book)` because both preview codicons are already taken on a .md file: markdown-language-features gives `markdown.showPreviewToSide` `$(open-preview)` and `markdown.reopenAsPreview` `$(preview)`, and all three land in the same navigation group. A book reads as -render this document- and is unmistakable next to them. Markdown gets the button - use this renderer when you want its components and diagrams - but never the auto-open.",
     "menus": {
       "editor/title": [
         {
