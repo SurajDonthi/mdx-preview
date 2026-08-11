@@ -2,7 +2,7 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 import type { Root } from 'react-dom/client';
 
-import type { MdxRegistry, ThemeId } from '@mdxstudio/core';
+import type { MdxExpressionMode, MdxRegistry, ThemeId } from '@mdxstudio/core';
 import { MdxRenderer, THEMES } from '@mdxstudio/react';
 
 import { startGuest } from './index';
@@ -26,6 +26,13 @@ export interface MdxGuestOptions {
 interface MdxGuestProps {
   theme?: ThemeId;
   showFrontmatterHeader?: boolean;
+  /**
+   * Forwarded from the host. Inside the frame `'full'` is not the risk it is in
+   * the page - there is no origin, no storage and no network to reach - so the
+   * renderer's own default stands, and a host that wants the stricter mode says
+   * so rather than having it imposed.
+   */
+  expressions?: MdxExpressionMode;
 }
 
 /** Resolves once the browser has laid out the tree React just committed. */
@@ -46,7 +53,7 @@ export function startMdxGuest(options: MdxGuestOptions = {}): void {
       // which is the thing the sandbox exists to preserve.
       root ??= createRoot(container);
 
-      const { theme, showFrontmatterHeader } = props as MdxGuestProps;
+      const { theme, showFrontmatterHeader, expressions } = props as MdxGuestProps;
       const themeConfig = (theme && THEMES[theme]) || THEMES[fallbackTheme];
 
       root.render(
@@ -56,6 +63,7 @@ export function startMdxGuest(options: MdxGuestOptions = {}): void {
             themeConfig={themeConfig}
             showFrontmatterHeader={showFrontmatterHeader !== false}
             registry={options.registry}
+            expressions={expressions === 'literals' ? 'literals' : 'full'}
           />
         </React.StrictMode>
       );

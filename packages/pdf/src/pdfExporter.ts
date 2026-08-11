@@ -1,5 +1,3 @@
-import { jsPDF } from 'jspdf';
-
 export type PdfExportEngine = 'html2pdf' | 'canvas';
 
 export function downloadMdxFile(content: string, documentTitle: string = 'document'): void {
@@ -769,6 +767,26 @@ function downloadBlob(blob: Blob, fileName: string, cleanupDelay = 1500): void {
   }
 }
 
+/**
+ * jsPDF is the largest thing this package depends on, and nothing before the
+ * final assembly step needs it: a document that is opened, edited and never
+ * exported should not pay for it. Loading it on first export keeps it out of a
+ * consumer's first-load graph, the same way html2canvas already stays out of it
+ * on the fallback path above.
+ *
+ * The failure is translated rather than propagated, because a rejected chunk
+ * load surfaces as a bare network or syntax error that names a hashed file and
+ * gives the user nothing to act on.
+ */
+async function loadJsPdf(): Promise<typeof import('jspdf').jsPDF> {
+  try {
+    const { jsPDF } = await import('jspdf');
+    return jsPDF;
+  } catch (cause) {
+    throw new Error('Cannot export PDF. The jsPDF library could not be loaded.', { cause });
+  }
+}
+
 /** Canvas-backed A4 exporter with measured, block-aware page boundaries. */
 export async function exportHtmlToPdfCanvas(
   source: HTMLElement | string,
@@ -791,7 +809,8 @@ export async function exportHtmlToPdfCanvas(
       throw new Error('Cannot export PDF. The rendered page is empty.');
     }
 
-    const pdf = new jsPDF('p', 'mm', 'a4');
+    const JsPdf = await loadJsPdf();
+    const pdf = new JsPdf('p', 'mm', 'a4');
     const margin = 10;
     const printWidth = pdf.internal.pageSize.getWidth() - margin * 2;
     const printHeight = pdf.internal.pageSize.getHeight() - margin * 2;

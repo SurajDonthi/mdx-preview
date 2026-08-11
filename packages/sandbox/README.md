@@ -116,6 +116,50 @@ Inside the document, `sandbox` is a global:
 Anything not registered is refused. `sandbox.call()` rejects on an unknown name,
 a throwing handler, or a timeout — a document can never leave a promise hanging.
 
+### Without React: `mountSandboxedDocument`
+
+A host that has no React tree to hang the component from — a CLI serving a folder
+onto the LAN, a VS Code webview for an untrusted workspace — gets the same bridge
+as one call. It is plain DOM, so the host page does not need React at all; React
+is already inside the guest bundle.
+
+```ts
+import { mountSandboxedDocument } from '@mdxstudio/sandbox';
+
+const doc = mountSandboxedDocument(document.getElementById('preview')!, {
+  source,
+  guestScript,
+  styles: mdxstudioCss,
+  theme: 'github-light',
+  onReady: () => console.info('sandbox ready'),
+  // The frame has an opaque origin, so nothing thrown inside it reaches
+  // window.onerror. Without this a broken document is just a blank box.
+  onError: (error) => console.warn('sandbox:', error.phase, error.message),
+});
+
+watcher.on('change', (next) => doc.update(next)); // no reload: state survives
+themeToggle.addEventListener('click', () => doc.setTheme('github-dark'));
+window.addEventListener('beforeunload', () => doc.dispose());
+```
+
+The handle also carries `setProps()`, `emit()` (which `sandbox.on(name, …)`
+receives inside the document), and the `frame` element itself. `dispose()`
+removes the frame and every listener the mount added, and is safe to call twice.
+If the guest never completes its handshake — a syntax error in the bundle, a CSP
+narrowed too far — `onError` reports a `SandboxHandshakeError` rather than the
+mount hanging silently.
+
+The frame is appended to the container rather than replacing its contents, and
+every option is the same as the component's, including `capabilities`, `csp` and
+`expressions`.
+
+There is deliberately **no `components` option**. A React component is a
+function, `postMessage` only carries structured-cloneable values, and the only
+ways to give the frame a host function are to run it in the host or to hand the
+frame the host's origin — both give up the isolation this package exists for.
+Components are baked into the guest bundle instead, via
+`startMdxGuest({ registry })`.
+
 ### Styling the frame
 
 The frame cannot load a stylesheet: it has no origin and no network. Pass the CSS
@@ -126,7 +170,7 @@ as text through `styles`. In Vite, `?raw` does that; with webpack, use
 
 | Import                       | Runtime | Contents                                              |
 | ---------------------------- | ------- | ----------------------------------------------------- |
-| `@mdxstudio/sandbox`            | browser | `SandboxedMdx`, `buildSandboxFrameDocument`, CSP types |
+| `@mdxstudio/sandbox`            | browser | `SandboxedMdx`, `mountSandboxedDocument`, `buildSandboxFrameDocument`, CSP types |
 | `@mdxstudio/sandbox/guest`      | browser | `startGuest` — build a renderer other than MdxRenderer |
 | `@mdxstudio/sandbox/guest/mdx`  | browser | `startMdxGuest` — the default MdxRenderer guest        |
 | `@mdxstudio/sandbox/protocol`   | shared  | Wire types and envelope helpers                        |

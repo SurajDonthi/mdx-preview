@@ -13,8 +13,10 @@ npm install @mdxstudio/pdf
 ```
 
 No peer dependencies; no React; no stylesheet. `jspdf` and `html2canvas` are
-ordinary dependencies, and `html2canvas` is loaded with a dynamic `import()` so
-the canvas engine costs nothing unless it is used.
+ordinary dependencies, and both are loaded with a dynamic `import()`: nothing in
+this package is in your first-load bundle until an export actually runs, and
+`html2canvas` only if the native capture path refuses. A document that is opened
+and never exported costs a few KB rather than several hundred.
 
 ## Usage
 

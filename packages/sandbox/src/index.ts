@@ -18,6 +18,12 @@
 export { SandboxedMdx } from './host/SandboxedMdx';
 export type { SandboxedMdxProps } from './host/SandboxedMdx';
 
+export { mountSandboxedDocument } from './host/mountSandboxedDocument';
+export type {
+  MountSandboxedDocumentOptions,
+  SandboxedDocumentHandle,
+} from './host/mountSandboxedDocument';
+
 export {
   buildSandboxFrameDocument,
   defaultSandboxCsp,
