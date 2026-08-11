@@ -1,6 +1,6 @@
 {
   "name": "@mdxstudio/sandbox",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
   "description": "Renders untrusted MDX inside an opaque-origin iframe and brokers a capability bridge between it and the host.",
   "keywords": [
@@ -57,11 +57,21 @@
   },
   "typesVersions": {
     "*": {
-      "guest": ["./dist/guest.d.ts"],
-      "guest/mdx": ["./dist/guest/mdx.d.ts"],
-      "protocol": ["./dist/protocol.d.ts"],
-      "vite": ["./dist/vite.d.ts"],
-      "build": ["./dist/build.d.ts"]
+      "guest": [
+        "./dist/guest.d.ts"
+      ],
+      "guest/mdx": [
+        "./dist/guest/mdx.d.ts"
+      ],
+      "protocol": [
+        "./dist/protocol.d.ts"
+      ],
+      "vite": [
+        "./dist/vite.d.ts"
+      ],
+      "build": [
+        "./dist/build.d.ts"
+      ]
     }
   },
   "files": [
@@ -81,8 +91,8 @@
     "esbuild": "^0.25.0"
   },
   "peerDependencies": {
-    "@mdxstudio/core": "^0.1.0",
-    "@mdxstudio/react": "^0.1.0",
+    "@mdxstudio/core": "^0.2.0",
+    "@mdxstudio/react": "^0.2.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   }
