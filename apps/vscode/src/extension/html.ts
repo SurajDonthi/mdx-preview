@@ -1,39 +1,36 @@
 import * as vscode from 'vscode';
 import type { MdxExpressionMode } from '@mdxstudio/core';
 
+import { buildContentSecurityPolicy } from './policy';
+
 /**
  * The preview document.
  *
- * ## Why the CSP is the interesting part
+ * A VS Code webview enforces exactly the policy its meta tag declares - there
+ * is no outer header to fight with - and a document's CSP is fixed once it has
+ * loaded. So the whole page is rebuilt whenever the policy changes, which is
+ * what `MdxPreview.reload()` is for. `policy.ts` decides *what* the policy is
+ * and explains why; this file only stamps it out.
  *
- * A VS Code webview enforces exactly the policy this meta tag declares - there
- * is no outer header to fight with - so everything the renderer needs has to be
- * granted here or it silently does nothing.
- *
- * `@mdxstudio/core`'s full expression evaluator serialises each `{...}` back to
- * JavaScript and runs it through `new Function`. That is `unsafe-eval`, and
- * without it every expression in the document fails with
- * "call to Function() blocked by CSP" - the renderer reports it as a diagnostic
- * and drops the value, so the page renders but the expression-valued props
- * (`<FlowGraph data={{...}}>`) come out undefined.
- *
- * So the policy is derived from the `mdxstudio.expressions` setting:
- *
- * - `full`     -> `'unsafe-eval'` is granted. This is the default: the documents
- *                 being previewed are the user's own files, already trusted
- *                 enough that VS Code runs their tasks and their extensions.
- * - `literals` -> `'unsafe-eval'` is *not* granted, and the renderer is told to
- *                 use the non-evaluating literal walker, which needs no eval.
- *                 Component props still work; body expressions do not.
- *
- * Everything else is deliberately narrow: `default-src 'none'`, no `connect-src`
- * (the preview never talks to the network), and scripts must carry the nonce.
+ * The user's own stylesheet is a second `<link>`, after the shipped one so it
+ * wins the cascade and can override the `--mdxstudio-*` variables. It goes
+ * through `asWebviewUri` like everything else, so `style-src webview.cspSource`
+ * already covers it - no part of the policy is loosened to make it work.
  */
 export interface PreviewHtmlOptions {
   webview: vscode.Webview;
   extensionUri: vscode.Uri;
+  /** The *effective* expression mode. See `resolveExpressionMode`. */
   expressions: MdxExpressionMode;
   title: string;
+  /** The user's `mdxstudio.customCss` file, already resolved to disk, or null. */
+  customCssUri: vscode.Uri | null;
+  /**
+   * Bumped whenever the page is rebuilt. Appended to the stylesheet URLs so a
+   * custom stylesheet that changed on disk is actually re-read rather than
+   * served out of the webview's cache.
+   */
+  cacheBust: number;
 }
 
 export function buildPreviewHtml(options: PreviewHtmlOptions): string {
@@ -46,25 +43,19 @@ export function buildPreviewHtml(options: PreviewHtmlOptions): string {
   const styleUri = webview.asWebviewUri(
     vscode.Uri.joinPath(extensionUri, 'dist', 'webview', 'main.css')
   );
+  const customCssUri = options.customCssUri
+    ? webview.asWebviewUri(options.customCssUri)
+    : null;
 
-  // `'unsafe-eval'` is the whole reason this is computed rather than constant.
-  const scriptSrc = options.expressions === 'full'
-    ? `'nonce-${nonce}' 'unsafe-eval'`
-    : `'nonce-${nonce}'`;
+  const csp = buildContentSecurityPolicy({
+    nonce,
+    cspSource: webview.cspSource,
+    expressions: options.expressions,
+  });
 
-  const csp = [
-    `default-src 'none'`,
-    // Mermaid and the flow graph draw inline SVG; images come from the document's
-    // own folder (through asWebviewUri), from data: URIs, or from the web.
-    `img-src ${webview.cspSource} https: data: blob:`,
-    `media-src ${webview.cspSource} https: data:`,
-    `font-src ${webview.cspSource} https: data:`,
-    // `'unsafe-inline'` covers the style *attribute*: MdxRenderer stamps the
-    // theme's custom properties onto its root as an inline style, and Recharts
-    // and Mermaid position everything with inline styles too.
-    `style-src ${webview.cspSource} 'unsafe-inline'`,
-    `script-src ${scriptSrc}`,
-  ].join('; ');
+  const customCssLink = customCssUri
+    ? `\n<link href="${customCssUri.toString()}?v=${options.cacheBust}" rel="stylesheet">`
+    : '';
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -72,7 +63,7 @@ export function buildPreviewHtml(options: PreviewHtmlOptions): string {
 <meta charset="UTF-8">
 <meta http-equiv="Content-Security-Policy" content="${csp}">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link href="${styleUri}" rel="stylesheet">
+<link href="${styleUri}" rel="stylesheet">${customCssLink}
 <title>${escapeHtml(options.title)}</title>
 </head>
 <body class="mdxstudio-vscode-body">

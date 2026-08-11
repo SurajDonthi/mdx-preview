@@ -7,6 +7,7 @@ import {
   isPreviewableDocument,
 } from './preview';
 import { autoPreviewEnabled } from './settings';
+import { MdxDocumentSymbolProvider } from './symbols';
 
 /**
  * Owns the open previews and decides when one appears.
@@ -110,6 +111,33 @@ class PreviewManager {
     for (const preview of this.previews) preview.refresh();
   }
 
+  /**
+   * The preview a preview-scoped command means.
+   *
+   * The focused panel if one has focus - which is what the zoom keybindings
+   * always mean, since their `when` clause is `mdxstudio.previewFocus` - and
+   * otherwise the only preview there is. With several open and none focused
+   * there is no honest answer, so the command does nothing rather than guessing.
+   */
+  private target(): MdxPreview | undefined {
+    return this.previews.find((preview) => preview.isActive) ?? this.previews[0];
+  }
+
+  zoom(delta: number): void {
+    this.target()?.zoom(delta);
+  }
+
+  async exportToHtml(): Promise<void> {
+    const preview = this.target();
+    if (!preview) {
+      void vscode.window.showInformationMessage(
+        'MDX Studio: open a preview before exporting it.'
+      );
+      return;
+    }
+    await preview.exportToHtml();
+  }
+
   private forget(preview: MdxPreview): void {
     const index = this.previews.indexOf(preview);
     if (index >= 0) this.previews.splice(index, 1);
@@ -122,6 +150,9 @@ class PreviewManager {
     for (const preview of this.previews.splice(0)) preview.dispose();
   }
 }
+
+/** How much one press of Zoom In or Zoom Out moves the preview's scale. */
+const ZOOM_STEP = 0.1;
 
 /** The column `ViewColumn.Beside` would land in, as a real column number. */
 function nextColumn(): vscode.ViewColumn {
@@ -171,7 +202,21 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand('mdxstudio.showPreview', open(vscode.ViewColumn.Active)),
     vscode.commands.registerCommand('mdxstudio.showPreviewToSide', open(vscode.ViewColumn.Beside)),
     vscode.commands.registerCommand('mdxstudio.refreshPreview', () => manager.refreshAll()),
+    vscode.commands.registerCommand('mdxstudio.zoomIn', () => manager.zoom(ZOOM_STEP)),
+    vscode.commands.registerCommand('mdxstudio.zoomOut', () => manager.zoom(-ZOOM_STEP)),
+    vscode.commands.registerCommand('mdxstudio.resetZoom', () => manager.zoom(0)),
+    vscode.commands.registerCommand('mdxstudio.exportHtml', () => manager.exportToHtml()),
     vscode.window.onDidChangeActiveTextEditor((editor) => manager.followActiveEditor(editor))
+  );
+
+  // `mdx` only. VS Code's own markdown-language-features already provides
+  // document symbols for `markdown`, and a second provider is added to the
+  // first rather than replacing it - every heading would appear twice.
+  context.subscriptions.push(
+    vscode.languages.registerDocumentSymbolProvider(
+      { language: 'mdx' },
+      new MdxDocumentSymbolProvider()
+    )
   );
 
   // Previews survive a window reload: VS Code hands the panel back and we point

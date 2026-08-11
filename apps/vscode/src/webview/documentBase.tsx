@@ -64,13 +64,21 @@ export function resolveResource(source: string, base: DocumentBase): string | un
 function MdxImage({ src, alt, title, node, ...rest }: Record<string, unknown>) {
   const base = useContext(DocumentBaseContext);
   void node;
-  const resolved = resolveResource(String(src ?? ''), base);
+  const raw = String(src ?? '');
+  const resolved = resolveResource(raw, base);
   if (!resolved) return null;
+
+  // The `vscode-resource` URL above means nothing outside the editor, and the
+  // webview cannot read it back to inline it (no `connect-src` in its CSP). The
+  // document's own path is kept alongside so `Export to HTML` can hand it to the
+  // extension host, which *can* read the file. See `exportDom.ts`.
+  const original = isExternal(raw) || raw.startsWith('data:') ? undefined : raw;
 
   return (
     <img
       {...(rest as Record<string, unknown>)}
       src={resolved}
+      data-mdxstudio-src={original}
       alt={typeof alt === 'string' ? alt : ''}
       title={typeof title === 'string' ? title : undefined}
       className="mdxstudio-vscode-image"

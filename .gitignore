@@ -21,3 +21,7 @@ firebase-applet-config.json
 # directory is the single source of truth; committing a second copy would let
 # the two drift.
 /packages/agent-skill/skill/
+
+# Packaged extensions. Built on demand by `vsce package`; the marketplace is
+# the distribution channel, not the repository.
+*.vsix

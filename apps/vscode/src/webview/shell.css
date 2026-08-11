@@ -26,6 +26,15 @@ body {
  */
 #mdxstudio-preview-root {
   font-size: 1rem;
+  /*
+   * The current-line marker is an absolutely positioned sibling of the
+   * renderer's root, so that marking a block never means writing to a DOM the
+   * renderer owns. This is the box it is positioned against.
+   *
+   * It is also what the zoom commands scale (`zoom`, set from `PreviewApp`), so
+   * everything inside - marker included - stays in one coordinate space.
+   */
+  position: relative;
 }
 
 #mdxstudio-preview-root > .mdxstudio-root {
@@ -45,6 +54,59 @@ body {
   max-width: 100%;
   height: auto;
   border-radius: var(--mdxstudio-radius-md, 0.375rem);
+}
+
+/*
+ * Restricted-mode notice.
+ *
+ * Shown when workspace trust - not the setting - is what pushed the renderer
+ * down to `literals`. A reader who sees a document render half its values has
+ * to be able to tell "this is broken" from "this is being held back", so it is
+ * stated rather than implied. Every colour is the editor's own, so it reads as
+ * a VS Code notification rather than as part of the document.
+ */
+.mdxstudio-vscode-restricted {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.9rem;
+  font-family: var(--vscode-font-family);
+  font-size: var(--vscode-font-size, 13px);
+  color: var(--vscode-editorWarning-foreground, var(--vscode-foreground));
+  background-color: var(
+    --vscode-inputValidation-warningBackground,
+    var(--vscode-editorWidget-background)
+  );
+  border-bottom: 1px solid
+    var(--vscode-inputValidation-warningBorder, var(--vscode-panel-border, transparent));
+}
+
+.mdxstudio-vscode-restricted__dot {
+  flex: none;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background-color: currentColor;
+}
+
+/*
+ * The block the editor's cursor is in.
+ *
+ * A left-edge rule rather than a background wash: the document already uses
+ * background colour to mean something (callouts, code, tables), and a marker
+ * that competes with it reads as part of the content. `editorCursor-foreground`
+ * is defined by every theme and is exactly the "you are here" colour the editor
+ * uses on the other side of the split.
+ */
+.mdxstudio-vscode-current-line {
+  position: absolute;
+  left: 0;
+  width: 3px;
+  border-radius: 2px;
+  background-color: var(--vscode-editorCursor-foreground, var(--vscode-focusBorder));
+  opacity: 0.55;
+  pointer-events: none;
+  transition: top 90ms ease-out, height 90ms ease-out;
 }
 
 .mdxstudio-vscode-empty {

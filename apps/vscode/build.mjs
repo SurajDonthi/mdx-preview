@@ -90,7 +90,18 @@ const webviewConfig = {
   target: ['chrome110'],
   splitting: false,
   jsx: 'automatic',
-  loader: { '.css': 'css', '.svg': 'dataurl', '.png': 'dataurl', '.woff2': 'dataurl' },
+  loader: {
+    '.css': 'css',
+    '.svg': 'dataurl',
+    '.png': 'dataurl',
+    '.woff2': 'dataurl',
+    // KaTeX's stylesheet lists three formats for every face. The webview is
+    // Chromium, which takes the woff2 above and never reaches these - and a
+    // `@font-face` src list falls through on its own when a url will not load.
+    // Inlining them too would triple the font payload for nothing.
+    '.woff': 'empty',
+    '.ttf': 'empty',
+  },
   // One React, whichever package asked for it. Same reason apps/studio and the
   // Vitest config dedupe it: two copies means two hook dispatchers.
   alias: {

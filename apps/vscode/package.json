@@ -5,6 +5,7 @@
   "private": true,
   "description": "Preview .mdx files in VS Code with the mdxstudio renderer: callouts, tabs, charts, flow graphs and Mermaid diagrams, themed to match the editor.",
   "publisher": "surajdonthi",
+  "icon": "media/icon.png",
   "license": "MIT",
   "author": "Suraj Donthi",
   "repository": {
@@ -32,6 +33,17 @@
     "onLanguage:mdx",
     "onWebviewPanel:mdxstudio.preview"
   ],
+  "//capabilities": "The preview evaluates the document's own `{...}` expressions with `new Function`, which is why the webview's CSP normally grants 'unsafe-eval'. In an untrusted workspace that would mean a freshly cloned repository executing its own JavaScript in the editor as soon as an .mdx file is clicked, so the extension pins itself to the non-evaluating literal walker and drops 'unsafe-eval' from the policy until trust is granted. Everything else - rendering, scroll sync, the outline - works untrusted.",
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": "limited",
+      "description": "The preview renders, but MDX `{...}` expressions are only read literally: evaluating them needs 'unsafe-eval' in the webview, which would let an untrusted repository run its own code in the editor. Grant trust to enable them.",
+      "restrictedConfigurations": [
+        "mdxstudio.expressions",
+        "mdxstudio.customCss"
+      ]
+    }
+  },
   "contributes": {
     "languages": [
       {
@@ -61,6 +73,25 @@
         "command": "mdxstudio.refreshPreview",
         "title": "MDX Studio: Refresh Preview",
         "icon": "$(refresh)"
+      },
+      {
+        "command": "mdxstudio.zoomIn",
+        "title": "MDX Studio: Zoom In",
+        "icon": "$(zoom-in)"
+      },
+      {
+        "command": "mdxstudio.zoomOut",
+        "title": "MDX Studio: Zoom Out",
+        "icon": "$(zoom-out)"
+      },
+      {
+        "command": "mdxstudio.resetZoom",
+        "title": "MDX Studio: Reset Zoom"
+      },
+      {
+        "command": "mdxstudio.exportHtml",
+        "title": "MDX Studio: Export to HTML",
+        "icon": "$(export)"
       }
     ],
     "//menus": "`$(book)` because both preview codicons are already taken on a .md file: markdown-language-features gives `markdown.showPreviewToSide` `$(open-preview)` and `markdown.reopenAsPreview` `$(preview)`, and all three land in the same navigation group. A book reads as -render this document- and is unmistakable next to them. Markdown gets the button - use this renderer when you want its components and diagrams - but never the auto-open.",
@@ -70,6 +101,11 @@
           "command": "mdxstudio.showPreviewToSide",
           "when": "resourceLangId == mdx || resourceExtname == .mdx || resourceLangId == markdown",
           "alt": "mdxstudio.showPreview",
+          "group": "navigation"
+        },
+        {
+          "command": "mdxstudio.refreshPreview",
+          "when": "resourceLangId == mdx || resourceExtname == .mdx || resourceLangId == markdown",
           "group": "navigation"
         }
       ],
@@ -85,6 +121,22 @@
         {
           "command": "mdxstudio.refreshPreview",
           "when": "resourceLangId == mdx || resourceExtname == .mdx || resourceLangId == markdown || mdxstudio.previewFocus"
+        },
+        {
+          "command": "mdxstudio.exportHtml",
+          "when": "resourceLangId == mdx || resourceExtname == .mdx || resourceLangId == markdown || mdxstudio.previewFocus"
+        },
+        {
+          "command": "mdxstudio.zoomIn",
+          "when": "mdxstudio.previewFocus"
+        },
+        {
+          "command": "mdxstudio.zoomOut",
+          "when": "mdxstudio.previewFocus"
+        },
+        {
+          "command": "mdxstudio.resetZoom",
+          "when": "mdxstudio.previewFocus"
         }
       ]
     },
@@ -101,6 +153,25 @@
         "key": "ctrl+k v",
         "mac": "cmd+k v",
         "when": "editorTextFocus && (resourceExtname == .mdx || editorLangId == mdx)"
+      },
+      {
+        "//": "Scoped to the focused preview so the editor's own font-size zoom keeps these chords everywhere else.",
+        "command": "mdxstudio.zoomIn",
+        "key": "ctrl+=",
+        "mac": "cmd+=",
+        "when": "mdxstudio.previewFocus"
+      },
+      {
+        "command": "mdxstudio.zoomOut",
+        "key": "ctrl+-",
+        "mac": "cmd+-",
+        "when": "mdxstudio.previewFocus"
+      },
+      {
+        "command": "mdxstudio.resetZoom",
+        "key": "ctrl+0",
+        "mac": "cmd+0",
+        "when": "mdxstudio.previewFocus"
       }
     ],
     "configuration": {
@@ -117,7 +188,22 @@
             "Only build values the syntax spells out - strings, numbers, booleans, arrays, plain objects. Needs no eval, so the preview runs under a CSP without 'unsafe-eval'. Component props still work; expressions in the document body do not."
           ],
           "default": "full",
-          "markdownDescription": "How much of an MDX `{...}` expression the preview evaluates. Changing this reloads open previews."
+          "markdownDescription": "How much of an MDX `{...}` expression the preview evaluates. Changing this reloads open previews. In a workspace you have not trusted this is forced to `literals` whatever it says, because `full` needs `'unsafe-eval'`."
+        },
+        "mdxstudio.updateMode": {
+          "type": "string",
+          "enum": [
+            "onType",
+            "onSave",
+            "manual"
+          ],
+          "enumDescriptions": [
+            "Re-render while you type, after `mdxstudio.preview.delay` milliseconds of quiet.",
+            "Re-render only when the document is saved.",
+            "Re-render only when you run `MDX Studio: Refresh Preview`."
+          ],
+          "default": "onType",
+          "markdownDescription": "When the preview re-renders. `onSave` and `manual` are for very large documents, where a diagram-heavy render on every keystroke is more than the machine wants to do."
         },
         "mdxstudio.autoPreview": {
           "type": "boolean",
@@ -129,7 +215,17 @@
           "default": 300,
           "minimum": 0,
           "maximum": 5000,
-          "description": "Milliseconds to wait after the last keystroke before re-rendering the preview."
+          "markdownDescription": "Milliseconds to wait after the last keystroke before re-rendering the preview. Only applies when `#mdxstudio.updateMode#` is `onType`."
+        },
+        "mdxstudio.highlightCurrentLine": {
+          "type": "boolean",
+          "default": true,
+          "description": "Mark the block the editor's cursor is in with a rule down its left edge."
+        },
+        "mdxstudio.customCss": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "A `.css` file loaded into the preview after the shipped stylesheet, so it can override the `--mdxstudio-*` variables. Workspace-relative (`.vscode/preview.css`) or absolute. The preview reloads when the file changes on disk."
         },
         "mdxstudio.preview.showFrontmatterHeader": {
           "type": "boolean",

@@ -39,10 +39,17 @@ Open `docs/ARCHITECTURE.mdx` in it.
 | --- | --- | --- |
 | `MDX Studio: Open Preview to the Side` | <kbd>Ctrl</kbd>+<kbd>K</kbd> <kbd>V</kbd> | Editor title bar, command palette |
 | `MDX Studio: Open Preview` | <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>V</kbd> | <kbd>Alt</kbd>-click the title bar button, command palette |
-| `MDX Studio: Refresh Preview` | — | Command palette |
+| `MDX Studio: Refresh Preview` | — | Editor title bar, command palette |
+| `MDX Studio: Export to HTML` | — | Command palette |
+| `MDX Studio: Zoom In` | <kbd>Ctrl</kbd>+<kbd>=</kbd> | Command palette |
+| `MDX Studio: Zoom Out` | <kbd>Ctrl</kbd>+<kbd>-</kbd> | Command palette |
+| `MDX Studio: Reset Zoom` | <kbd>Ctrl</kbd>+<kbd>0</kbd> | Command palette |
 
-The keybindings are the Markdown preview's own chords, scoped to `.mdx` so they
-never take them away from a `.md` file.
+The preview keybindings are the Markdown preview's own chords, scoped to `.mdx`
+so they never take them away from a `.md` file. The three zoom chords only apply
+while the preview panel itself has focus, so everywhere else they still mean what
+they always meant. Zoom scales the previewed document only — never VS Code's own
+UI — and each panel remembers its own level.
 
 The title bar button appears for `.md` as well — render a Markdown file through
 this pipeline when you want its components and diagrams — but Markdown never
@@ -55,18 +62,72 @@ all three buttons land in the same group.
 
 | Setting | Default | What it does |
 | --- | --- | --- |
-| `mdxstudio.expressions` | `full` | How much of an MDX `{...}` expression to evaluate. `full` needs `'unsafe-eval'` in the preview's CSP; `literals` does not. See below. |
+| `mdxstudio.expressions` | `full` | How much of an MDX `{...}` expression to evaluate. `full` needs `'unsafe-eval'` in the preview's CSP; `literals` does not. Forced to `literals` in an untrusted workspace. See below. |
 | `mdxstudio.autoPreview` | `true` | Open the preview beside the editor whenever an `.mdx` file is opened. `.mdx` only. |
-| `mdxstudio.preview.delay` | `300` | Milliseconds after the last keystroke before re-rendering. |
+| `mdxstudio.updateMode` | `onType` | When the preview re-renders: `onType`, `onSave`, or `manual` (only `MDX Studio: Refresh Preview`). |
+| `mdxstudio.highlightCurrentLine` | `true` | Mark the block the editor's cursor is in with a rule down its left edge. |
+| `mdxstudio.customCss` | `""` | A `.css` file loaded after the shipped stylesheet. Workspace-relative or absolute. |
+| `mdxstudio.preview.delay` | `300` | Milliseconds after the last keystroke before re-rendering. `onType` only. |
 | `mdxstudio.preview.showFrontmatterHeader` | `true` | Render YAML frontmatter as a header card. |
 | `mdxstudio.preview.scrollPreviewWithEditor` | `true` | Editor scrolls the preview. |
 | `mdxstudio.preview.scrollEditorWithPreview` | `true` | Preview scrolls the editor. |
 
 Scroll sync is anchored on the document's headings, interpolating between them,
 and only reports back to the editor when you actually scrolled the preview
-yourself.
+yourself. The current-line marker uses the same anchors, so within a long
+heading-free stretch it tracks the section rather than the line.
 
-## `unsafe-eval`, and why the default is what it is
+<kbd>Ctrl</kbd>-click (<kbd>Cmd</kbd> on macOS) anywhere in the preview puts the
+cursor on the source line that block came from — including on a link, where it
+means "show me where this is written" rather than "follow it".
+
+## Links between documents
+
+A relative link to another `.md` or `.mdx` file — `[see](./other.mdx)`, with or
+without a `#heading` — is resolved against the current document's folder, opened
+in an editor, and followed by the preview. A leading `/` means the workspace
+folder, the same convention images use. A link to a file that is not there says
+so and leaves the preview alone. Anything with a scheme (`https:`, `mailto:`)
+still goes to the browser, and anything that is not markdown is handed to
+VS Code to open however it normally would.
+
+## Custom CSS
+
+`mdxstudio.customCss` points at a stylesheet that is linked *after* the shipped
+one, so it can override any of the `--mdxstudio-*` variables:
+
+```css
+/* .vscode/preview.css */
+#mdxstudio-vscode-preview {
+  --mdxstudio-accent: #d97706;
+  --mdxstudio-font-body: "Iowan Old Style", Georgia, serif;
+}
+```
+
+The file is loaded through `webview.asWebviewUri`, so the content security
+policy is not loosened for it — its folder is added to the webview's resource
+roots instead. Editing it reloads the preview. A path that cannot be read is
+reported once, not on every render.
+
+## Outline and breadcrumbs
+
+`.mdx` files get a heading tree in the outline view and in the breadcrumbs. The
+headings come from `@mdxstudio/core`, the same call the preview stamps its ids
+from — so `# comment` inside a fenced code block is code in both, and an anchor
+link and an outline entry can never disagree. Markdown is left to VS Code's own
+provider; registering a second one would list every heading twice.
+
+## Export to HTML
+
+`MDX Studio: Export to HTML` writes a single self-contained file next to the
+document. The markup is serialised out of the webview rather than re-rendered,
+because the webview is the only place the finished document exists — Mermaid
+resolves after the first paint, the flow graph measures itself, Recharts draws
+from a layout pass. The shipped stylesheet is inlined, the editor theme's
+resolved colours travel with it, and local images become `data:` URIs, so the
+file opens in any browser with no VS Code and no network.
+
+## `unsafe-eval`, workspace trust, and why the defaults are what they are
 
 A webview enforces exactly the content security policy its meta tag declares.
 `@mdxstudio/core`'s full expression evaluator serialises each `{...}` back to
@@ -75,25 +136,44 @@ expression in a document fails — not only body expressions but component props
 too, which takes `<FlowGraph data={...}>`, `<Chart data={...}>`,
 `<Tabs labels={...}>` and `<Mermaid chart={...}>` down with them.
 
-So `'unsafe-eval'` is granted by default. The documents being previewed are the
-user's own files, already trusted enough that VS Code runs their tasks and their
-extensions.
+So in a **trusted** workspace `'unsafe-eval'` is granted by default. The
+documents being previewed are the user's own files, already trusted enough that
+VS Code runs their tasks and their extensions.
 
-Setting `mdxstudio.expressions` to `literals` switches the renderer to the
-non-evaluating literal walker and rebuilds the page without `'unsafe-eval'`.
-Every attribute in this repository's documents still works; what you lose is
-expressions in the document *body* (`{2 + 2}`, `{items.map(...)}`). Changing the
-setting reloads open previews, because a document's CSP is fixed once it loads.
+In an **untrusted** workspace it is not, and cannot be. `full` there would mean a
+freshly cloned repository executing its own JavaScript inside the editor the
+moment you clicked one of its `.mdx` files, so the extension pins itself to
+`literals` whatever `mdxstudio.expressions` says — including a value committed
+into the repository's own `.vscode/settings.json` — rebuilds the page without
+`'unsafe-eval'`, and shows a line at the top of the preview saying why. Granting
+trust upgrades open previews immediately, page rebuild and all, because a
+document's CSP is fixed once it has loaded. Everything else works untrusted:
+rendering, scroll sync, the outline, links, export.
 
-Nothing else is granted: `default-src 'none'`, no `connect-src` at all, scripts
-must carry the nonce, and images, fonts and media come from `webview.cspSource`,
-`https:` or `data:`.
+Setting `mdxstudio.expressions` to `literals` yourself does the same thing
+deliberately: the renderer switches to the non-evaluating literal walker and the
+page is rebuilt without `'unsafe-eval'`. Every attribute in this repository's
+documents still works; what you lose is expressions in the document *body*
+(`{2 + 2}`, `{items.map(...)}`).
+
+Nothing else is granted, in either mode: `default-src 'none'`, no `connect-src`
+at all, scripts must carry the nonce, and images, fonts and media come from
+`webview.cspSource`, `https:` or `data:`. A custom stylesheet is a `<link>`
+through `asWebviewUri`, which the policy already covers — its folder is added to
+the webview's resource roots rather than the policy being widened.
+
+`tests/policy.test.ts` pins all of the above down.
 
 ## Packaging
 
 ```sh
-npx @vscode/vsce package
+npm run build -w mdxstudio-vscode
+npx @vscode/vsce package --no-dependencies
 ```
+
+`.vscodeignore` keeps everything but the two bundles, the icons, `package.json`
+and this readme out of the `.vsix` — the bundles are self-contained, so sources,
+tests, build scripts and `node_modules` are all dead weight in the package.
 
 `"private": true` is set deliberately so nothing publishes this by accident;
 drop it for a packaging run if `vsce` objects.

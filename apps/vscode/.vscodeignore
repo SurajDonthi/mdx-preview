@@ -1,6 +1,32 @@
+# Everything the extension host does not read.
+#
+# The two bundles in `dist/` are self-contained - esbuild has already inlined
+# the workspace packages, React and every asset - so nothing outside `dist/`,
+# `media/`, `package.json` and the readme has any business in the .vsix.
+
+# Sources, which are only inputs to the bundles.
 src/**
+tests/**
 build.mjs
+tsconfig*.json
+
+# Editor and repository plumbing.
 .vscode/**
 .vscodeignore
+.gitignore
+.eslintrc*
 node_modules/**
+
+# The full-resolution artwork the marketplace icon was cut down from. Nothing
+# loads it, and at nearly a megabyte it was a third of the package.
+media/icon-source.png
+
+# The 128px cut, which is uploaded by hand to the marketplace publisher profile
+# rather than read from the package. `media/icon.png` is the one the manifest
+# points at.
+media/icon-128.png
+
+# Build leftovers.
 **/*.map
+**/*.tsbuildinfo
+*.vsix
