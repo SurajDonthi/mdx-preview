@@ -18,7 +18,12 @@ export function MdxEditor({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const gutterRef = useRef<HTMLDivElement>(null);
   const mirrorRef = useRef<HTMLDivElement>(null);
+  const snippetsButtonRef = useRef<HTMLButtonElement>(null);
+  const snippetsMenuRef = useRef<HTMLDivElement>(null);
   const [showSnippetsMenu, setShowSnippetsMenu] = useState(false);
+  const [snippetsMenuAnchor, setSnippetsMenuAnchor] = useState<{ top: number; left: number } | null>(
+    null
+  );
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearch, setShowSearch] = useState(false);
 
@@ -79,6 +84,62 @@ export function MdxEditor({
     observer.observe(textarea);
     return () => observer.disconnect();
   }, [value, syncGutterScroll]);
+
+  /**
+   * The toolbar strip scrolls sideways, and a box that scrolls in one axis
+   * clips the other one too, so a menu hanging below the button was cut off at
+   * the strip's own 34px and nothing of it was ever visible. The menu is
+   * positioned against the viewport instead, measured from the button, which
+   * also keeps it under the button when the strip itself has been scrolled.
+   */
+  const positionSnippetsMenu = useCallback(() => {
+    const button = snippetsButtonRef.current;
+    if (!button) return;
+    const bounds = button.getBoundingClientRect();
+    const MENU_WIDTH = 256;
+    const MARGIN = 8;
+    setSnippetsMenuAnchor({
+      top: bounds.bottom + 4,
+      left: Math.max(MARGIN, Math.min(bounds.left, window.innerWidth - MENU_WIDTH - MARGIN)),
+    });
+  }, []);
+
+  useLayoutEffect(() => {
+    if (!showSnippetsMenu) return;
+    positionSnippetsMenu();
+
+    // A viewport-positioned menu does not travel with the button, so anything
+    // that could move the button has to close the gap again.
+    const reposition = () => positionSnippetsMenu();
+    window.addEventListener('resize', reposition);
+    window.addEventListener('scroll', reposition, true);
+    return () => {
+      window.removeEventListener('resize', reposition);
+      window.removeEventListener('scroll', reposition, true);
+    };
+  }, [showSnippetsMenu, positionSnippetsMenu]);
+
+  // Picking an item closes the menu; so should clicking anywhere else, or Escape.
+  useEffect(() => {
+    if (!showSnippetsMenu) return;
+
+    const onPointerDown = (event: PointerEvent) => {
+      const target = event.target as Node;
+      if (snippetsMenuRef.current?.contains(target)) return;
+      if (snippetsButtonRef.current?.contains(target)) return;
+      setShowSnippetsMenu(false);
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setShowSnippetsMenu(false);
+    };
+
+    document.addEventListener('pointerdown', onPointerDown, true);
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('pointerdown', onPointerDown, true);
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, [showSnippetsMenu]);
 
   // Sync value changes to history stack when user types or inserts text
   useEffect(() => {
@@ -317,6 +378,7 @@ export function MdxEditor({
           {/* Insert Custom Component Snippet Dropdown */}
           <div className="relative">
             <button
+              ref={snippetsButtonRef}
               onClick={() => setShowSnippetsMenu(!showSnippetsMenu)}
               className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-600/30 text-indigo-300 hover:bg-indigo-600/50 border border-indigo-500/30 font-medium transition-colors cursor-pointer"
             >
@@ -325,9 +387,11 @@ export function MdxEditor({
               <Icons.ChevronDown className="w-3 h-3 ml-0.5" />
             </button>
 
-            {showSnippetsMenu && (
+            {showSnippetsMenu && snippetsMenuAnchor && (
               <div
-                className="fixed sm:absolute left-2 sm:left-0 top-12 sm:top-full mt-1 z-50 w-64 bg-slate-900 border border-slate-700 rounded-xl shadow-xl py-1 text-xs"
+                ref={snippetsMenuRef}
+                className="fixed z-50 w-64 max-h-[70vh] overflow-y-auto custom-scrollbar bg-slate-900 border border-slate-700 rounded-xl shadow-xl py-1 text-xs"
+                style={{ top: snippetsMenuAnchor.top, left: snippetsMenuAnchor.left }}
                 onClick={() => setShowSnippetsMenu(false)}
               >
                 <div className="px-3 py-1.5 font-semibold text-slate-400 uppercase tracking-wider text-[10px] border-b border-slate-800">
