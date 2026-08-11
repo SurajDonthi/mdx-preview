@@ -1,6 +1,6 @@
 {
   "name": "@mdxstudio/mermaid",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "type": "module",
   "description": "Mermaid diagram component and MDX plugin for mdxstudio. Mermaid itself is loaded on demand.",
   "keywords": [
@@ -55,7 +55,7 @@
     "mermaid": "^11.16.0"
   },
   "peerDependencies": {
-    "@mdxstudio/core": "^0.2.2",
+    "@mdxstudio/core": "^0.2.3",
     "react": "^19.0.0"
   }
 }
