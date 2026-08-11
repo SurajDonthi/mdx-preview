@@ -1,0 +1,16 @@
+{
+  "//": "Open apps/vscode as a folder and press F5. `preLaunchTask` is deliberately absent - run `npm run build -w @mdxstudio/vscode` (or `npm run watch -w @mdxstudio/vscode`) yourself, so a build failure is visible in a terminal rather than swallowed by the launch.",
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Run MDX Studio Preview",
+      "type": "extensionHost",
+      "request": "launch",
+      "args": [
+        "--extensionDevelopmentPath=${workspaceFolder}",
+        "${workspaceFolder}/../../docs"
+      ],
+      "outFiles": ["${workspaceFolder}/dist/**/*.js"]
+    }
+  ]
+}

@@ -1,0 +1,6 @@
+src/**
+build.mjs
+.vscode/**
+.vscodeignore
+node_modules/**
+**/*.map

@@ -1,0 +1,170 @@
+{
+  "name": "@mdxstudio/vscode",
+  "displayName": "MDX Studio Preview",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Preview .mdx files in VS Code with the mdxstudio renderer: callouts, tabs, charts, flow graphs and Mermaid diagrams, themed to match the editor.",
+  "publisher": "surajdonthi",
+  "license": "MIT",
+  "author": "Suraj Donthi",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SurajDonthi/mdx-preview.git",
+    "directory": "apps/vscode"
+  },
+  "//type": "Deliberately CommonJS. The extension host loads `main` with require(); only the build script is ESM, and it says so with its .mjs extension.",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Visualization"
+  ],
+  "keywords": [
+    "mdx",
+    "markdown",
+    "preview",
+    "mermaid",
+    "documentation"
+  ],
+  "main": "./dist/extension.js",
+  "activationEvents": [
+    "onLanguage:mdx",
+    "onWebviewPanel:mdxstudio.preview"
+  ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "mdx",
+        "aliases": [
+          "MDX",
+          "mdx"
+        ],
+        "extensions": [
+          ".mdx"
+        ]
+      }
+    ],
+    "//commands": "The product name is in the `title` rather than in a `category` on purpose. The title bar button's tooltip shows the title alone, and for a .md file this button sits next to VS Code's own markdown preview button - 'Open Preview to the Side' on both would be indistinguishable. Spelling it out keeps the palette entries namespaced under 'MDX Studio' at the same time.",
+    "commands": [
+      {
+        "command": "mdxstudio.showPreview",
+        "title": "MDX Studio: Open Preview",
+        "icon": "$(preview)"
+      },
+      {
+        "command": "mdxstudio.showPreviewToSide",
+        "title": "MDX Studio: Open Preview to the Side",
+        "icon": "$(preview)"
+      },
+      {
+        "command": "mdxstudio.refreshPreview",
+        "title": "MDX Studio: Refresh Preview",
+        "icon": "$(refresh)"
+      }
+    ],
+    "//menus": "`$(preview)` rather than `$(open-preview)`: the built-in markdown preview owns the latter, and on a .md file both buttons are in this same group. Markdown gets the button - render it through this pipeline when you want components and diagrams - but never the auto-open.",
+    "menus": {
+      "editor/title": [
+        {
+          "command": "mdxstudio.showPreviewToSide",
+          "when": "resourceLangId == mdx || resourceExtname == .mdx || resourceLangId == markdown",
+          "alt": "mdxstudio.showPreview",
+          "group": "navigation"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "mdxstudio.showPreview",
+          "when": "resourceLangId == mdx || resourceExtname == .mdx || resourceLangId == markdown"
+        },
+        {
+          "command": "mdxstudio.showPreviewToSide",
+          "when": "resourceLangId == mdx || resourceExtname == .mdx || resourceLangId == markdown"
+        },
+        {
+          "command": "mdxstudio.refreshPreview",
+          "when": "resourceLangId == mdx || resourceExtname == .mdx || resourceLangId == markdown || mdxstudio.previewFocus"
+        }
+      ]
+    },
+    "//keybindings": "The Markdown preview's own chords, scoped to .mdx so they never clash: on a .md file `ctrl+shift+v` and `ctrl+k v` still belong to the built-in preview. Markdown reaches this renderer through the title bar button and the palette instead.",
+    "keybindings": [
+      {
+        "command": "mdxstudio.showPreview",
+        "key": "shift+ctrl+v",
+        "mac": "shift+cmd+v",
+        "when": "editorTextFocus && (resourceExtname == .mdx || editorLangId == mdx)"
+      },
+      {
+        "command": "mdxstudio.showPreviewToSide",
+        "key": "ctrl+k v",
+        "mac": "cmd+k v",
+        "when": "editorTextFocus && (resourceExtname == .mdx || editorLangId == mdx)"
+      }
+    ],
+    "configuration": {
+      "title": "MDX Studio",
+      "properties": {
+        "mdxstudio.expressions": {
+          "type": "string",
+          "enum": [
+            "full",
+            "literals"
+          ],
+          "enumDescriptions": [
+            "Evaluate `{...}` expressions with real JavaScript semantics. The preview's content security policy has to allow 'unsafe-eval' for this, because the renderer compiles each expression with `new Function`.",
+            "Only build values the syntax spells out - strings, numbers, booleans, arrays, plain objects. Needs no eval, so the preview runs under a CSP without 'unsafe-eval'. Component props still work; expressions in the document body do not."
+          ],
+          "default": "full",
+          "markdownDescription": "How much of an MDX `{...}` expression the preview evaluates. Changing this reloads open previews."
+        },
+        "mdxstudio.autoPreview": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Open the preview beside the editor whenever an `.mdx` file is opened, without moving focus out of the editor. One preview is reused for every document rather than one panel per file. Closing the preview stops it reopening for that file; opening a different `.mdx` file brings it back. Turn this off to open previews only from the command or the editor title bar."
+        },
+        "mdxstudio.preview.delay": {
+          "type": "number",
+          "default": 300,
+          "minimum": 0,
+          "maximum": 5000,
+          "description": "Milliseconds to wait after the last keystroke before re-rendering the preview."
+        },
+        "mdxstudio.preview.showFrontmatterHeader": {
+          "type": "boolean",
+          "default": true,
+          "description": "Render the document's YAML frontmatter as a header card at the top of the preview."
+        },
+        "mdxstudio.preview.scrollPreviewWithEditor": {
+          "type": "boolean",
+          "default": true,
+          "description": "Scroll the preview to match the editor's position. Sync points are the document's headings."
+        },
+        "mdxstudio.preview.scrollEditorWithPreview": {
+          "type": "boolean",
+          "default": true,
+          "description": "Scroll the editor to match the preview's position. Sync points are the document's headings."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "build": "node build.mjs",
+    "watch": "node build.mjs --watch",
+    "clean": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\""
+  },
+  "//dependencies": "Declared so npm links the workspace packages and pins the React the preview bundle is built against. `build.mjs` resolves the @mdxstudio/* specifiers to `packages/*/src` rather than to their built `dist`, exactly as apps/studio's Vite config does, so the extension never needs `npm run build:packages` first.",
+  "dependencies": {
+    "@mdxstudio/charts": "*",
+    "@mdxstudio/core": "*",
+    "@mdxstudio/flow": "*",
+    "@mdxstudio/mermaid": "*",
+    "@mdxstudio/react": "*",
+    "react": "^19.0.1",
+    "react-dom": "^19.0.1"
+  },
+  "devDependencies": {
+    "@types/vscode": "1.85.0"
+  }
+}

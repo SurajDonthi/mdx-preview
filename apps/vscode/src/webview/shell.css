@@ -1,0 +1,58 @@
+/*
+ * The page around the renderer.
+ *
+ * Deliberately tiny: everything that makes the document *look* like anything
+ * lives in the package stylesheets, and everything that makes it match the
+ * editor is the `--mdxstudio-*` -> `--vscode-*` mapping in `vscodeTheme.ts`.
+ * What is left is the shell - filling the viewport, and undoing the two things
+ * VS Code's own webview defaults do that the renderer does not expect.
+ */
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  min-height: 100%;
+  background-color: var(--vscode-editor-background);
+  color: var(--vscode-editor-foreground, var(--vscode-foreground));
+}
+
+/*
+ * VS Code sets `body { font-size: var(--vscode-font-size) }`, which is 13px -
+ * a UI size, not a reading size. The components size themselves in `rem` and
+ * were designed against a 16px root, so the inherited size is reset here and
+ * `rem` carries the rest. `--vscode-font-family` still applies, from the theme
+ * mapping, so the preview reads in the editor's font at the document's scale.
+ */
+#mdxstudio-preview-root {
+  font-size: 1rem;
+}
+
+#mdxstudio-preview-root > .mdxstudio-root {
+  min-height: 100vh;
+}
+
+/*
+ * A webview scrolls the document, so an anchor jumped to from the table of
+ * contents or from a `#heading` link would otherwise land under nothing at all.
+ * A little breathing room reads better and costs nothing.
+ */
+#mdxstudio-vscode-preview :is(h1, h2, h3, h4, h5, h6)[id] {
+  scroll-margin-top: 1rem;
+}
+
+.mdxstudio-vscode-image {
+  max-width: 100%;
+  height: auto;
+  border-radius: var(--mdxstudio-radius-md, 0.375rem);
+}
+
+.mdxstudio-vscode-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 2rem;
+  font-family: var(--vscode-font-family);
+  color: var(--vscode-descriptionForeground, var(--vscode-foreground));
+}
