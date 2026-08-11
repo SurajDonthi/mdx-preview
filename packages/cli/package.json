@@ -1,0 +1,66 @@
+{
+  "name": "@mdxstudio/cli",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Browse a whole folder of MDX and Markdown documents in the browser, with a navigable sidebar and live reload.",
+  "keywords": [
+    "mdx",
+    "markdown",
+    "cli",
+    "docs",
+    "preview",
+    "documentation",
+    "server",
+    "live-reload"
+  ],
+  "license": "MIT",
+  "author": "Suraj Donthi",
+  "homepage": "https://github.com/SurajDonthi/mdx-preview/tree/main/packages/cli#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SurajDonthi/mdx-preview.git",
+    "directory": "packages/cli"
+  },
+  "bugs": {
+    "url": "https://github.com/SurajDonthi/mdx-preview/issues"
+  },
+  "sideEffects": false,
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "bin": {
+    "mdxstudio": "./dist/cli.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=20.11"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "//client": "`dist/client/` is the browser half: React, the renderer and the plugin packages, bundled once at build time by scripts/build-client.mjs. It ships inside the tarball, so `npx @mdxstudio/cli serve` starts a server without installing or compiling anything in the folder being read.",
+  "scripts": {
+    "build": "tsup && node scripts/build-client.mjs",
+    "clean": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\""
+  },
+  "//devDependencies": "Everything the browser half is built from is a devDependency, not a dependency: it is bundled into dist/client at build time and no consumer resolves it. The CLI itself has no runtime dependencies at all, so `npx @mdxstudio/cli` is one small download.",
+  "devDependencies": {
+    "@mdxstudio/charts": "*",
+    "@mdxstudio/core": "*",
+    "@mdxstudio/flow": "*",
+    "@mdxstudio/mermaid": "*",
+    "@mdxstudio/react": "*",
+    "esbuild": "^0.25.0",
+    "react": "^19.0.1",
+    "react-dom": "^19.0.1"
+  }
+}

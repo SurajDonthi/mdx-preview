@@ -1,0 +1,623 @@
+/*
+ * The CLI's shell: title bar, file tree, outline rail.
+ *
+ * Plain CSS, no framework. It reads the same `--mdxstudio-*` custom properties
+ * the renderer's own stylesheet declares, and the client stamps
+ * `data-mdxstudio-theme` on <html>, so switching theme retints the chrome and
+ * the document together with nothing to keep in step.
+ *
+ * The layout target is 390px - a phone held in one hand - and every rule below
+ * that costs horizontal space is inside a media query, not the other way round.
+ */
+
+:root {
+  --mdxcli-bar-height: 48px;
+  --mdxcli-sidebar-width: 272px;
+  --mdxcli-toc-width: 216px;
+  --mdxcli-canvas: #020617;
+  --mdxcli-canvas-fg: #e2e8f0;
+  --mdxcli-chrome-bg: var(--mdxstudio-surface-panel, #f1f5f9);
+  --mdxcli-chrome-fg: var(--mdxstudio-fg-body, #334155);
+  --mdxcli-chrome-muted: var(--mdxstudio-fg-muted, #64748b);
+  --mdxcli-chrome-border: var(--mdxstudio-border, #e2e8f0);
+  --mdxcli-accent: var(--mdxstudio-accent, #6366f1);
+  --mdxcli-font: var(
+    --mdxstudio-font-sans,
+    ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif
+  );
+  --mdxcli-mono: var(--mdxstudio-font-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace);
+  color-scheme: light dark;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  background: var(--mdxcli-canvas);
+  /* The page itself never scrolls sideways. Anything too wide - a table, a
+     flow graph, a code block - scrolls inside its own box. */
+  overflow: hidden;
+}
+
+body {
+  font-family: var(--mdxcli-font);
+  color: var(--mdxcli-chrome-fg);
+  -webkit-text-size-adjust: 100%;
+}
+
+#root {
+  height: 100%;
+}
+
+.mdxcli-app {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.mdxcli-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.mdxcli-icon {
+  width: 16px;
+  height: 16px;
+  flex: none;
+}
+
+/* ------------------------------------------------------------------ *
+ * Title bar
+ * ------------------------------------------------------------------ */
+
+.mdxcli-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+  height: var(--mdxcli-bar-height);
+  padding: 0 10px;
+  padding-inline-start: max(10px, env(safe-area-inset-left));
+  background: var(--mdxcli-chrome-bg);
+  border-bottom: 1px solid var(--mdxcli-chrome-border);
+}
+
+.mdxcli-bar__title {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+
+.mdxcli-bar__brand {
+  align-self: center;
+  color: var(--mdxcli-accent);
+}
+
+.mdxcli-bar__crumb {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--mdxstudio-fg-strong, #0f172a);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mdxcli-bar__path {
+  font-family: var(--mdxcli-mono);
+  font-size: 11px;
+  color: var(--mdxcli-chrome-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mdxcli-bar__spacer {
+  flex: 1 1 auto;
+}
+
+.mdxcli-iconbutton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  /* 32px is the smallest comfortable target with 8px of padding around a
+     16px icon; the drawer handles are the ones a thumb reaches for. */
+  width: 32px;
+  height: 32px;
+  flex: none;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--mdxcli-chrome-muted);
+  cursor: pointer;
+}
+
+.mdxcli-iconbutton:hover {
+  background: var(--mdxstudio-row-hover, rgb(0 0 0 / 6%));
+  color: var(--mdxstudio-fg-strong, #0f172a);
+}
+
+.mdxcli-select {
+  height: 28px;
+  max-width: 8.5rem;
+  padding: 0 6px;
+  border: 1px solid var(--mdxcli-chrome-border);
+  border-radius: 8px;
+  background: var(--mdxstudio-surface-base, #fff);
+  color: var(--mdxcli-chrome-fg);
+  font-family: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.mdxcli-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: var(--mdxstudio-sunken-bg-strong, rgb(0 0 0 / 4%));
+  color: var(--mdxcli-chrome-muted);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.mdxcli-live__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--mdxstudio-fg-subtle, #94a3b8);
+}
+
+.mdxcli-live.is-live {
+  color: var(--mdxstudio-tone-success-fg, #047857);
+}
+
+.mdxcli-live.is-live .mdxcli-live__dot {
+  background: var(--mdxstudio-tone-success, #10b981);
+  animation: mdxcli-pulse 2.4s ease-in-out infinite;
+}
+
+@keyframes mdxcli-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mdxcli-live.is-live .mdxcli-live__dot { animation: none; }
+}
+
+/* ------------------------------------------------------------------ *
+ * Body columns
+ * ------------------------------------------------------------------ */
+
+.mdxcli-body {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
+}
+
+.mdxcli-sidebar {
+  display: flex;
+  flex-direction: column;
+  flex: none;
+  width: var(--mdxcli-sidebar-width);
+  min-height: 0;
+  border-inline-end: 1px solid var(--mdxcli-chrome-border);
+  background: var(--mdxcli-chrome-bg);
+}
+
+.mdxcli-sidebar__inner {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+}
+
+.mdxcli-sidebar__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+  padding: 10px 10px 6px;
+}
+
+.mdxcli-sidebar__title {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--mdxcli-chrome-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mdxcli-sidebar__count {
+  flex: none;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--mdxstudio-sunken-bg-strong, rgb(0 0 0 / 5%));
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--mdxcli-chrome-muted);
+}
+
+.mdxcli-search {
+  position: relative;
+  flex: none;
+  padding: 0 10px 8px;
+}
+
+.mdxcli-search__icon {
+  position: absolute;
+  top: 7px;
+  inset-inline-start: 18px;
+  width: 14px;
+  height: 14px;
+  color: var(--mdxcli-chrome-muted);
+  pointer-events: none;
+}
+
+.mdxcli-search__input {
+  width: 100%;
+  height: 28px;
+  padding: 0 8px 0 28px;
+  border: 1px solid var(--mdxcli-chrome-border);
+  border-radius: 8px;
+  background: var(--mdxstudio-surface-base, #fff);
+  color: var(--mdxcli-chrome-fg);
+  font-family: inherit;
+  font-size: 12px;
+}
+
+.mdxcli-search__input:focus-visible {
+  outline: 2px solid var(--mdxcli-accent);
+  outline-offset: -1px;
+}
+
+.mdxcli-tree {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  padding: 0 6px 16px;
+  overscroll-behavior: contain;
+}
+
+.mdxcli-tree__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.mdxcli-tree__row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  min-height: 30px;
+  padding: 5px 8px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--mdxcli-chrome-fg);
+  font: inherit;
+  font-size: 12.5px;
+  text-align: start;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.mdxcli-tree__row:hover {
+  background: var(--mdxstudio-row-hover, rgb(0 0 0 / 6%));
+}
+
+.mdxcli-tree__row.is-active {
+  background: var(--mdxstudio-accent-soft-bg, rgb(99 102 241 / 14%));
+  color: var(--mdxstudio-accent, #6366f1);
+  font-weight: 600;
+}
+
+.mdxcli-tree__row--dir {
+  color: var(--mdxcli-chrome-muted);
+  font-weight: 600;
+}
+
+.mdxcli-tree__icon {
+  width: 14px;
+  height: 14px;
+  flex: none;
+  opacity: 0.75;
+}
+
+.mdxcli-tree__chevron {
+  width: 12px;
+  height: 12px;
+  flex: none;
+  transition: transform 120ms ease;
+}
+
+.mdxcli-tree__chevron--open {
+  transform: rotate(90deg);
+}
+
+.mdxcli-tree__label {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.mdxcli-tree__empty {
+  margin: 12px 8px;
+  font-size: 12px;
+  color: var(--mdxcli-chrome-muted);
+}
+
+/* ------------------------------------------------------------------ *
+ * Document canvas
+ * ------------------------------------------------------------------ */
+
+.mdxcli-main {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  background: var(--mdxcli-canvas);
+  color: var(--mdxcli-canvas-fg);
+  overscroll-behavior-y: contain;
+  scroll-padding-top: 16px;
+}
+
+.mdxcli-doc {
+  max-width: 62rem;
+  min-width: 0;
+  margin: 0 auto;
+  padding: 20px 24px 30vh;
+  padding-inline: max(24px, env(safe-area-inset-left)) max(24px, env(safe-area-inset-right));
+}
+
+/* The renderer paints its own background; inside the canvas that would be a
+   second, slightly different rectangle. */
+.mdxcli-doc .mdxstudio-root {
+  background: transparent !important;
+}
+
+.mdxcli-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 60vh;
+  padding: 24px;
+  text-align: center;
+  color: var(--mdxcli-canvas-fg);
+  opacity: 0.75;
+  font-size: 13px;
+}
+
+.mdxcli-empty code {
+  font-family: var(--mdxcli-mono);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.mdxcli-empty__icon {
+  width: 28px;
+  height: 28px;
+  opacity: 0.5;
+}
+
+.mdxcli-empty__hint {
+  font-size: 12px;
+  opacity: 0.7;
+}
+
+/* ------------------------------------------------------------------ *
+ * Outline
+ * ------------------------------------------------------------------ */
+
+.mdxcli-toc {
+  display: flex;
+  flex-direction: column;
+  flex: none;
+  min-height: 0;
+  background: var(--mdxcli-chrome-bg);
+}
+
+.mdxcli-toc--rail {
+  width: var(--mdxcli-toc-width);
+  border-inline-start: 1px solid var(--mdxcli-chrome-border);
+}
+
+.mdxcli-toc__inner {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+  padding: 10px 8px 16px;
+}
+
+.mdxcli-toc__head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+  padding: 0 6px 8px;
+  color: var(--mdxcli-chrome-muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.mdxcli-toc__head .mdxcli-iconbutton {
+  margin-inline-start: auto;
+}
+
+.mdxcli-toc__list {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+.mdxcli-toc__item {
+  display: block;
+  width: 100%;
+  padding: 5px 8px;
+  border: 0;
+  border-inline-start: 2px solid transparent;
+  border-radius: 0 8px 8px 0;
+  background: transparent;
+  color: var(--mdxcli-chrome-muted);
+  font: inherit;
+  font-size: 12px;
+  text-align: start;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+
+.mdxcli-toc__item:hover {
+  background: var(--mdxstudio-row-hover, rgb(0 0 0 / 6%));
+  color: var(--mdxstudio-fg-strong, #0f172a);
+}
+
+.mdxcli-toc__item.is-active {
+  border-inline-start-color: var(--mdxcli-accent);
+  background: var(--mdxstudio-accent-soft-bg, rgb(99 102 241 / 12%));
+  color: var(--mdxcli-accent);
+  font-weight: 600;
+}
+
+.mdxcli-toc__empty {
+  padding: 8px 6px;
+  font-size: 12px;
+  color: var(--mdxcli-chrome-muted);
+}
+
+/* ------------------------------------------------------------------ *
+ * Drawers - the phone layout
+ * ------------------------------------------------------------------ */
+
+.mdxcli-drawer {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+}
+
+.mdxcli-drawer--end {
+  justify-content: flex-end;
+}
+
+.mdxcli-drawer__scrim {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  padding: 0;
+  background: rgb(2 6 23 / 55%);
+  cursor: pointer;
+}
+
+.mdxcli-drawer__panel {
+  position: relative;
+  z-index: 1;
+  /* Never full width: the edge of the document behind it is the affordance
+     that says "tap here to go back". */
+  width: min(320px, 86vw);
+  height: 100%;
+  box-shadow: 0 0 40px rgb(2 6 23 / 35%);
+  animation: mdxcli-slide-in 140ms ease-out;
+}
+
+.mdxcli-drawer--end .mdxcli-drawer__panel {
+  animation-name: mdxcli-slide-in-end;
+}
+
+@keyframes mdxcli-slide-in {
+  from { transform: translateX(-100%); }
+}
+
+@keyframes mdxcli-slide-in-end {
+  from { transform: translateX(100%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mdxcli-drawer__panel { animation: none; }
+}
+
+.mdxcli-only-narrow,
+.mdxcli-only-narrow-toc {
+  display: none;
+}
+
+/* Matches the 900px breakpoint the client uses to decide whether the sidebar
+   and outline are columns or drawers. Keep the two in step. */
+@media (max-width: 899.98px) {
+  .mdxcli-only-narrow,
+  .mdxcli-only-narrow-toc {
+    display: inline-flex;
+  }
+
+  .mdxcli-bar__path {
+    display: none;
+  }
+
+  .mdxcli-doc {
+    padding: 14px 14px 30vh;
+    padding-inline: max(14px, env(safe-area-inset-left)) max(14px, env(safe-area-inset-right));
+  }
+
+  .mdxcli-drawer__panel {
+    border-inline-end: 1px solid var(--mdxcli-chrome-border);
+  }
+}
+
+@media (max-width: 460px) {
+  .mdxcli-bar {
+    gap: 4px;
+    padding: 0 6px;
+  }
+
+  .mdxcli-bar__crumb {
+    font-size: 12.5px;
+  }
+
+  .mdxcli-select {
+    max-width: 6.5rem;
+  }
+
+  /* On a 390px screen the label is three characters of a dot's worth of
+     information; the dot alone still says whether reload is connected. */
+  .mdxcli-live {
+    padding: 3px 6px;
+    font-size: 0;
+    gap: 0;
+  }
+}
