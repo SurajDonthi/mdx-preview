@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useLayoutEffect, useCallback } from 'react';
 import * as Icons from 'lucide-react';
 
 interface MdxEditorProps {
@@ -16,9 +16,15 @@ export function MdxEditor({
   onManualSave,
 }: MdxEditorProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const gutterRef = useRef<HTMLDivElement>(null);
+  const mirrorRef = useRef<HTMLDivElement>(null);
   const [showSnippetsMenu, setShowSnippetsMenu] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearch, setShowSearch] = useState(false);
+
+  // How tall each logical line renders inside the textarea, measured from the
+  // mirror below. Empty until the first layout pass.
+  const [lineHeights, setLineHeights] = useState<number[]>([]);
 
   // Undo / Redo History Stack
   const [history, setHistory] = useState<string[]>([value]);
@@ -28,6 +34,51 @@ export function MdxEditor({
   // Line count for editor line numbers sidebar
   const lines = value.split('\n');
   const lineCount = lines.length;
+
+  /**
+   * The gutter is a sibling of the textarea, so nothing moves it when the text
+   * scrolls. Only the textarea drives this, and only when the two differ: the
+   * gutter's own scroll event is never listened to, so there is no way for the
+   * two to push each other.
+   */
+  const syncGutterScroll = useCallback(() => {
+    const textarea = textareaRef.current;
+    const gutter = gutterRef.current;
+    if (!textarea || !gutter) return;
+    if (gutter.scrollTop !== textarea.scrollTop) gutter.scrollTop = textarea.scrollTop;
+  }, []);
+
+  /**
+   * A soft-wrapped line fills more than one row of the textarea, so a gutter
+   * that gives every line the same height slides out of step with the text -
+   * gradually, and worst at the bottom of a long document - even once the two
+   * scroll together. The mirror lays the same lines out in the textarea's own
+   * content box, which is the only way to find out how tall each one really is.
+   */
+  useLayoutEffect(() => {
+    const mirror = mirrorRef.current;
+    const textarea = textareaRef.current;
+    if (!mirror || !textarea) return;
+
+    const measure = () => {
+      // clientWidth excludes the scrollbar, so the mirror wraps where the text does.
+      mirror.style.width = `${textarea.clientWidth}px`;
+      const heights = Array.from(mirror.children, (row) => (row as HTMLElement).offsetHeight);
+      setLineHeights((current) =>
+        current.length === heights.length && current.every((height, i) => height === heights[i])
+          ? current
+          : heights
+      );
+      syncGutterScroll();
+    };
+
+    measure();
+
+    if (typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(measure);
+    observer.observe(textarea);
+    return () => observer.disconnect();
+  }, [value, syncGutterScroll]);
 
   // Sync value changes to history stack when user types or inserts text
   useEffect(() => {
@@ -316,9 +367,15 @@ export function MdxEditor({
       {/* Text Area with Line Numbers */}
       <div className="relative flex-1 flex overflow-hidden">
         {/* Line Numbers Column */}
-        <div className="w-10 shrink-0 select-none bg-slate-950/80 border-r border-slate-800/60 py-3 text-right pr-2 text-[11px] font-mono text-slate-600 leading-6 overflow-hidden">
+        <div
+          ref={gutterRef}
+          aria-hidden="true"
+          className="w-10 shrink-0 select-none bg-slate-950/80 border-r border-slate-800/60 py-3 text-right pr-2 text-[11px] font-mono text-slate-600 leading-6 overflow-hidden"
+        >
           {Array.from({ length: Math.max(1, lineCount) }).map((_, i) => (
-            <div key={i}>{i + 1}</div>
+            <div key={i} style={lineHeights[i] ? { height: lineHeights[i] } : undefined}>
+              {i + 1}
+            </div>
           ))}
         </div>
 
@@ -327,11 +384,30 @@ export function MdxEditor({
           ref={textareaRef}
           value={value}
           onChange={(e) => onChange(e.target.value)}
+          onScroll={syncGutterScroll}
           onKeyDown={handleKeyDown}
           placeholder="Type or paste MDX content here..."
           spellCheck={false}
           className="flex-1 h-full w-full bg-slate-900 text-slate-100 p-3 font-mono text-xs leading-6 resize-none focus:outline-hidden custom-scrollbar"
         />
+
+        {/*
+          The textarea's own layout, laid out again where it can be measured. It
+          carries the textarea's padding, font and wrapping rules so each child's
+          height is the height that line takes up in the editor; it is hidden
+          rather than removed because only a laid-out box has a height.
+        */}
+        <div
+          ref={mirrorRef}
+          aria-hidden="true"
+          className="invisible pointer-events-none absolute top-0 left-0 -z-10 p-3 font-mono text-xs leading-6 whitespace-pre-wrap break-words"
+        >
+          {lines.map((line, i) => (
+            // A blank line still occupies a row, but an empty box has no height,
+            // so it gets a zero-width space to stand on.
+            <div key={i}>{line === '' ? '\u200b' : line}</div>
+          ))}
+        </div>
       </div>
     </div>
   );

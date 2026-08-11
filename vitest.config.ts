@@ -94,9 +94,9 @@ export default defineConfig({
         test: {
           name: 'studio',
           root: path.resolve(root, 'apps/studio'),
-          // storage.ts talks to localStorage.
+          // storage.ts talks to localStorage, and the editor is mounted for real.
           environment: 'jsdom',
-          include: ['tests/**/*.test.ts'],
+          include: ['tests/**/*.test.ts', 'tests/**/*.test.tsx'],
         },
       },
     ],
