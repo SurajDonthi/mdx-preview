@@ -1,7 +1,23 @@
-import React, { useContext, useEffect, useId, useMemo, useState } from 'react';
-import { AlertTriangle, Check, Copy, GitFork, Loader2 } from 'lucide-react';
+import React, { useCallback, useContext, useEffect, useId, useMemo, useRef, useState } from 'react';
+import { AlertTriangle, Check, Copy, GitFork, Loader2, RotateCcw, ZoomIn, ZoomOut } from 'lucide-react';
 import { MdxRenderContext } from '@mdxstudio/core';
 import type { MdxRenderMode, MdxThemeCategory } from '@mdxstudio/core';
+import {
+  MERMAID_FIT,
+  MERMAID_KEY_PAN_STEP,
+  clampScale,
+  clampTransform,
+  isPannable,
+  panBy,
+  pinchScale,
+  pointerDistance,
+  pointerMidpoint,
+  transformToCss,
+  zoomAbout,
+  zoomByStep,
+  zoomPercent,
+} from './panZoom';
+import type { MermaidTransform, MermaidViewportSize } from './panZoom';
 
 export interface MermaidDiagramProps {
   chart?: string;
@@ -114,6 +130,275 @@ function renderMermaid(
   return operation;
 }
 
+interface MermaidPanZoom {
+  viewportRef: React.RefObject<HTMLDivElement | null>;
+  transform: MermaidTransform;
+  dragging: boolean;
+  zoomIn: () => void;
+  zoomOut: () => void;
+  reset: () => void;
+  onPointerDown: React.PointerEventHandler<HTMLDivElement>;
+  onPointerMove: React.PointerEventHandler<HTMLDivElement>;
+  onPointerEnd: React.PointerEventHandler<HTMLDivElement>;
+  onKeyDown: React.KeyboardEventHandler<HTMLDivElement>;
+}
+
+/**
+ * Wires the arithmetic in `panZoom.ts` to a real element.
+ *
+ * `enabled` is false whenever there is no drawing to explore — an export, a
+ * parse failure, a diagram still rendering — and every listener then costs
+ * nothing. `resetKey` changes when the drawing itself does, which puts the
+ * reader back at the fit rather than leaving them zoomed into a picture that is
+ * no longer there.
+ */
+function useMermaidPanZoom(enabled: boolean, resetKey: string): MermaidPanZoom {
+  const viewportRef = useRef<HTMLDivElement | null>(null);
+  const [transform, setTransform] = useState<MermaidTransform>(MERMAID_FIT);
+  const [dragging, setDragging] = useState(false);
+  /** Client-space position of every pointer currently down on the viewport. */
+  const pointersRef = useRef(new Map<number, { x: number; y: number }>());
+  const dragRef = useRef<{ pointerId: number; x: number; y: number; from: MermaidTransform } | null>(
+    null
+  );
+  const pinchRef = useRef<{ distance: number; scale: number } | null>(null);
+  // Event handlers run after commit, so a mirror updated during render always
+  // holds the transform the reader can see.
+  const transformRef = useRef(transform);
+  transformRef.current = transform;
+
+  const measure = useCallback((): MermaidViewportSize => {
+    const element = viewportRef.current;
+    if (!element) return { width: 0, height: 0 };
+    return { width: element.clientWidth, height: element.clientHeight };
+  }, []);
+
+  const toLocal = useCallback((clientX: number, clientY: number) => {
+    const element = viewportRef.current;
+    if (!element || typeof element.getBoundingClientRect !== 'function') return { x: 0, y: 0 };
+    const rect = element.getBoundingClientRect();
+    return { x: clientX - rect.left, y: clientY - rect.top };
+  }, []);
+
+  useEffect(() => {
+    setTransform(MERMAID_FIT);
+    pointersRef.current.clear();
+    dragRef.current = null;
+    pinchRef.current = null;
+    setDragging(false);
+  }, [resetKey]);
+
+  // A Split pane dragged narrower shrinks the frame under a panned diagram; the
+  // offset has to be pulled back inside the new bounds or the drawing hangs off
+  // an edge with no way to fetch it.
+  useEffect(() => {
+    const element = viewportRef.current;
+    if (!enabled || !element || typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(() => {
+      setTransform((current) =>
+        clampTransform(current, { width: element.clientWidth, height: element.clientHeight })
+      );
+    });
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [enabled]);
+
+  useEffect(() => {
+    const element = viewportRef.current;
+    if (!enabled || !element) return;
+    const onWheel = (event: WheelEvent) => {
+      // A plain wheel belongs to the page. Only the Ctrl/Cmd chord every map and
+      // canvas already uses zooms the diagram, and only then is the browser's own
+      // page zoom suppressed.
+      if (!event.ctrlKey && !event.metaKey) return;
+      event.preventDefault();
+      const rect = element.getBoundingClientRect();
+      const focus = { x: event.clientX - rect.left, y: event.clientY - rect.top };
+      const viewport = { width: element.clientWidth, height: element.clientHeight };
+      setTransform((current) =>
+        // Exponential rather than additive, so a trackpad's stream of small
+        // deltas and a mouse wheel's single notch feel like the same gesture.
+        zoomAbout(current, clampScale(current.scale * Math.exp(-event.deltaY / 320)), focus, viewport)
+      );
+    };
+    // React registers wheel listeners passively at the root, where
+    // `preventDefault` does nothing, so the chord has to be bound directly.
+    element.addEventListener('wheel', onWheel, { passive: false });
+    return () => element.removeEventListener('wheel', onWheel);
+  }, [enabled]);
+
+  const zoomIn = useCallback(() => {
+    setTransform((current) => zoomByStep(current, 1, measure()));
+  }, [measure]);
+
+  const zoomOut = useCallback(() => {
+    setTransform((current) => zoomByStep(current, -1, measure()));
+  }, [measure]);
+
+  const reset = useCallback(() => setTransform(MERMAID_FIT), []);
+
+  const beginDrag = useCallback((pointerId: number, x: number, y: number) => {
+    dragRef.current = { pointerId, x, y, from: transformRef.current };
+    setDragging(true);
+  }, []);
+
+  const onPointerDown = useCallback(
+    (event: React.PointerEvent<HTMLDivElement>) => {
+      if (!enabled) return;
+      if (event.pointerType === 'mouse' && event.button !== 0) return;
+      const pointers = pointersRef.current;
+      pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+
+      if (pointers.size === 2) {
+        const [a, b] = Array.from(pointers.values());
+        dragRef.current = null;
+        setDragging(false);
+        pinchRef.current = {
+          distance: pointerDistance(a, b),
+          scale: clampScale(transformRef.current.scale),
+        };
+        return;
+      }
+      if (pointers.size !== 1) return;
+      // Nothing sits outside the frame at the fitted scale, so a press there is
+      // left alone: text stays selectable and the cursor stays an arrow.
+      if (!isPannable(transformRef.current)) return;
+
+      beginDrag(event.pointerId, event.clientX, event.clientY);
+      const element = viewportRef.current;
+      if (element && typeof element.setPointerCapture === 'function') {
+        try {
+          element.setPointerCapture(event.pointerId);
+        } catch {
+          // A pointer the browser has already released cannot be captured. The
+          // drag still works, it just ends when the pointer leaves the element.
+        }
+      }
+    },
+    [beginDrag, enabled]
+  );
+
+  const onPointerMove = useCallback(
+    (event: React.PointerEvent<HTMLDivElement>) => {
+      if (!enabled) return;
+      const pointers = pointersRef.current;
+      if (!pointers.has(event.pointerId)) return;
+      pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+      const viewport = measure();
+
+      const pinch = pinchRef.current;
+      if (pinch && pointers.size >= 2) {
+        const [a, b] = Array.from(pointers.values());
+        const next = pinchScale(pinch.scale, pinch.distance, pointerDistance(a, b));
+        const middle = pointerMidpoint(a, b);
+        const focus = toLocal(middle.x, middle.y);
+        setTransform((current) => zoomAbout(current, next, focus, viewport));
+        return;
+      }
+
+      const drag = dragRef.current;
+      if (!drag || drag.pointerId !== event.pointerId) return;
+      // Measured from where the drag started rather than accumulated, so running
+      // into a clamped edge does not eat the journey back.
+      setTransform(() => panBy(drag.from, event.clientX - drag.x, event.clientY - drag.y, viewport));
+    },
+    [enabled, measure, toLocal]
+  );
+
+  const onPointerEnd = useCallback(
+    (event: React.PointerEvent<HTMLDivElement>) => {
+      const pointers = pointersRef.current;
+      pointers.delete(event.pointerId);
+      if (pointers.size < 2) pinchRef.current = null;
+
+      const drag = dragRef.current;
+      if (drag && drag.pointerId === event.pointerId) {
+        dragRef.current = null;
+        setDragging(false);
+      }
+
+      const element = viewportRef.current;
+      if (
+        element &&
+        typeof element.hasPointerCapture === 'function' &&
+        typeof element.releasePointerCapture === 'function' &&
+        element.hasPointerCapture(event.pointerId)
+      ) {
+        element.releasePointerCapture(event.pointerId);
+      }
+
+      // Lifting one finger out of a pinch hands the other one the drag, so the
+      // gesture does not dead-end while a finger is still on the glass.
+      if (enabled && pointers.size === 1 && !dragRef.current && isPannable(transformRef.current)) {
+        const [remainingId] = Array.from(pointers.keys());
+        const point = pointers.get(remainingId);
+        if (point) beginDrag(remainingId, point.x, point.y);
+      }
+    },
+    [beginDrag, enabled]
+  );
+
+  const onKeyDown = useCallback(
+    (event: React.KeyboardEvent<HTMLDivElement>) => {
+      if (!enabled) return;
+      const viewport = measure();
+      const step = event.shiftKey ? MERMAID_KEY_PAN_STEP * 3 : MERMAID_KEY_PAN_STEP;
+      const pan = (dx: number, dy: number) => {
+        // With nothing to pan the arrow keys belong to the page, so a diagram
+        // nobody has zoomed never swallows the reader's keystrokes.
+        if (!isPannable(transformRef.current)) return;
+        event.preventDefault();
+        setTransform((current) => panBy(current, dx, dy, viewport));
+      };
+
+      switch (event.key) {
+        case 'ArrowLeft':
+          pan(step, 0);
+          break;
+        case 'ArrowRight':
+          pan(-step, 0);
+          break;
+        case 'ArrowUp':
+          pan(0, step);
+          break;
+        case 'ArrowDown':
+          pan(0, -step);
+          break;
+        case '+':
+        case '=':
+          event.preventDefault();
+          zoomIn();
+          break;
+        case '-':
+        case '_':
+          event.preventDefault();
+          zoomOut();
+          break;
+        case '0':
+          event.preventDefault();
+          reset();
+          break;
+        default:
+          break;
+      }
+    },
+    [enabled, measure, reset, zoomIn, zoomOut]
+  );
+
+  return {
+    viewportRef,
+    transform,
+    dragging,
+    zoomIn,
+    zoomOut,
+    reset,
+    onPointerDown,
+    onPointerMove,
+    onPointerEnd,
+    onKeyDown,
+  };
+}
+
 export function MermaidDiagram({ chart, children, className = '', renderMode, themeCategory }: MermaidDiagramProps) {
   const context = useContext(MdxRenderContext);
   const effectiveRenderMode = renderMode ?? context.renderMode;
@@ -132,6 +417,12 @@ export function MermaidDiagram({ chart, children, className = '', renderMode, th
     .join('');
   const chartCode = (chart || childText || '').trim();
   const isPdf = effectiveRenderMode === 'pdf';
+  const canExplore = !isPdf && renderState === 'ready' && Boolean(svg) && !error;
+  const panZoom = useMermaidPanZoom(
+    canExplore,
+    `${effectiveRenderMode}|${effectiveThemeCategory}|${chartCode}`
+  );
+  const pannable = isPannable(panZoom.transform);
 
   useEffect(() => {
     let isActive = true;
@@ -171,6 +462,7 @@ export function MermaidDiagram({ chart, children, className = '', renderMode, th
       data-render-state={renderState}
       data-mermaid-error={renderState === 'error' ? 'true' : undefined}
       data-error-message={error || undefined}
+      data-mermaid-zoom={canExplore ? zoomPercent(panZoom.transform) : undefined}
       className={`mdxstudio-mermaid${isPdf ? ' mdxstudio-mermaid--pdf' : ''} ${className}`.trim()}
     >
       <div className="mdxstudio-mermaid__header">
@@ -210,11 +502,84 @@ export function MermaidDiagram({ chart, children, className = '', renderMode, th
               <pre className="mdxstudio-mermaid__error-raw">{chartCode}</pre>
             </details>
           </div>
-        ) : svg ? (
+        ) : svg && isPdf ? (
+          /* The export sheet gets the drawing at its natural fit and nothing
+             else. Every button is stripped from the capture anyway, and a
+             diagram frozen mid-zoom would arrive cropped. */
           <div
             className="mermaid-svg-container"
             dangerouslySetInnerHTML={{ __html: svg }}
           />
+        ) : svg ? (
+          <div
+            ref={panZoom.viewportRef}
+            role="group"
+            aria-label="Mermaid diagram, pannable and zoomable"
+            aria-describedby={`${stableMermaidId}-help`}
+            tabIndex={0}
+            data-mermaid-viewport="true"
+            className={
+              'mdxstudio-mermaid__viewport' +
+              (pannable ? ' mdxstudio-mermaid__viewport--pannable' : '') +
+              (panZoom.dragging ? ' mdxstudio-mermaid__viewport--dragging' : '')
+            }
+            onPointerDown={panZoom.onPointerDown}
+            onPointerMove={panZoom.onPointerMove}
+            onPointerUp={panZoom.onPointerEnd}
+            onPointerCancel={panZoom.onPointerEnd}
+            onKeyDown={panZoom.onKeyDown}
+          >
+            <div
+              className="mdxstudio-mermaid__stage"
+              style={{ transform: transformToCss(panZoom.transform) }}
+            >
+              <div
+                className="mermaid-svg-container"
+                dangerouslySetInnerHTML={{ __html: svg }}
+              />
+            </div>
+
+            <p id={`${stableMermaidId}-help`} className="mdxstudio-mermaid__sr-only">
+              Drag or press the arrow keys to pan. Plus and minus zoom, zero returns to the
+              fitted view. Hold Control or Command while scrolling to zoom; scrolling on its
+              own moves the page.
+            </p>
+
+            {/* The cluster sits inside the frame, so a press on it must not also
+                read as the start of a drag. */}
+            <div
+              className="mdxstudio-mermaid__controls"
+              onPointerDown={(event) => event.stopPropagation()}
+            >
+              <button
+                type="button"
+                onClick={panZoom.zoomOut}
+                aria-label="Zoom out"
+                title="Zoom out"
+                className="mdxstudio-mermaid__control"
+              >
+                <ZoomOut className="mdxstudio-mermaid__icon-14" aria-hidden="true" />
+              </button>
+              <button
+                type="button"
+                onClick={panZoom.zoomIn}
+                aria-label="Zoom in"
+                title="Zoom in"
+                className="mdxstudio-mermaid__control"
+              >
+                <ZoomIn className="mdxstudio-mermaid__icon-14" aria-hidden="true" />
+              </button>
+              <button
+                type="button"
+                onClick={panZoom.reset}
+                aria-label="Reset zoom"
+                title="Reset zoom"
+                className="mdxstudio-mermaid__control"
+              >
+                <RotateCcw className="mdxstudio-mermaid__icon-14" aria-hidden="true" />
+              </button>
+            </div>
+          </div>
         ) : (
           <div className="mdxstudio-mermaid__pending">
             <Loader2

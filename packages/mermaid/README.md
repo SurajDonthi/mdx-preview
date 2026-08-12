@@ -38,6 +38,36 @@ graph TD
 ```
 ````
 
+## Pan and zoom
+
+A rendered diagram is fitted to the width it is given, which for anything large
+means unreadable. Every live diagram therefore sits in a frame it can be moved
+around inside, with three buttons in the bottom-right corner: zoom out, zoom in,
+and reset. Reset returns to exactly the initial fit.
+
+| Gesture | Does |
+| --- | --- |
+| Drag | Pans, once zoomed in. |
+| Arrow keys | Pans, three times as far with `Shift`. |
+| `+` / `-` / `0` | Zoom in, zoom out, reset. |
+| `Ctrl`/`Cmd` + wheel | Zooms about the pointer. |
+| Wheel on its own | **Scrolls the page.** The diagram never takes it. |
+| Pinch | Zooms, once zoomed in. |
+
+Zoom runs from the fitted view up to 8x. Zooming is a CSS transform on a wrapper,
+so the card keeps the height it had and the document never reflows underneath the
+reader; there is no pan-zoom library involved.
+
+The controls are faint until the frame is hovered, focused or zoomed — a preview
+pane is often only a few hundred pixels wide, and a solid control bar there is a
+bite out of the drawing. On a touch screen, which has no hover, they stay
+visible.
+
+A diagram that failed to parse has no controls, and neither does one in an
+export: `renderMode="pdf"` renders the drawing at its natural fit and nothing
+else, because the exporter strips every button and a diagram frozen mid-zoom
+would arrive cropped.
+
 ## Stylesheet
 
 ```ts

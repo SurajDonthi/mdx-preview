@@ -181,6 +181,121 @@
   background: var(--mdxstudio-scrollbar-thumb-hover, rgb(148 163 184 / 0.45));
 }
 
+/*
+ * Pan and zoom.
+ *
+ * The viewport is the window: it keeps the height the fitted drawing had, and
+ * clips whatever the stage's transform pushes past its edges. Because a
+ * transform never touches layout, zooming in cannot change the card's height or
+ * reflow the document under the reader's cursor.
+ *
+ * `touch-action` is the honest half of this. At the fitted scale there is
+ * nothing outside the frame, so a finger dragged upwards must scroll the page as
+ * it would anywhere else. Only once the reader has zoomed in - a deliberate act
+ * - does the frame claim the gesture for panning and pinching.
+ */
+.mdxstudio-mermaid__viewport {
+  position: relative;
+  flex: 1 1 auto;
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  touch-action: pan-y;
+}
+
+.mdxstudio-mermaid__viewport--pannable {
+  cursor: grab;
+  touch-action: none;
+}
+
+.mdxstudio-mermaid__viewport--dragging {
+  cursor: grabbing;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.mdxstudio-mermaid__viewport:focus-visible {
+  outline: 2px solid var(--mdxstudio-mermaid-icon);
+  outline-offset: -2px;
+}
+
+.mdxstudio-mermaid__stage {
+  transform-origin: 0 0;
+}
+
+/* Promoted to its own layer only while it is actually being moved. A document
+   with twenty diagrams would otherwise hold twenty compositor layers for
+   nothing. */
+.mdxstudio-mermaid__viewport--pannable .mdxstudio-mermaid__stage {
+  will-change: transform;
+}
+
+/*
+ * At rest the cluster is faint: the VS Code preview is often a few hundred
+ * pixels wide and a solid control bar there is a bite out of the drawing.
+ * Hiding it entirely until hover is worse - undiscoverable, and unreachable on a
+ * touch screen that has no hover at all - so it stays present and merely quiet,
+ * and comes fully forward the moment the frame is hovered, focused, or already
+ * zoomed and therefore in use.
+ */
+.mdxstudio-mermaid__controls {
+  position: absolute;
+  right: var(--mdxstudio-space-2);
+  bottom: var(--mdxstudio-space-2);
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  border-radius: var(--mdxstudio-radius-sm);
+  border: 1px solid var(--mdxstudio-mermaid-border);
+  background-color: var(--mdxstudio-mermaid-header-bg);
+  box-shadow: var(--mdxstudio-shadow-sm);
+  opacity: 0.4;
+  transition: opacity var(--mdxstudio-transition-duration) var(--mdxstudio-transition-timing);
+}
+
+.mdxstudio-mermaid__viewport:hover .mdxstudio-mermaid__controls,
+.mdxstudio-mermaid__viewport:focus-within .mdxstudio-mermaid__controls,
+.mdxstudio-mermaid__viewport--pannable .mdxstudio-mermaid__controls {
+  opacity: 1;
+}
+
+@media (hover: none) {
+  .mdxstudio-mermaid__controls { opacity: 1; }
+}
+
+.mdxstudio-mermaid__control {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: var(--mdxstudio-radius-sm);
+  background-color: transparent;
+  color: var(--mdxstudio-mermaid-button-fg);
+  cursor: pointer;
+  transition:
+    color var(--mdxstudio-transition-duration) var(--mdxstudio-transition-timing),
+    background-color var(--mdxstudio-transition-duration) var(--mdxstudio-transition-timing);
+}
+
+.mdxstudio-mermaid__control:hover {
+  background-color: var(--mdxstudio-mermaid-button-bg-hover);
+  color: var(--mdxstudio-mermaid-button-fg-hover);
+}
+
+/* Read by a screen reader, never drawn. */
+.mdxstudio-mermaid__sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
 /* `.mermaid-svg-container` is load-bearing: the PDF exporter finds the drawing
    through it in order to rasterise it. */
 .mermaid-svg-container {

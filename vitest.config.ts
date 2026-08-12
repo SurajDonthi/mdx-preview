@@ -51,6 +51,18 @@ export default defineConfig({
       {
         extends: true,
         test: {
+          name: 'mermaid',
+          root: path.resolve(root, 'packages/mermaid'),
+          // The pan and zoom arithmetic is environment-free, but the card is a
+          // real component with pointer handlers and a control cluster, so the
+          // project runs in jsdom.
+          environment: 'jsdom',
+          include: ['tests/**/*.test.ts', 'tests/**/*.test.tsx'],
+        },
+      },
+      {
+        extends: true,
+        test: {
           name: 'tasks',
           root: path.resolve(root, 'packages/tasks'),
           // The parser is environment-free, but the board is a real component
