@@ -16,7 +16,6 @@ import 'prismjs/components/prism-markdown';
 import {
   MdxRenderContext,
   parseFrontmatter,
-  collectHeadings,
   parseMdxDocument,
   formatMdxParseError,
   countLines,
@@ -40,6 +39,15 @@ import { baseMdxRegistry } from './plugin';
 import { InlineToken } from './InlineToken';
 import { ImageLightbox, MdxImage } from './Lightbox';
 import type { LightboxImage, OpenLightbox } from './Lightbox';
+import {
+  HEADING_SECTION_TAG,
+  MdxH1,
+  MdxH2,
+  MdxH3,
+  MdxHeadingSection,
+  assignHeadingIds,
+  groupHeadingSections,
+} from './Headings';
 import { AlertTriangle, Check, Copy, HelpCircle } from 'lucide-react';
 
 /**
@@ -310,20 +318,6 @@ function unwrapBlockJsx(node: any): void {
   node.children = next;
 }
 
-/**
- * Stamps `id` on every heading in the tree.
- *
- * The ids come from `collectHeadings()`, which is also what the table of
- * contents links to and what the scroll-spy reads back, so the two cannot
- * disagree about what a heading is called.
- */
-function assignHeadingIds(tree: any): void {
-  for (const heading of collectHeadings(tree)) {
-    const node = heading.node as { properties?: Record<string, unknown> };
-    node.properties = { ...(node.properties ?? {}), id: heading.id };
-  }
-}
-
 /** Resolves `<Name>` / `<Name.Sub>` against the document scope. */
 function estreeName(node: any): string | null {
   if (!node || typeof node !== 'object') return null;
@@ -425,6 +419,8 @@ function buildDocument(options: BuildOptions): BuiltDocument {
 
   unwrapBlockJsx(ast.tree);
   assignHeadingIds(ast.tree);
+  // After the ids, so a section knows the id of the heading that opened it.
+  groupHeadingSections(ast.tree);
 
   const evaluate: MdxExpressionEvaluator =
     options.expressions === 'literals'
@@ -632,22 +628,12 @@ export function MdxRenderer({
       },
 
       // Heading anchors for scroll spy TOC. `id` is stamped on the tree before
-      // rendering, in document order, so it matches extractHeadings().
-      h1: ({ children, node, ...props }: any) => (
-        <h1 className="mdxstudio-heading mdxstudio-heading--1" {...props}>
-          {children}
-        </h1>
-      ),
-      h2: ({ children, node, ...props }: any) => (
-        <h2 className="mdxstudio-heading mdxstudio-heading--2" {...props}>
-          {children}
-        </h2>
-      ),
-      h3: ({ children, node, ...props }: any) => (
-        <h3 className="mdxstudio-heading mdxstudio-heading--3" {...props}>
-          {children}
-        </h3>
-      ),
+      // rendering, in document order, so it matches extractHeadings(). h1 to h3
+      // also carry the section controls; see ./Headings.
+      [HEADING_SECTION_TAG]: MdxHeadingSection,
+      h1: MdxH1,
+      h2: MdxH2,
+      h3: MdxH3,
       h4: ({ children, node, ...props }: any) => (
         <h4 className="mdxstudio-heading mdxstudio-heading--4" {...props}>
           {children}

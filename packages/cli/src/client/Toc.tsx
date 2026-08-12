@@ -31,12 +31,41 @@ export function Toc({ headings, scrollRoot, onSelect, onClose }: TocProps) {
       { root: scrollRoot ?? null, rootMargin: '-72px 0px -60% 0px' }
     );
 
-    for (const heading of headings) {
-      const element = document.getElementById(heading.id);
-      if (element) observer.observe(element);
-    }
+    /**
+     * The elements currently being watched.
+     *
+     * A heading is not a fixed element: a section a reader collapsed takes its
+     * headings off the page, and puts *new* ones back when it opens again, as
+     * does switching a `<Tabs>` panel. An observer still holding the old node
+     * never fires for it, so the outline would latch on whatever was
+     * highlighted last. Resolving the ids again on every DOM change fixes that;
+     * comparing what was found first keeps it to a lookup per heading.
+     */
+    let watched: HTMLElement[] = [];
 
-    return () => observer.disconnect();
+    const attach = (): void => {
+      const found = headings
+        .map((heading) => document.getElementById(heading.id))
+        .filter((element): element is HTMLElement => element !== null);
+
+      const same =
+        found.length === watched.length &&
+        found.every((element, index) => element === watched[index]);
+      if (same) return;
+
+      watched = found;
+      observer.disconnect();
+      for (const element of found) observer.observe(element);
+    };
+
+    attach();
+    const mutations = new MutationObserver(attach);
+    if (scrollRoot) mutations.observe(scrollRoot, { childList: true, subtree: true });
+
+    return () => {
+      mutations.disconnect();
+      observer.disconnect();
+    };
   }, [headings, scrollRoot]);
 
   return (

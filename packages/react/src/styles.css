@@ -599,6 +599,74 @@
   .mdxstudio-heading--2 { font-size: var(--mdxstudio-text-2xl); line-height: calc(2 / 1.5); }
 }
 
+/* ------------------------------------------------------------------ *
+ * Collapsible sections
+ *
+ * Neither the section nor its body may take a border, padding or an
+ * overflow of its own: the moment one of them does, the margins that
+ * used to collapse between a heading and the paragraph under it stop
+ * collapsing and every document on screen grows a set of new gaps.
+ * ------------------------------------------------------------------ */
+
+.mdxstudio-section__body[hidden] { display: none; }
+
+.mdxstudio-heading__controls {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--mdxstudio-space-0-5);
+  margin-left: var(--mdxstudio-space-2);
+  vertical-align: middle;
+  /* Selecting a sentence out of a heading must not pick these up with it. */
+  user-select: none;
+  -webkit-user-select: none;
+  opacity: 0;
+  transition: opacity var(--mdxstudio-transition-duration) var(--mdxstudio-transition-timing);
+}
+
+.mdxstudio-heading:hover .mdxstudio-heading__controls,
+.mdxstudio-heading__controls:focus-within,
+/* Shut, the chevron is the only way back in, so it stays on screen. */
+.mdxstudio-section[data-collapsed='true'] > .mdxstudio-heading .mdxstudio-heading__controls {
+  opacity: 1;
+}
+
+/* A pointer that cannot hover has no way to reveal them. */
+@media (hover: none) {
+  .mdxstudio-heading__controls { opacity: 1; }
+}
+
+.mdxstudio-heading__toggle,
+.mdxstudio-heading__anchor {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--mdxstudio-space-1);
+  border-radius: var(--mdxstudio-radius-md);
+  color: var(--mdxstudio-fg-muted);
+  cursor: pointer;
+  transition:
+    color var(--mdxstudio-transition-duration) var(--mdxstudio-transition-timing),
+    background-color var(--mdxstudio-transition-duration) var(--mdxstudio-transition-timing);
+}
+
+.mdxstudio-heading__toggle:hover,
+.mdxstudio-heading__anchor:hover {
+  color: var(--mdxstudio-accent);
+  background-color: var(--mdxstudio-accent-wash);
+}
+
+.mdxstudio-heading__toggle:focus-visible,
+.mdxstudio-heading__anchor:focus-visible {
+  outline: 2px solid var(--mdxstudio-accent);
+  outline-offset: 1px;
+}
+
+.mdxstudio-heading__chevron {
+  transition: transform var(--mdxstudio-transition-duration) var(--mdxstudio-transition-timing);
+}
+
+.mdxstudio-heading__chevron--shut { transform: rotate(-90deg); }
+
 .mdxstudio-link {
   font-weight: var(--mdxstudio-weight-medium);
   text-decoration-line: underline;

@@ -125,6 +125,36 @@ themed by the same `--mdxstudio-callout-*` properties:
 > Mind the gap.
 ```
 
+### Headings
+
+`h1` to `h3` each open a section a reader can collapse: everything under the
+heading, down to the next heading of the same level or a shallower one, folds
+away behind a chevron in the heading itself. `h4` to `h6` get no chevron of their
+own — they label a paragraph rather than start a chapter — and fold away with the
+section they sit in. Everything starts open, and a heading with nothing under it
+gets no chevron at all.
+
+The chevron is the only thing that opens and closes a section, so selecting a
+sentence out of a heading never folds the text under it away. It is a real
+button: `aria-expanded`, `aria-controls`, Enter and Space. A collapsed section's
+content is unmounted rather than hidden, so a heading inside it stops answering
+`document.getElementById` — which is what stops a table of contents or an editor
+scroll sync from measuring a heading that is not on the page.
+
+Beside it is a copy control, which puts the heading's fragment on the clipboard —
+`#the-heading` — and nothing else. That is the one form that means the same thing
+in every host: pasted into a document it is a working in-page link, and given a
+path in front of it, the cross-document link the VS Code extension resolves
+(`./other.mdx#the-heading`). A full URL would be a `vscode-webview://` address or
+a port on somebody's laptop, neither of which survives being shared. The ids are
+the ones `extractHeadings()` reports, so a copied link and a table of contents
+entry cannot disagree.
+
+The heading itself is untouched: a real `h1`, `h2` or `h3`, with its id, in
+document order, and with only its own text in it. In `renderMode="pdf"` every
+section is open and neither control is rendered, so nothing is lost to the
+exporter.
+
 ### Accordions
 
 Panels are children, so anything a document can hold goes inside one — lists,
