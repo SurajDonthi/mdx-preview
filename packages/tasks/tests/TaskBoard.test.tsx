@@ -75,6 +75,17 @@ const choose = (label: string, value: string) => {
     element.dispatchEvent(new Event('change', { bubbles: true }));
   });
 };
+/** Types into the toolbar's text filter the way a keystroke would. */
+const search = (text: string) => {
+  act(() => {
+    const input = container.querySelector<HTMLInputElement>('.mdxstudio-tasks__search')!;
+    // React tracks the value it set, so a plain assignment looks like no change
+    // at all; the native setter is what a real keystroke goes through.
+    const setValue = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!;
+    setValue.call(input, text);
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+};
 const click = (element: Element | undefined) => {
   if (!element) throw new Error('nothing to click');
   act(() => {
@@ -318,18 +329,10 @@ describe('views', () => {
     expect(cardTitles).toContain('Port the routes');
     // An epic is context for its children, not a card of its own.
     expect(cardTitles).not.toContain('Delete the engine');
-    expect(cards[0].querySelector('.mdxstudio-tasks__context')?.textContent).toContain('›');
-  });
-
-  it('puts completed and canceled work in one bucket at the end, deferred in its own', () => {
-    render(<TaskBoard source={'- [ ] open\n- [x] closed\n- [-] dropped\n- [→] later'} />);
-
-    click(Array.from(container.querySelectorAll('button')).find((b) => b.textContent === 'Board'));
-
-    const heads = Array.from(container.querySelectorAll('.mdxstudio-tasks__column-head')).map(
-      (head) => head.querySelector('.mdxstudio-tasks__column-title')?.textContent
+    const nested = cards.find(
+      (card) => card.querySelector('.mdxstudio-tasks__title')?.textContent === 'Port the routes'
     );
-    expect(heads).toEqual(['All work', 'Deferred', 'Completed and canceled']);
+    expect(nested?.querySelector('.mdxstudio-tasks__context')?.textContent).toContain('›');
   });
 
   it('groups the list without losing anything', () => {
@@ -341,6 +344,221 @@ describe('views', () => {
     );
     expect(heads).toContain('In progress');
     expect(rows()).toHaveLength(6);
+  });
+});
+
+describe('the board columns', () => {
+  /**
+   * Every status, under two epics, so one plan can say where each marker lands
+   * and what grouping does to it.
+   */
+  const EVERY = [
+    '- [ ] AG-1: Alpha',
+    '    - [ ] draft the schema',
+    '    - [~] port the routes',
+    '    - [!] wait on legal',
+    '- [ ] AG-2: Beta',
+    '    - [→] revisit the cache',
+    '    - [x] ship the flag',
+    '    - [-] drop the shim',
+  ].join('\n');
+
+  const COLUMNS = ['Backlog', 'In progress', 'Blocked', 'Deferred', 'Completed and canceled'];
+
+  const board = () =>
+    click(Array.from(container.querySelectorAll('button')).find((b) => b.textContent === 'Board'));
+
+  const headsIn = (scope: ParentNode, selector: string) =>
+    Array.from(scope.querySelectorAll(selector)).map(
+      (head) => head.querySelector('.mdxstudio-tasks__column-title')?.textContent
+    );
+  const columnHeads = (scope: ParentNode = container) =>
+    headsIn(scope, '.mdxstudio-tasks__column-head');
+  const laneHeads = () => headsIn(container, '.mdxstudio-tasks__section-head');
+  const lanes = () => Array.from(container.querySelectorAll<HTMLElement>('.mdxstudio-tasks__lane'));
+  const column = (key: string, scope: ParentNode = container) =>
+    scope.querySelector<HTMLElement>(`[data-task-column="${key}"]`);
+  const cardsIn = (key: string, scope: ParentNode = container) =>
+    Array.from(column(key, scope)?.querySelectorAll('.mdxstudio-tasks__card') ?? []).map(
+      (card) => card.querySelector('.mdxstudio-tasks__title')?.textContent
+    );
+  const countIn = (key: string, scope: ParentNode = container) =>
+    column(key, scope)?.querySelector('.mdxstudio-tasks__column-count')?.textContent;
+
+  it('opens on the workflow, left to right', () => {
+    render(<TaskBoard source={EVERY} />);
+    board();
+
+    expect(columnHeads()).toEqual(COLUMNS);
+  });
+
+  it('opens on the same columns straight from defaultView', () => {
+    render(<TaskBoard source={EVERY} defaultView="board" />);
+
+    expect(columnHeads()).toEqual(COLUMNS);
+  });
+
+  it('lands each status in its own column', () => {
+    render(<TaskBoard source={EVERY} defaultView="board" />);
+    click(buttonLabelled('Expand Deferred'));
+    click(buttonLabelled('Expand Completed and canceled'));
+
+    expect(cardsIn('todo')).toEqual(['draft the schema']);
+    expect(cardsIn('in-progress')).toEqual(['port the routes']);
+    expect(cardsIn('blocked')).toEqual(['wait on legal']);
+    expect(cardsIn('~deferred')).toEqual(['revisit the cache']);
+    // Done and canceled share the last column: neither is work anybody is
+    // going to pick up.
+    expect(cardsIn('~closed')).toEqual(['ship the flag', 'drop the shim']);
+  });
+
+  it('gives blocked work a column of its own rather than burying it', () => {
+    render(<TaskBoard source={EVERY} defaultView="board" />);
+
+    // Third, beside the work it is about, and open on load.
+    expect(columnHeads()[2]).toBe('Blocked');
+    expect(cardsIn('blocked')).toEqual(['wait on legal']);
+  });
+
+  it('uses the same keys and labels as the list, so the two views agree', () => {
+    render(<TaskBoard source={EVERY} />);
+    const listBuckets = Array.from(
+      container.querySelectorAll('.mdxstudio-tasks__bucket .mdxstudio-tasks__column-title')
+    ).map((node) => node.textContent);
+    board();
+
+    expect(listBuckets).toEqual(['Deferred', 'Completed and canceled']);
+    // And the fold state carried across with them: both arrived folded.
+    expect(cardsIn('~deferred')).toEqual([]);
+    expect(cardsIn('~closed')).toEqual([]);
+    expect(countIn('~deferred')).toBe('1');
+    expect(countIn('~closed')).toBe('2');
+  });
+
+  it('draws an empty column rather than dropping it', () => {
+    render(<TaskBoard source={'- [ ] one\n- [ ] two'} defaultView="board" />);
+
+    expect(columnHeads()).toEqual(COLUMNS);
+    expect(countIn('in-progress')).toBe('0');
+    expect(countIn('blocked')).toBe('0');
+    // The two live ones say it in words; the settled two arrive folded, so
+    // their heading and its zero are the whole of what they have to say.
+    expect(container.querySelectorAll('.mdxstudio-tasks__column-none')).toHaveLength(2);
+    expect(countIn('~closed')).toBe('0');
+    expect(column('in-progress')?.className).toContain('mdxstudio-tasks__column--empty');
+  });
+
+  it('keeps the whole workflow for a plan with nothing left to do', () => {
+    render(<TaskBoard source={'- [x] shipped\n- [-] dropped'} defaultView="board" />);
+    click(buttonLabelled('Expand Completed and canceled'));
+
+    expect(columnHeads()).toEqual(COLUMNS);
+    expect(cardsIn('~closed')).toEqual(['shipped', 'dropped']);
+    expect(cardsIn('todo')).toEqual([]);
+  });
+
+  it('renders a one-item plan, and a plan of nothing it can read', () => {
+    render(<TaskBoard source={'- [~] the only thing'} defaultView="board" />);
+    expect(cardsIn('in-progress')).toEqual(['the only thing']);
+
+    // A line the parser cannot read is not a task, so the board has no card
+    // for it - and says so with an empty workflow rather than a bare panel.
+    render(<TaskBoard source={'- [?] a line the parser cannot read'} defaultView="board" />);
+    expect(columnHeads()).toEqual(COLUMNS);
+    expect(container.querySelectorAll('.mdxstudio-tasks__card')).toHaveLength(0);
+  });
+
+  it('says so when a filter matches nothing, rather than drawing empty columns', () => {
+    render(<TaskBoard source={EVERY} defaultView="board" />);
+    search('nothing in this plan says this');
+
+    expect(container.querySelector('.mdxstudio-tasks__none')?.textContent).toContain('Nothing');
+    expect(columnHeads()).toEqual([]);
+  });
+
+  it('turns grouping into lanes, keeping the columns in each', () => {
+    render(<TaskBoard source={EVERY} defaultView="board" />);
+    choose('Group', 'parent');
+
+    expect(laneHeads()).toEqual(['Alpha', 'Beta']);
+    const [alpha, beta] = lanes();
+    expect(columnHeads(alpha)).toEqual(COLUMNS);
+    expect(columnHeads(beta)).toEqual(COLUMNS);
+    // The epic says which lane; the status still says which column.
+    expect(cardsIn('blocked', alpha)).toEqual(['wait on legal']);
+    expect(cardsIn('blocked', beta)).toEqual([]);
+    expect(countIn('~closed', beta)).toBe('2');
+  });
+
+  it('folds a lane away from its own heading', () => {
+    render(<TaskBoard source={EVERY} defaultView="board" />);
+    choose('Group', 'parent');
+    click(buttonLabelled('Collapse Alpha'));
+
+    expect(lanes()[0].querySelectorAll('.mdxstudio-tasks__column')).toHaveLength(0);
+    expect(columnHeads(lanes()[1])).toEqual(COLUMNS);
+  });
+
+  it('offers no status grouping on a board, and drops it on the way in', () => {
+    render(<TaskBoard source={EVERY} />);
+    choose('Group', 'status');
+    board();
+
+    expect(Array.from(selectFor('Group').options).map((option) => option.textContent)).not.toContain(
+      'Status'
+    );
+    // The board is already laid out by status, so it is the ungrouped board.
+    expect(laneHeads()).toEqual([]);
+    expect(columnHeads()).toEqual(COLUMNS);
+  });
+
+  it('collapses and expands every column and lane at once', () => {
+    render(<TaskBoard source={EVERY} defaultView="board" />);
+    choose('Group', 'parent');
+
+    click(buttonLabelled('Collapse every column'));
+    expect(container.querySelectorAll('.mdxstudio-tasks__card')).toHaveLength(0);
+    expect(laneHeads()).toEqual(['Alpha', 'Beta']);
+
+    click(buttonLabelled('Expand every column'));
+    expect(container.querySelectorAll('.mdxstudio-tasks__card')).toHaveLength(6);
+  });
+
+  it('shows every column, every card and no button in the export pass', () => {
+    render(<TaskBoard source={EVERY} defaultView="board" />, 'pdf');
+
+    expect(columnHeads()).toEqual(COLUMNS);
+    expect(
+      Array.from(container.querySelectorAll('.mdxstudio-tasks__card')).map(
+        (card) => card.querySelector('.mdxstudio-tasks__title')?.textContent
+      )
+    ).toEqual([
+      'draft the schema',
+      'port the routes',
+      'wait on legal',
+      'revisit the cache',
+      'ship the flag',
+      'drop the shim',
+    ]);
+    expect(container.querySelectorAll('button')).toHaveLength(0);
+  });
+
+  it('exports the lanes too, with nothing folded', () => {
+    render(<TaskBoard source={EVERY} defaultView="board" defaultGroupBy="parent" />, 'pdf');
+
+    expect(laneHeads()).toEqual(['Alpha', 'Beta']);
+    expect(container.querySelectorAll('.mdxstudio-tasks__card')).toHaveLength(6);
+    expect(container.querySelectorAll('button')).toHaveLength(0);
+  });
+
+  it('renders no control that would change the plan', () => {
+    render(<TaskBoard source={EVERY} defaultView="board" />);
+
+    const labels = Array.from(container.querySelectorAll('button')).map((button) =>
+      button.getAttribute('aria-label')
+    );
+    expect(labels.some((label) => label?.startsWith('Move '))).toBe(false);
+    expect(labels.some((label) => label?.includes('change status'))).toBe(false);
   });
 });
 
@@ -526,14 +744,8 @@ describe('the head of a long plan', () => {
 
   it('lifts the cap for a filter and for the export pass', () => {
     render(<TaskBoard source={long} initialItems={3} />);
-    act(() => {
-      const search = container.querySelector<HTMLInputElement>('.mdxstudio-tasks__search')!;
-      // React tracks the value it set, so a plain assignment looks like no
-      // change at all; the native setter is what a real keystroke goes through.
-      const setValue = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!;
-      setValue.call(search, 'e');
-      search.dispatchEvent(new Event('input', { bubbles: true }));
-    });
+    search('e');
+
     expect(titles().length).toBeGreaterThan(4);
   });
 

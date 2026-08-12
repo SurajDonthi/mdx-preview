@@ -488,6 +488,117 @@ function buildGroups(nodes: TaskNode[], groupBy: TaskGroupBy, document: TaskDocu
 }
 
 /* ------------------------------------------------------------------ *
+ * The board's columns
+ * ------------------------------------------------------------------ */
+
+/**
+ * The columns of a board, left to right, and the statuses each one holds.
+ *
+ * They are the workflow, not a summary of the file: the same columns in the
+ * same order whatever the plan contains. A board whose columns come and go with
+ * its contents is one nobody can learn, and two plans drawn with different
+ * columns cannot be read against each other.
+ *
+ * The last two columns *are* the list's buckets - same keys, same labels, same
+ * fold state - because a column and a bucket are one idea seen from two sides,
+ * and the two views must not disagree about where settled work went. Done and
+ * canceled share the last one for the reason the list shares it: neither is
+ * work anybody is going to pick up. Deferred keeps its own, because it is work
+ * somebody put down deliberately and will come back to.
+ *
+ * `[!]` blocked gets a column of its own rather than being folded in with
+ * anything. It is the one status on a board that names work needing a person
+ * today, and hiding it inside another column is exactly the failure this view
+ * exists to prevent. It sits third, beside the work it is about: inside the
+ * first screenful, without breaking the left-to-right reading of the workflow.
+ */
+const BOARD_COLUMNS: Array<{ key: string; label: string; statuses: TaskStatus[] }> = [
+  { key: 'todo', label: 'Backlog', statuses: ['todo'] },
+  { key: 'in-progress', label: 'In progress', statuses: ['in-progress'] },
+  { key: 'blocked', label: 'Blocked', statuses: ['blocked'] },
+  { key: DEFERRED_BUCKET, label: 'Deferred', statuses: ['deferred'] },
+  { key: CLOSED_BUCKET, label: 'Completed and canceled', statuses: CLOSED },
+];
+
+/** Where a status this file has never heard of goes, rather than nowhere. */
+const OTHER_COLUMN = '~other';
+
+/** A row of the board: one group's cards, dealt across the status columns. */
+interface Lane {
+  key: string;
+  /** Empty when the board is ungrouped - one lane, and no heading over it. */
+  label: string;
+  columns: Group[];
+}
+
+/**
+ * One lane's cards, dealt into the columns.
+ *
+ * Every column comes back, empty ones included. An empty column is a fact worth
+ * reading - nothing in progress is a different plan from three things in
+ * progress - and it is what keeps the same status under the same heading in
+ * every lane, which is the only thing that makes lanes comparable.
+ */
+function boardColumns(nodes: TaskNode[]): Group[] {
+  const columns: Group[] = BOARD_COLUMNS.map((column) => ({
+    key: column.key,
+    label: column.label,
+    nodes: [],
+  }));
+
+  const byStatus = new Map<TaskStatus, Group>();
+  BOARD_COLUMNS.forEach((column, index) => {
+    for (const status of column.statuses) byStatus.set(status, columns[index]);
+  });
+
+  const other: Group = { key: OTHER_COLUMN, label: 'Other', nodes: [] };
+  for (const node of nodes) (byStatus.get(node.status) ?? other).nodes.push(node);
+  // A marker the parser cannot read comes back as a plain line, so nothing
+  // reaches this through `parseTaskBoard`. It is here so that a status added
+  // later lands on the board rather than off it, next to the live columns
+  // rather than after the settled ones.
+  if (other.nodes.length > 0) columns.splice(3, 0, other);
+
+  return columns;
+}
+
+/**
+ * The board: status across, grouping down.
+ *
+ * Grouping adds lanes instead of replacing the columns. The columns are what a
+ * board *is* - swapping them for one column per epic would leave the reader
+ * with a second list and no statuses - so the two compose on their own axes:
+ * a lane says which epic, a column says how far along. Grouping by status is
+ * the one case with nothing to add, and asks for the board it already has.
+ */
+function buildBoard(nodes: TaskNode[], groupBy: TaskGroupBy, document: TaskDocument): Lane[] {
+  if (groupBy === 'none' || groupBy === 'status') {
+    return [{ key: '~all', label: '', columns: boardColumns(nodes) }];
+  }
+
+  const lanes: Array<{ key: string; label: string; nodes: TaskNode[] }> = [];
+  const byKey = new Map<string, { key: string; label: string; nodes: TaskNode[] }>();
+  for (const node of nodes) {
+    const [key, label] = groupKeys(node, groupBy, document);
+    let lane = byKey.get(key);
+    if (!lane) {
+      lane = { key, label, nodes: [] };
+      byKey.set(key, lane);
+      lanes.push(lane);
+    }
+    lane.nodes.push(node);
+  }
+
+  // Lanes and columns fold out of one set, so a lane key is namespaced: a
+  // milestone called "blocked" must not fold the Blocked column.
+  return lanes.map((lane) => ({
+    key: `~lane/${lane.key}`,
+    label: lane.label,
+    columns: boardColumns(lane.nodes),
+  }));
+}
+
+/* ------------------------------------------------------------------ *
  * Clipboard
  * ------------------------------------------------------------------ */
 
@@ -865,12 +976,14 @@ export function TaskBoard(props: TaskBoardProps) {
     [document, filters, isPdf]
   );
 
-  const cards = useMemo(() => {
-    // A card is a leaf: an epic is context for its children, not a card of its
-    // own, and showing both would count the same work twice.
-    const leaves = visibleTasks.filter((task) => task.children.every((child) => child.kind === 'line'));
-    return buildGroups(leaves, groupBy, document);
-  }, [visibleTasks, groupBy, document]);
+  // A card is a leaf: an epic is context for its children, not a card of its
+  // own, and showing both would count the same work twice.
+  const leaves = useMemo(
+    () => visibleTasks.filter((task) => task.children.every((child) => child.kind === 'line')),
+    [visibleTasks]
+  );
+
+  const lanes = useMemo(() => buildBoard(leaves, groupBy, document), [leaves, groupBy, document]);
 
   const grouped = useMemo(
     () => (groupBy === 'none' ? [] : buildGroups(visibleTasks, groupBy, document)),
@@ -879,7 +992,19 @@ export function TaskBoard(props: TaskBoardProps) {
 
   /** The tree is the only view that folds rows; the others fold columns. */
   const tree = view === 'list' && groupBy === 'none';
-  const columns = view === 'board' ? cards : grouped;
+  /**
+   * Everything the current view can fold, for the two toolbar buttons.
+   *
+   * The one lane of an ungrouped board has no heading, so it is not in here:
+   * folding it would hide the board behind nothing to press.
+   */
+  const foldable =
+    view === 'board'
+      ? lanes.flatMap((lane) => [
+          ...(lane.label ? [lane.key] : []),
+          ...lane.columns.map((column) => column.key),
+        ])
+      : grouped.map((group) => group.key);
 
   const copyAll = useCallback(() => {
     const visibleRows = [
@@ -1315,7 +1440,12 @@ export function TaskBoard(props: TaskBoardProps) {
               type="button"
               className={`mdxstudio-tasks__tab${view === 'board' ? ' mdxstudio-tasks__tab--on' : ''}`}
               aria-pressed={view === 'board'}
-              onClick={() => setView('board')}
+              onClick={() => {
+                setView('board');
+                // A board is already laid out by status, so the option is not
+                // offered there; the state must not be left pointing at it.
+                if (groupBy === 'status') setGroupBy('none');
+              }}
             >
               Board
             </button>
@@ -1328,11 +1458,15 @@ export function TaskBoard(props: TaskBoardProps) {
               value={groupBy}
               onChange={(event) => setGroupBy(event.target.value as TaskGroupBy)}
             >
-              {groupOptions.map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
+              {groupOptions
+                // Status is the board's own layout. Offering it as a grouping
+                // there would be a control with nothing left to do.
+                .filter(([value]) => !(view === 'board' && value === 'status'))
+                .map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
             </select>
           </label>
 
@@ -1402,7 +1536,7 @@ export function TaskBoard(props: TaskBoardProps) {
               setDisclosure((current) =>
                 tree
                   ? { ...current, children: new Set() }
-                  : { ...current, groups: new Set(columns.map((group) => group.key)) }
+                  : { ...current, groups: new Set(foldable) }
               )
             }
           >
@@ -1424,18 +1558,57 @@ export function TaskBoard(props: TaskBoardProps) {
         </div>
       )}
 
-      {view === 'board' && !isPdf ? (
-        <div className="mdxstudio-tasks__columns">
-          {cards.map((group) => (
-            <div key={group.key} className="mdxstudio-tasks__column">
-              {groupHead(group, 'mdxstudio-tasks__column-head')}
-              {(isPdf || !disclosure.groups.has(group.key)) && group.nodes.map(renderCard)}
-            </div>
-          ))}
-          {cards.length === 0 && (
-            <p className="mdxstudio-tasks__none">Nothing matches the current filter.</p>
-          )}
-        </div>
+      {view === 'board' ? (
+        // A filter that matched nothing says so, rather than drawing five empty
+        // columns over it. With no filter on, empty columns are the truth: this
+        // plan has nothing on the board.
+        leaves.length === 0 && filtersActive(filters) ? (
+          <p className="mdxstudio-tasks__none">Nothing matches the current filter.</p>
+        ) : (
+          <div className="mdxstudio-tasks__board">
+            {lanes.map((lane) => {
+              const laneFolded =
+                Boolean(lane.label) && !isPdf && disclosure.groups.has(lane.key);
+              return (
+                <div key={lane.key} className="mdxstudio-tasks__lane">
+                  {lane.label &&
+                    groupHead(
+                      {
+                        key: lane.key,
+                        label: lane.label,
+                        nodes: lane.columns.flatMap((column) => column.nodes),
+                      },
+                      'mdxstudio-tasks__section-head'
+                    )}
+                  {!laneFolded && (
+                    <div className="mdxstudio-tasks__columns">
+                      {lane.columns.map((column) => (
+                        <div
+                          key={column.key}
+                          className={`mdxstudio-tasks__column${
+                            column.nodes.length === 0 ? ' mdxstudio-tasks__column--empty' : ''
+                          }`}
+                          data-task-column={column.key}
+                        >
+                          {groupHead(column, 'mdxstudio-tasks__column-head')}
+                          {(isPdf || !disclosure.groups.has(column.key)) &&
+                            (column.nodes.length > 0 ? (
+                              column.nodes.map(renderCard)
+                            ) : (
+                              // Drawn, not skipped: a column that disappears
+                              // when it empties takes the shape of the
+                              // workflow with it.
+                              <p className="mdxstudio-tasks__column-none">Nothing here</p>
+                            ))}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )
       ) : groupBy !== 'none' ? (
         <div className="mdxstudio-tasks__sections">
           {grouped.map((group) => (

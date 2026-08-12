@@ -744,19 +744,71 @@ button.mdxstudio-tasks__status { cursor: pointer; }
  * Board and grouped sections
  * ------------------------------------------------------------------ */
 
+.mdxstudio-tasks__board {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mdxstudio-space-2);
+  padding: var(--mdxstudio-space-3);
+}
+
+/* One group's row of the board. Ungrouped, there is exactly one and no heading. */
+.mdxstudio-tasks__lane {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.mdxstudio-tasks__lane:first-child .mdxstudio-tasks__section-head { margin-top: 0; }
+
+/*
+ * The columns share the width evenly and wrap when there is not enough of it.
+ * Below two columns' worth - a VS Code preview pane, most of the time - the
+ * board becomes one deck per status, stacked in the same order. Horizontal
+ * scrolling would keep the shape and lose the work off the right-hand edge;
+ * stacked, every column is still there and still in workflow order.
+ */
 .mdxstudio-tasks__columns {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
   gap: var(--mdxstudio-space-3);
-  padding: var(--mdxstudio-space-3);
   align-items: start;
 }
+
+/* On paper the columns stack, so a card keeps a readable width. */
+.mdxstudio-tasks--pdf .mdxstudio-tasks__columns { grid-template-columns: 1fr; }
 
 .mdxstudio-tasks__column {
   display: flex;
   flex-direction: column;
   gap: var(--mdxstudio-space-2);
   min-width: 0;
+}
+
+/*
+ * Blocked work is the reason to look at a board, so its heading says so - and
+ * only while there is any. A red nought is a warning about nothing.
+ */
+.mdxstudio-tasks__column[data-task-column='blocked']:not(.mdxstudio-tasks__column--empty)
+  .mdxstudio-tasks__column-title,
+.mdxstudio-tasks__column[data-task-column='blocked']:not(.mdxstudio-tasks__column--empty)
+  .mdxstudio-tasks__column-count {
+  color: var(--mdxstudio-tasks-blocked);
+}
+
+/*
+ * An empty column keeps its place. The heading and one dashed line are the
+ * whole cost, and "nothing in progress" is worth as much of the reader's
+ * attention as three things in progress.
+ */
+.mdxstudio-tasks__column--empty .mdxstudio-tasks__column-head { opacity: 0.75; }
+
+.mdxstudio-tasks__column-none {
+  margin: 0;
+  padding: var(--mdxstudio-space-2) var(--mdxstudio-space-2-5);
+  border: 1px dashed var(--mdxstudio-tasks-border);
+  border-radius: var(--mdxstudio-radius-xl);
+  font-size: var(--mdxstudio-text-2xs-plus);
+  color: var(--mdxstudio-tasks-faint);
 }
 
 .mdxstudio-tasks__column-head,

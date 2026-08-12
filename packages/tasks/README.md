@@ -163,10 +163,24 @@ The same goes for anything derived from estimates — remaining time, burn-down,
   in the bucket with the greyed path of the tree it came from.
 - **A row's prose and a row's children are separate disclosures.** Opening one
   never touches the other. An item with no prose has no prose control.
-- **Views** — a list (the tree) and a board of leaf cards, each grouped by
-  parent, status, assignee, label, milestone or priority. Completed and canceled
-  work collapses into one bucket at the end of a board; deferred keeps its own.
-  **Every column and every grouped section is itself collapsible**, from its own
+- **Views** — a list (the tree) and a board of leaf cards.
+- **The board is the workflow.** Five status columns, always the same five and
+  always in this order: **Backlog** `[ ]`, **In progress** `[~]`, **Blocked**
+  `[!]`, **Deferred** `[→]`, **Completed and canceled** `[x]` `[-]`. Blocked
+  keeps a column of its own because it names the work that needs somebody today;
+  done and canceled share the last one because neither is work anybody is going
+  to pick up. Those last two columns *are* the list's buckets — same labels,
+  same fold state, so the two views never disagree about where settled work
+  went. **An empty column is still drawn**: the columns are the workflow, not a
+  summary of the file, and nothing in progress is worth as much of the reader's
+  attention as three things in progress. Narrower than two columns — a preview
+  pane, usually — the board stacks into one deck per status, in the same order.
+- **Grouping adds lanes; it does not replace the columns.** Group by parent,
+  assignee, label, milestone or priority and the board becomes one lane per
+  group, each with the same columns: a lane says which epic, a column says how
+  far along. The same control makes sections in the list. Status is not offered
+  on a board, because it is already the layout.
+- **Every column, lane and grouped section is itself collapsible**, from its own
   heading, and the heading keeps its count while it is folded.
 - **Filters** — epic, assignee, label, milestone and free text. Each appears
   only when it would have more than one option to offer.
@@ -214,7 +228,9 @@ editor's undo stack and dirty buffer like any other edit.
 
 The export pass strips every `button`, so in `renderMode === 'pdf'` the board
 renders no buttons at all and everything is already open: every child, every
-description, the completed bucket. What reaches the paper is the whole plan.
+description, the completed bucket. A board exports as a board — every column,
+every lane, every card, stacked one column per deck so a card keeps a readable
+width. What reaches the paper is the whole plan.
 
 ## Parsing it yourself
 
