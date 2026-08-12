@@ -1,6 +1,6 @@
 {
   "name": "@mdxstudio/tasks",
-  "version": "0.2.5",
+  "version": "0.2.6",
   "type": "module",
   "description": "TaskBoard plan-checklist component and MDX plugin for mdxstudio.",
   "keywords": [
@@ -54,7 +54,7 @@
     "lucide-react": "^0.546.0"
   },
   "peerDependencies": {
-    "@mdxstudio/core": "^0.2.5",
+    "@mdxstudio/core": "^0.2.6",
     "react": "^19.0.0"
   }
 }
