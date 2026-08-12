@@ -113,6 +113,7 @@ all three buttons land in the same group.
 | `mdxstudio.config` | `""` | Where to look for `mdxstudio.config.js`. Empty searches the workspace folder; a path names one file; `off` loads none. Never loaded in an untrusted workspace. See below. |
 | `mdxstudio.preview.delay` | `300` | Milliseconds after the last keystroke before re-rendering. `onType` only. |
 | `mdxstudio.preview.showFrontmatterHeader` | `true` | Render YAML frontmatter as a header card. |
+| `mdxstudio.preview.collapsibleHeadings` | `true` | Let a reader fold the section under an H1, H2 or H3. The copy-link control is unaffected, and a PDF export always has every section open. |
 | `mdxstudio.preview.scrollPreviewWithEditor` | `true` | Editor scrolls the preview. |
 | `mdxstudio.preview.scrollEditorWithPreview` | `true` | Preview scrolls the editor. |
 

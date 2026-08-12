@@ -53,6 +53,7 @@ export function clientDirectory(): string {
 
 export interface DocServerOptions {
   expressions?: 'full' | 'literals';
+  collapsibleHeadings?: boolean;
   theme?: string;
   /** The theme was asked for by name, not defaulted. */
   themePinned?: boolean;
@@ -261,6 +262,7 @@ export function createDocServer(source: DocSource, options: DocServerOptions = {
       single: source.single,
       watch: watcher !== null,
       expressions: options.expressions ?? 'full',
+      collapsibleHeadings: options.collapsibleHeadings !== false,
       theme: options.theme ?? 'github-dark',
       themePinned: options.themePinned ?? false,
       version: options.version ?? '0.0.0',

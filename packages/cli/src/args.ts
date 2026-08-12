@@ -17,6 +17,7 @@ export interface CliOptions {
   openBrowser: boolean;
   watch: boolean;
   gitignore: boolean;
+  collapsibleHeadings: boolean;
   expressions: 'full' | 'literals';
   theme: string;
   /** `--theme` was named on the command line, so it beats a remembered one. */
@@ -35,6 +36,7 @@ const DEFAULTS: CliOptions = {
   openBrowser: false,
   watch: true,
   gitignore: true,
+  collapsibleHeadings: true,
   expressions: 'full',
   theme: 'github-dark',
   themeExplicit: false,
@@ -112,6 +114,9 @@ export function parseArgs(argv: string[]): CliOptions {
         options.watch = true;
         break;
 
+      case '--no-collapse':
+        options.collapsibleHeadings = false;
+        break;
       case '--no-gitignore':
         options.gitignore = false;
         break;
@@ -192,6 +197,7 @@ Options
   -o, --open           Open a browser (the default for \`open\`, off for \`serve\`)
       --no-open        Do not open a browser
       --no-watch       Do not watch for file changes or live-reload
+      --no-collapse    Headings do not fold; the copy-link control stays
       --no-gitignore   Include files that .gitignore excludes
       --expressions <full|literals>
                        How much of an MDX {expression} to evaluate. Default

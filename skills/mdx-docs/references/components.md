@@ -195,6 +195,11 @@ prefer real headings over bold pseudo-headings. A `**Configuration**` line in
 bold looks similar and collapses nothing, appears in no table of contents, and
 has no anchor to link to.
 
+A host can turn the folding off - `collapsibleHeadings={false}` on the renderer,
+`mdxstudio.preview.collapsibleHeadings` in VS Code, `--no-collapse` on the CLI.
+The headings, their ids and the copy control are unaffected either way, so
+nothing you write depends on which way it is set.
+
 ## Split and Pane
 
 Two things beside each other, for a reader who has to compare them. `Tabs` shows

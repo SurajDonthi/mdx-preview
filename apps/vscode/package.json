@@ -238,6 +238,11 @@
           "default": true,
           "description": "Render the document's YAML frontmatter as a header card at the top of the preview."
         },
+        "mdxstudio.preview.collapsibleHeadings": {
+          "type": "boolean",
+          "default": true,
+          "description": "Let a reader fold the section under an H1, H2 or H3. The control that copies a heading's link is unaffected, and the PDF export always has every section open."
+        },
         "mdxstudio.preview.scrollPreviewWithEditor": {
           "type": "boolean",
           "default": true,

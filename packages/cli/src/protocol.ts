@@ -54,6 +54,7 @@ export interface BootData {
   single: boolean;
   watch: boolean;
   expressions: 'full' | 'literals';
+  collapsibleHeadings: boolean;
   theme: string;
   /** `--theme` was passed, so it overrides whatever the browser remembered. */
   themePinned: boolean;

@@ -413,6 +413,7 @@ export function PreviewApp() {
           registry={config.registry}
           expressions={state.expressions}
           showFrontmatterHeader={state.showFrontmatterHeader}
+          collapsibleHeadings={state.collapsibleHeadings}
           containerId="mdxstudio-vscode-preview"
           containerRef={containerRef}
         />

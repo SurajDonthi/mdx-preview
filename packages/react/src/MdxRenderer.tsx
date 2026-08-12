@@ -47,6 +47,7 @@ import {
   MdxHeadingSection,
   assignHeadingIds,
   groupHeadingSections,
+  MdxHeadingSectionOpen,
 } from './Headings';
 import { AlertTriangle, Check, Copy, HelpCircle } from 'lucide-react';
 
@@ -394,6 +395,7 @@ interface BuildOptions {
   scope: Record<string, unknown>;
   expressions: MdxExpressionMode;
   registry: MdxRegistry;
+  collapsibleHeadings: boolean;
 }
 
 /**
@@ -419,6 +421,8 @@ function buildDocument(options: BuildOptions): BuiltDocument {
 
   unwrapBlockJsx(ast.tree);
   assignHeadingIds(ast.tree);
+  // Ids are assigned either way: the table of contents, the anchors and the
+  // outline all read them, and none of that depends on the sections existing.
   // After the ids, so a section knows the id of the heading that opened it.
   groupHeadingSections(ast.tree);
 
@@ -529,6 +533,16 @@ interface MdxRendererProps {
    * the whole page. Always off in `pdf` mode, where nothing can be clicked.
    */
   lightbox?: boolean;
+  /**
+   * `#`, `##` and `###` open a section the reader can fold, with a control
+   * beside them that copies the heading's anchor. On by default.
+   *
+   * Turn it off for a host that wants headings to be nothing but headings - a
+   * short document where folding is noise, or one embedded in a page that
+   * already has its own disclosure furniture. Always off in `pdf` mode, where
+   * a folded section would take a chapter out of the export.
+   */
+  collapsibleHeadings?: boolean;
 }
 
 export function MdxRenderer({
@@ -541,6 +555,7 @@ export function MdxRenderer({
   registry = baseMdxRegistry,
   expressions = 'full',
   lightbox = true,
+  collapsibleHeadings = true,
 }: MdxRendererProps) {
   const [runtimeError, setRuntimeError] = useState<string | null>(null);
   const [zoomed, setZoomed] = useState<LightboxImage | null>(null);
@@ -630,7 +645,7 @@ export function MdxRenderer({
       // Heading anchors for scroll spy TOC. `id` is stamped on the tree before
       // rendering, in document order, so it matches extractHeadings(). h1 to h3
       // also carry the section controls; see ./Headings.
-      [HEADING_SECTION_TAG]: MdxHeadingSection,
+      [HEADING_SECTION_TAG]: collapsibleHeadings ? MdxHeadingSection : MdxHeadingSectionOpen,
       h1: MdxH1,
       h2: MdxH2,
       h3: MdxH3,
@@ -700,7 +715,7 @@ export function MdxRenderer({
       // Custom interactive component map
       ...registry.components,
     }),
-    [themeConfig, registry, zoomable]
+    [themeConfig, registry, zoomable, collapsibleHeadings]
   );
 
   /** Names a document may reference in JSX tags and in `{...}` expressions. */
@@ -718,8 +733,11 @@ export function MdxRenderer({
         scope,
         expressions,
         registry,
+        // A folded section in an export is a chapter the reader never sees, so
+        // the mode decides this and the prop cannot override it.
+        collapsibleHeadings: collapsibleHeadings && renderMode !== 'pdf',
       }),
-    [body, lineOffset, components, scope, expressions, registry]
+    [body, lineOffset, components, scope, expressions, registry, collapsibleHeadings, renderMode]
   );
 
   // A half-typed document must not blank the preview, so the last tree that did

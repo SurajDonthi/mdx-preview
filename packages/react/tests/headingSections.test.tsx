@@ -39,7 +39,11 @@ interface View {
   update: (content: string) => void;
 }
 
-function renderMdx(content: string, renderMode: 'live' | 'pdf' = 'live'): View {
+function renderMdx(
+  content: string,
+  renderMode: 'live' | 'pdf' = 'live',
+  collapsibleHeadings = true
+): View {
   const container = document.createElement('div');
   document.body.appendChild(container);
   const root = createRoot(container);
@@ -53,6 +57,7 @@ function renderMdx(content: string, renderMode: 'live' | 'pdf' = 'live'): View {
           themeConfig={theme}
           showFrontmatterHeader={false}
           renderMode={renderMode}
+          collapsibleHeadings={collapsibleHeadings}
         />
       );
     });
@@ -515,6 +520,74 @@ describe('the PDF export', () => {
   it('still stamps the ids and keeps the sections in document order', () => {
     const { container } = renderMdx(DOCUMENT, 'pdf');
 
+    expect(headingIds(container)).toEqual(extractHeadings(DOCUMENT).map((h) => h.id));
+  });
+});
+
+describe('collapsibleHeadings={false}', () => {
+  it('renders headings with no sections and nothing to fold', () => {
+    const { container } = renderMdx(DOCUMENT, 'live', false);
+
+    expect(sections(container)).toHaveLength(0);
+    expect(toggles(container)).toHaveLength(0);
+  });
+
+  it('keeps the copy anchor, which is a different control', () => {
+    // Turning off folding is not a reason to stop a reader linking to a
+    // heading, so the anchor survives.
+    const { container } = renderMdx(DOCUMENT, 'live', false);
+
+    expect(anchors(container).length).toBeGreaterThan(0);
+  });
+
+  it('keeps every id, and keeps them in document order', () => {
+    // The table of contents, the anchors and the outline all read these, and
+    // none of that is what the option turns off.
+    const { container } = renderMdx(DOCUMENT, 'live', false);
+
+    expect(headingIds(container)).toEqual(extractHeadings(DOCUMENT).map((h) => h.id));
+  });
+
+  it('leaves every heading on the page for the scroll sync to measure', () => {
+    const on = renderMdx(DOCUMENT, 'live', true);
+    const off = renderMdx(DOCUMENT, 'live', false);
+
+    // Nothing is foldable, so nothing can be missing - the anchor list is the
+    // one an all-expanded document gives.
+    expect(headingIds(off.container)).toEqual(headingIds(on.container));
+  });
+
+  it('does not lose the body of any section', () => {
+    const { container } = renderMdx(DOCUMENT, 'live', false);
+
+    expect(container.textContent).toContain('Some prose before anything else.');
+    expect(container.textContent).toContain('Chapter body.');
+    expect(container.textContent).toContain('Detail one body.');
+  });
+
+  it('can be turned back on without a remount', () => {
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    mounted.push({ root, container });
+
+    const draw = (collapsible: boolean) =>
+      act(() => {
+        root.render(
+          <MdxRenderer
+            content={DOCUMENT}
+            themeConfig={theme}
+            showFrontmatterHeader={false}
+            collapsibleHeadings={collapsible}
+          />
+        );
+      });
+
+    draw(false);
+    expect(sections(container)).toHaveLength(0);
+
+    draw(true);
+    expect(sections(container).length).toBeGreaterThan(0);
     expect(headingIds(container)).toEqual(extractHeadings(DOCUMENT).map((h) => h.id));
   });
 });

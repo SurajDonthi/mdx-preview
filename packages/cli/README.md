@@ -36,6 +36,7 @@ cat draft.mdx | mdxstudio open -   # from stdin
 | `-o, --open` / `--no-open` | Open a browser. |
 | `--no-watch` | Stop watching for changes. |
 | `--no-gitignore` | Include files `.gitignore` excludes. |
+| `--no-collapse` | Headings do not fold. The control that copies a heading link stays. |
 | `--expressions full\|literals` | See below. |
 | `--theme <id>` | One of the built-in theme presets. |
 

@@ -22,6 +22,7 @@ const FALLBACK: BootData = {
   single: false,
   watch: false,
   expressions: 'full',
+  collapsibleHeadings: true,
   theme: 'github-dark',
   themePinned: false,
   version: '0.0.0',

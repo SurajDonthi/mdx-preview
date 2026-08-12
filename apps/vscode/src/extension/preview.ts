@@ -362,6 +362,7 @@ export class MdxPreview {
       uri: uri.toString(),
       fileName: basename(uri),
       content: safeText(this.document),
+      collapsibleHeadings: settings.collapsibleHeadings,
       baseUri: `${this.panel.webview.asWebviewUri(directory).toString()}/`,
       workspaceUri: folder
         ? `${this.panel.webview.asWebviewUri(folder.uri).toString()}/`

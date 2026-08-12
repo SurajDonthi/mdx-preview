@@ -46,6 +46,7 @@ export interface PreviewState {
   /** The config's file name, for the message a broken one produces. */
   configFile: string | null;
   showFrontmatterHeader: boolean;
+  collapsibleHeadings: boolean;
   /** Whether the webview should report its scroll position back to the editor. */
   scrollEditorWithPreview: boolean;
   /** Whether the block under the editor's cursor gets a left-edge marker. */

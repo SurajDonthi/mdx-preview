@@ -22,6 +22,7 @@ export interface MdxPreviewSettings {
   updateMode: MdxUpdateMode;
   delay: number;
   showFrontmatterHeader: boolean;
+  collapsibleHeadings: boolean;
   scrollPreviewWithEditor: boolean;
   scrollEditorWithPreview: boolean;
   highlightCurrentLine: boolean;
@@ -58,6 +59,7 @@ export function readSettings(resource?: vscode.Uri): MdxPreviewSettings {
     updateMode: updateMode(config.get<string>('updateMode', 'onType')),
     delay: clamp(config.get<number>('preview.delay', 300), 0, 5000),
     showFrontmatterHeader: config.get<boolean>('preview.showFrontmatterHeader', true),
+    collapsibleHeadings: config.get<boolean>('preview.collapsibleHeadings', true),
     scrollPreviewWithEditor: config.get<boolean>('preview.scrollPreviewWithEditor', true),
     scrollEditorWithPreview: config.get<boolean>('preview.scrollEditorWithPreview', true),
     highlightCurrentLine: config.get<boolean>('highlightCurrentLine', true),

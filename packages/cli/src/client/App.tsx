@@ -349,6 +349,7 @@ export function App({ boot }: { boot: BootData }) {
                 themeConfig={themeConfig}
                 registry={registry}
                 expressions={boot.expressions}
+                collapsibleHeadings={boot.collapsibleHeadings}
                 containerId="mdxstudio-cli-document"
               />
             </div>

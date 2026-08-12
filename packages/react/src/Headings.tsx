@@ -346,6 +346,24 @@ function HeadingControls({ id, text }: { id?: string; text: string }) {
   );
 }
 
+/**
+ * The section wrapper, with the folding taken out.
+ *
+ * `collapsibleHeadings={false}` cannot simply skip {@link groupHeadingSections}:
+ * the parse is memoised and one tree is handed to the renderer, the table of
+ * contents and the exporter, so by the time a second consumer sees it the
+ * sections are already there. Rendering them away is the only place the
+ * decision can be made per consumer.
+ *
+ * It renders the children and nothing else - no `section`, no body wrapper and,
+ * because it provides no context, no toggle. The heading keeps its anchor: that
+ * is a separate control, and turning off folding is not a reason to stop a
+ * reader linking to a heading.
+ */
+export function MdxHeadingSectionOpen({ children }: { children?: React.ReactNode }) {
+  return <>{children}</>;
+}
+
 const HEADING_TAGS = ['h1', 'h2', 'h3'] as const;
 
 /**
