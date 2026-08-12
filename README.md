@@ -169,6 +169,8 @@ Rendered as a titled card with the tags as pills, not printed as text.
 - **GitHub alerts** — `> [!NOTE]`, `> [!WARNING]` and the rest, which become
   `<Callout>` rather than a parallel style. Sugar for portability: `<Callout>` is
   still the more capable form, with any title you like
+- **Collapsible sections** — `#`, `##` and `###` each fold, with a control beside
+  them that copies `#the-heading` to link to it
 - **Syntax highlighting** for fenced code, themed with the document
 - **PDF export** that measures real page breaks — no `window.print()`, works on mobile
 - **Sandboxed rendering** for a document you did not write: an opaque-origin iframe

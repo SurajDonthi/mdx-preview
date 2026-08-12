@@ -1,6 +1,6 @@
 {
   "name": "@mdxstudio/cli",
-  "version": "0.2.7",
+  "version": "0.2.8",
   "type": "module",
   "description": "Browse a whole folder of MDX and Markdown documents in the browser, with a navigable sidebar and live reload.",
   "keywords": [
@@ -57,12 +57,12 @@
   },
   "//devDependencies": "Everything the browser half is built from is a devDependency, not a dependency: it is bundled into dist/client at build time and no consumer resolves it. The CLI itself has no runtime dependencies at all, so `npx @mdxstudio/cli` is one small download.",
   "devDependencies": {
-    "@mdxstudio/charts": "^0.2.7",
-    "@mdxstudio/core": "^0.2.7",
-    "@mdxstudio/flow": "^0.2.7",
-    "@mdxstudio/mermaid": "^0.2.7",
-    "@mdxstudio/react": "^0.2.7",
-    "@mdxstudio/tasks": "^0.2.7",
+    "@mdxstudio/charts": "^0.2.8",
+    "@mdxstudio/core": "^0.2.8",
+    "@mdxstudio/flow": "^0.2.8",
+    "@mdxstudio/mermaid": "^0.2.8",
+    "@mdxstudio/react": "^0.2.8",
+    "@mdxstudio/tasks": "^0.2.8",
     "esbuild": "^0.25.0",
     "katex": "^0.16.47",
     "react": "^19.0.1",

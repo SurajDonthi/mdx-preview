@@ -164,6 +164,37 @@ Use children.
 **No PDF caveat, unlike `Tabs`.** In `pdf` render mode every panel is open and
 the trigger is not a button, so an accordion survives an export whole.
 
+## Headings
+
+You do not write anything for this - it is what `#`, `##` and `###` already do.
+
+Each of those opens a **collapsible section** running to the next heading of the
+same or a higher level. `####` and below are not separately collapsible; they
+fold with the section they sit in. Sections start **open**, and the PDF export
+always has every one of them open, so nothing can go missing from a printed
+document.
+
+The chevron toggles a section, not the heading text - so selecting a sentence
+out of a heading does not collapse the thing you are reading.
+
+Beside it is a **copy control that yields `#the-heading`**, the bare fragment.
+That is the string to paste into a document as a link on the same page, or after
+a path for another one:
+
+```md
+[the rule about braces](#rule-2-braces-are-expressions-everywhere)
+[in another document](./AUTHORING.mdx#frontmatter)
+```
+
+Ids are generated from the heading text and de-duplicated, so a document with
+two headings reading *Notes* gives `#notes` and `#notes-1`. Copy the anchor
+rather than guessing the id.
+
+Practical consequence when writing: a long document is now cheap to skim, so
+prefer real headings over bold pseudo-headings. A `**Configuration**` line in
+bold looks similar and collapses nothing, appears in no table of contents, and
+has no anchor to link to.
+
 ## Split and Pane
 
 Two things beside each other, for a reader who has to compare them. `Tabs` shows
