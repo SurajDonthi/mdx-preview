@@ -1,6 +1,6 @@
 {
   "name": "@mdxstudio/react",
-  "version": "0.2.9",
+  "version": "0.3.0",
   "type": "module",
   "description": "MdxRenderer and the built-in MDX components: callouts, cards, stats, tabs, steps and the rest.",
   "keywords": [
@@ -62,7 +62,7 @@
     "@types/prismjs": "^1.26.6"
   },
   "peerDependencies": {
-    "@mdxstudio/core": "^0.2.9",
+    "@mdxstudio/core": "^0.3.0",
     "react": "^19.0.0"
   }
 }

@@ -24,7 +24,24 @@ These are true of this renderer, not of Mermaid in general.
 
 - **A failed diagram does not break the document.** Invalid syntax renders an
   inline error card with the parser's message and the raw source in a `details`
-  element. The rest of the page is unaffected.
+  element. The rest of the page is unaffected. An errored diagram has no
+  controls.
+- **Diagrams pan and zoom.** Three buttons sit bottom-right - zoom out, zoom in,
+  reset. Dragging pans, arrow keys pan, `+` and `-` zoom, `0` resets, and
+  <kbd>Ctrl</kbd>/<kbd>Cmd</kbd>+wheel zooms about the pointer. Once zoomed in,
+  pinch works too. Zoom runs from the fitted view to 8x and is a CSS transform,
+  so the card's height never changes.
+- **A plain wheel scrolls the page.** The diagram never takes it, so a reader
+  scrolling past a large diagram is never trapped in it.
+- The controls are faint until hovered, focused or zoomed, and always visible on
+  a touch device. `data-mermaid-zoom` on the wrapper carries the current
+  percentage in live mode.
+- **PDF export renders no controls and the diagram at its natural fit.** What a
+  reader zoomed to is not carried into the export.
+
+  Practical consequence when writing: a diagram too dense to read at page width
+  is still too dense in the export. Pan and zoom help a reader on screen; they
+  do not rescue a diagram that should have been split into two.
 - **Diagrams expose `data-render-state`** on their wrapper element:
   `rendering` → `ready` | `error`. Tests and export code key off it. An errored
   diagram also carries `data-mermaid-error="true"` and `data-error-message`.

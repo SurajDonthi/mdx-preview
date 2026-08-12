@@ -460,12 +460,28 @@ inconsistency and left alone. If that is not what you meant, fix the markers.
 
 ### How it reads
 
-Children are collapsed on load, top level included, except the path down to any
-`[~]`, which opens. The list starts at the head of the plan - everything in
+Children are collapsed on load, top level included - nothing opens itself,
+whatever the plan holds. The list starts at the head of the plan - everything in
 flight plus the next few items - with `View N more` for the rest, and top-level
 work that is finished, canceled or deferred sinks into a folded bucket at the
 bottom. Each row copies its **verbatim source line**, which is how a reader
 hands you an exact line to edit. The component never writes to the file.
+
+The **board** view lays the same plan out as five columns, always in this order
+and always all five, whatever the plan holds:
+
+`Backlog` `[ ]` · `In progress` `[~]` · `Blocked` `[!]` · `Deferred` `[→]` ·
+`Completed and canceled` `[x]` `[-]`
+
+Blocked has a column of its own because it is the one status naming work that
+needs somebody today. Empty columns are still drawn: the columns are the
+workflow rather than a summary of the file, so two plans can be read side by
+side. The last two are the same buckets the list uses - same fold, same labels -
+so the two views can never disagree about where settled work went.
+
+Grouping adds **lanes** rather than replacing the columns: group by parent and
+each epic gets a lane with all five columns, so a lane says which epic and a
+column says how far along.
 
 That is why order matters when you write one: put the work that is next near the
 top, and let finished work stay where it was rather than deleting it.
@@ -511,6 +527,8 @@ frontmatter card. It runs entirely in the browser.
   do not put anything load-bearing in a tab that is not the default one.
   `Accordion`, `Split` and the ` ```tasks ` board are safe: they render every
   panel, pane, description and bucket open in `pdf` mode, with no buttons to
-  strip.
+  strip. A board exports as a board - every column and lane, stacked one deck
+  per column. A Mermaid diagram exports at its natural fit with no controls, so
+  whatever a reader had zoomed to is not carried into the export.
 - Export **fails outright** if any Mermaid diagram in the document is in the
   error state, or if diagrams have not finished rendering within 10 seconds.
