@@ -1,5 +1,14 @@
 import React, { useContext, useId, useMemo, useRef, useState } from 'react';
-import { Check, ChevronDown, Minus, Plus, RotateCcw, Table } from 'lucide-react';
+import {
+  Check,
+  ChevronDown,
+  GripHorizontal,
+  GripVertical,
+  Minus,
+  Plus,
+  RotateCcw,
+  Table,
+} from 'lucide-react';
 import { MdxRenderContext } from '@mdxstudio/core';
 import { InlineToken } from './InlineToken';
 // A document names its icons at runtime (`<Card icon="Eye">`), which no set of
@@ -837,6 +846,585 @@ export function TableComponent({
   );
 }
 
+// 11. Split & Pane
+//
+// Two things on the page at once, which is the one thing `Tabs` cannot do: a
+// tab shows one variant at a time, and a comparison is only a comparison when
+// both variants are in front of the reader together.
+//
+//   <Split ratio="60/40">
+//
+//   <Pane title="Before" icon="Ban">
+//
+//   ```ts
+//   const x = 1;
+//   ```
+//
+//   </Pane>
+//
+//   <Pane title="After" icon="Check" badge="Typed">
+//
+//   ```ts
+//   const x: number = 1;
+//   ```
+//
+//   </Pane>
+//
+//   </Split>
+//
+// Content is children, never a prop. A pane goes through the MDX pipeline like
+// anything else, so a fence is a fence, a list is a list and a diagram is a
+// diagram - which is exactly what a comparison is usually made of.
+//
+// On `direction`. "Horizontal split" names the divider to some people and the
+// arrangement of the panes to others, and both readings are in common use, so
+// the word is avoided entirely: `direction` takes `row` and `column`, the CSS
+// `flex-direction` vocabulary, and describes *the panes*. `row` puts them beside
+// each other, `column` stacks them. The divider then lies across the other axis
+// by definition, and that axis is spelled out separately, in the one place it is
+// actually load-bearing: the separator's `aria-orientation`, which is `vertical`
+// for a row of panes and `horizontal` for a column of them.
+
+/** How the panes are arranged. Not how the divider lies - see above. */
+export type SplitDirection = 'row' | 'column';
+
+/**
+ * The initial share of each pane. A list of weights (`"2:1"`, `"60 40"`,
+ * `[3, 1]`), or a single number, which is the first pane's percentage.
+ */
+export type SplitRatio = number | string | Array<number | string>;
+
+export interface PaneProps {
+  /** A small header above the pane. */
+  title?: React.ReactNode;
+  /** lucide icon name, as `Card` and `Callout` take. */
+  icon?: string;
+  badge?: string;
+  children?: React.ReactNode;
+}
+
+export interface SplitProps {
+  direction?: SplitDirection | string;
+  /** Where the split starts. Dragging moves it for the session only. */
+  ratio?: SplitRatio;
+  /**
+   * How tall the split is. A column split needs a height for its divider to
+   * have anything to move and takes {@link SPLIT_COLUMN_HEIGHT} without one; a
+   * row split grows with its content unless a height is given. Either way the
+   * panes scroll rather than clip, and the export ignores it.
+   */
+  height?: number | string;
+  children?: React.ReactNode;
+}
+
+/** The narrowest a pane can be, as a percentage of the split. */
+const SPLIT_MIN_SHARE = 10;
+
+/** Arrow-key steps, the same pair the Studio's own split view uses. */
+const SPLIT_STEP = 2;
+const SPLIT_STEP_LARGE = 10;
+
+/** What a column split is tall by default, having no content to be sized by. */
+const SPLIT_COLUMN_HEIGHT = '24rem';
+
+/** The gutter a divider stands in, mirroring `--mdxstudio-space-3` in the sheet. */
+const SPLIT_GUTTER_PX = 12;
+
+/**
+ * How wide a split is on the PDF capture sheet. `PAPER_WIDTH_PX` in
+ * `@mdxstudio/pdf` is 794, the sheet is padded by 32 either side and the
+ * renderer insets its prose by another 40, which leaves this. Measured off a
+ * real capture rather than reasoned about, and mirrored as a number because the
+ * export does not run a media query against the sheet: the capture happens in
+ * whatever window the reader has open, so a viewport query would make an A4
+ * page depend on the size of a browser nobody is looking at.
+ */
+const PDF_SHEET_CONTENT_PX = 650;
+
+/**
+ * The narrowest a pane may be on that sheet and still be worth printing.
+ *
+ * 240px, less the pane's own padding and the code block's, leaves about 24
+ * characters of the 12px monospace the export sets - which the short lines a
+ * before-and-after comparison is made of still fit on. Below that everything
+ * wraps and the columns stop being comparable at all.
+ *
+ * Two panes clear it down to 60/40 and print side by side, which is what the
+ * comparison was for. Three do not (209px each), nor does anything more
+ * lopsided, and those are stacked instead, each under its own title: a
+ * comparison the reader has to scroll is worth more than one they cannot read.
+ */
+const PDF_MIN_PANE_PX = 240;
+
+interface SplitPaneEntry {
+  title: React.ReactNode;
+  /** The title as plain text, for the divider's label. */
+  label: string;
+  icon?: string;
+  badge?: string;
+  content: React.ReactNode;
+}
+
+function splitText(value: unknown): string {
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number') return String(value);
+  return '';
+}
+
+/** Reads a pane out of a `<Pane>`'s props. */
+function splitPaneEntry(source: Record<string, unknown>): SplitPaneEntry {
+  const props = source ?? {};
+  const label = splitText(props.title).trim();
+
+  return {
+    title: label !== '' || React.isValidElement(props.title) ? (props.title as React.ReactNode) : null,
+    label,
+    icon: typeof props.icon === 'string' ? props.icon : undefined,
+    badge: splitText(props.badge) || undefined,
+    content: (props.children ?? null) as React.ReactNode,
+  };
+}
+
+/** A child with no pane to read: its content is the whole of it. */
+function splitLooseEntry(node: React.ReactNode): SplitPaneEntry {
+  return { title: null, label: '', content: node };
+}
+
+/**
+ * Whether a child declares a pane.
+ *
+ * `Pane` itself, or - as `Tabs` and `Accordion` already do - any
+ * component-typed child that names a `title`, so a host's own wrapper is placed
+ * rather than swallowed.
+ */
+function isSplitPane(child: React.ReactElement): boolean {
+  if (child.type === Pane) return true;
+  if (typeof child.type === 'string') return false;
+  const props = child.props as Record<string, unknown> | null;
+  return Boolean(props && 'title' in props);
+}
+
+/** Whether a wrapper the parser inserted has panes inside it. */
+function holdsSplitPanes(children: React.ReactNode): boolean {
+  return React.Children.toArray(children).some(
+    (child) => React.isValidElement(child) && isSplitPane(child)
+  );
+}
+
+/**
+ * The panes of a split.
+ *
+ * Anything that is not a `Pane` becomes a pane of its own rather than being
+ * dropped or pushed out of the layout: a column with no title still shows what
+ * the document put there, which is the least surprising thing a comparison can
+ * do with a child it did not expect.
+ */
+function splitPanes(children: React.ReactNode): SplitPaneEntry[] {
+  const entries: SplitPaneEntry[] = [];
+
+  const walk = (nodes: React.ReactNode) => {
+    for (const child of React.Children.toArray(nodes)) {
+      if (typeof child === 'string') {
+        // Whitespace between JSX children is not content.
+        if (child.trim()) entries.push(splitLooseEntry(child));
+        continue;
+      }
+
+      if (React.isValidElement(child)) {
+        if (isSplitPane(child)) {
+          entries.push(splitPaneEntry(child.props as never));
+          continue;
+        }
+
+        // Panes written without a blank line between them are one markdown
+        // paragraph as far as the parser is concerned, and arrive wrapped in it.
+        if (holdsSplitPanes((child.props as { children?: React.ReactNode } | null)?.children)) {
+          walk((child.props as { children?: React.ReactNode }).children);
+          continue;
+        }
+      }
+
+      entries.push(splitLooseEntry(child));
+    }
+  };
+
+  walk(children);
+  return entries;
+}
+
+/** Raises anything under the minimum, taking the difference from the rest. */
+function liftSplitShares(shares: number[]): number[] {
+  const equal = () => new Array(shares.length).fill(100 / shares.length);
+  if (shares.length * SPLIT_MIN_SHARE >= 100) return equal();
+
+  let next = shares.slice();
+  // One pass per pane at worst: each pass pins at least one pane to the floor.
+  for (let pass = 0; pass < shares.length; pass += 1) {
+    const deficit = next.reduce((sum, share) => sum + Math.max(0, SPLIT_MIN_SHARE - share), 0);
+    if (deficit < 1e-9) break;
+    const surplus = next.reduce((sum, share) => sum + Math.max(0, share - SPLIT_MIN_SHARE), 0);
+    if (surplus < 1e-9) return equal();
+    next = next.map((share) =>
+      share <= SPLIT_MIN_SHARE
+        ? SPLIT_MIN_SHARE
+        : share - ((share - SPLIT_MIN_SHARE) / surplus) * deficit
+    );
+  }
+
+  return next;
+}
+
+/**
+ * Reads `ratio` into one percentage per pane, summing to 100.
+ *
+ * Every unusable form lands on equal panes rather than throwing: an author who
+ * mistypes a ratio should see the comparison, not an error.
+ */
+export function normaliseSplitShares(ratio: SplitRatio | undefined, count: number): number[] {
+  if (!Number.isInteger(count) || count <= 0) return [];
+  if (count === 1) return [100];
+
+  const equal = () => new Array(count).fill(100 / count);
+
+  const tokens: unknown[] = Array.isArray(ratio)
+    ? ratio
+    : typeof ratio === 'string'
+      ? ratio.split(/[\s,:/|]+/)
+      : ratio === undefined || ratio === null
+        ? []
+        : [ratio];
+
+  const weights = tokens
+    .map((token) => (typeof token === 'number' ? token : Number(String(token).trim())))
+    .filter((weight) => Number.isFinite(weight) && weight > 0);
+
+  if (weights.length === 0) return equal();
+
+  // One weight for several panes reads as a percentage - `ratio={70}` is the
+  // familiar way of saying "seventy-thirty" - and the rest share what is left.
+  if (weights.length === 1) {
+    const first = weights[0];
+    if (first >= 100) return liftSplitShares([first, ...new Array(count - 1).fill(0)]);
+    return liftSplitShares([first, ...new Array(count - 1).fill((100 - first) / (count - 1))]);
+  }
+
+  // Fewer weights than panes is a document that changed under its ratio. The
+  // panes it forgot get the average of the ones it named.
+  const mean = weights.reduce((sum, weight) => sum + weight, 0) / weights.length;
+  const padded = weights.slice(0, count);
+  while (padded.length < count) padded.push(mean);
+
+  const total = padded.reduce((sum, weight) => sum + weight, 0);
+  return liftSplitShares(padded.map((weight) => (weight / total) * 100));
+}
+
+/** Where the boundary after pane `index` sits, as a percentage of the split. */
+export function splitBoundaryPosition(shares: number[], index: number): number {
+  return shares.slice(0, index + 1).reduce((sum, share) => sum + share, 0);
+}
+
+/**
+ * Puts that boundary at `position`.
+ *
+ * Only the two panes the boundary separates change, so dragging one divider of
+ * a three-pane split leaves the third alone - the same contract every split
+ * view has.
+ */
+export function moveSplitBoundary(shares: number[], index: number, position: number): number[] {
+  if (index < 0 || index + 1 >= shares.length || !Number.isFinite(position)) return shares;
+
+  const before = shares.slice(0, index).reduce((sum, share) => sum + share, 0);
+  const pair = shares[index] + shares[index + 1];
+  const first = Math.min(
+    Math.max(position - before, SPLIT_MIN_SHARE),
+    Math.max(pair - SPLIT_MIN_SHARE, SPLIT_MIN_SHARE)
+  );
+
+  const next = shares.slice();
+  next[index] = first;
+  next[index + 1] = pair - first;
+  return next;
+}
+
+/**
+ * Where the pointer puts a boundary, as a percentage of the space the panes
+ * actually share - which is the track less the dividers standing in it. Null
+ * when there is no such space, which is what a track that is not laid out yet
+ * looks like.
+ */
+export function splitPointerPosition(measurements: {
+  /** `clientX` for a row of panes, `clientY` for a column. */
+  point: number;
+  /** The track's left edge, or its top. */
+  start: number;
+  /** The track's width, or its height. */
+  extent: number;
+  /** One divider's width, or its height. */
+  dividerSize: number;
+  /** How many dividers the track has. */
+  dividers: number;
+  /** How many of them lie before this boundary. */
+  before: number;
+}): number | null {
+  const { point, start, extent, dividerSize, dividers, before } = measurements;
+  const content = extent - dividerSize * dividers;
+  if (!(content > 0)) return null;
+  return ((point - start - dividerSize * before) / content) * 100;
+}
+
+/** The height the track is given, or null when it grows with its content. */
+function splitHeight(height: unknown, axis: SplitDirection): string | null {
+  if (typeof height === 'number') {
+    return Number.isFinite(height) && height > 0 ? `${height}px` : null;
+  }
+  if (typeof height === 'string') {
+    const text = height.trim();
+    if (text && text !== 'auto') return text;
+    if (text === 'auto') return null;
+  }
+  return axis === 'column' ? SPLIT_COLUMN_HEIGHT : null;
+}
+
+/**
+ * A pane's share, as a custom property rather than an inline `flex-grow`.
+ *
+ * The share is data; which axis it applies to, and whether it applies at all,
+ * is a layout decision the stylesheet makes - a stacked split has to be able to
+ * ignore it, and an inline `flex-grow` would outrank the media query that does
+ * the stacking.
+ */
+const shareStyle = (share: number): React.CSSProperties =>
+  ({ '--mdxstudio-split-share': String(Number(share.toFixed(3))) }) as React.CSSProperties;
+
+const heightStyle = (height: string | null): React.CSSProperties | undefined =>
+  height ? ({ '--mdxstudio-split-height': height } as React.CSSProperties) : undefined;
+
+export function Split({ direction, ratio, height, children }: SplitProps) {
+  const { renderMode } = useContext(MdxRenderContext);
+  const isPdf = renderMode === 'pdf';
+
+  const panes = useMemo(() => splitPanes(children), [children]);
+  const authored = useMemo(
+    () => normaliseSplitShares(ratio, panes.length),
+    [ratio, panes.length]
+  );
+
+  const [shares, setShares] = useState<number[]>(authored);
+  // Re-resolved when the document rewrites the panes under them, which is what
+  // every keystroke in an editor does. Keyed on the shares themselves so a
+  // re-render with the same ratio does not undo a drag.
+  const signature = authored.join(',');
+  const lastSignature = useRef(signature);
+  if (lastSignature.current !== signature) {
+    lastSignature.current = signature;
+    setShares(authored);
+  }
+
+  const trackRef = useRef<HTMLDivElement | null>(null);
+  const [dragging, setDragging] = useState(-1);
+
+  const axis: SplitDirection = direction === 'column' ? 'column' : 'row';
+
+  // An A4 page is not a screen. A row that would put a pane below the legible
+  // floor is stacked for the export instead, so every pane is printed at full
+  // width under its own title rather than as a ribbon nobody can read.
+  const printable = PDF_SHEET_CONTENT_PX - SPLIT_GUTTER_PX * (panes.length - 1);
+  const exportStacks =
+    isPdf &&
+    (axis === 'column' || shares.some((share) => (share / 100) * printable < PDF_MIN_PANE_PX));
+  const renderAxis: SplitDirection = exportStacks ? 'column' : axis;
+  const trackHeight = isPdf ? null : splitHeight(height, axis);
+
+  const boundaryLabel = (index: number) => {
+    const before = panes[index]?.label;
+    const after = panes[index + 1]?.label;
+    if (before && after) return `Resize ${before} and ${after}`;
+    return `Resize panes ${index + 1} and ${index + 2}`;
+  };
+
+  const positionFromPointer = (
+    index: number,
+    event: React.PointerEvent<HTMLDivElement>
+  ): number | null => {
+    const track = trackRef.current;
+    if (!track) return null;
+
+    const isRow = renderAxis === 'row';
+    const bounds = track.getBoundingClientRect();
+    const divider = event.currentTarget;
+
+    return splitPointerPosition({
+      point: isRow ? event.clientX : event.clientY,
+      start: isRow ? bounds.left : bounds.top,
+      extent: isRow ? bounds.width : bounds.height,
+      dividerSize: isRow ? divider.offsetWidth : divider.offsetHeight,
+      dividers: panes.length - 1,
+      before: index,
+    });
+  };
+
+  const onPointerDown = (index: number) => (event: React.PointerEvent<HTMLDivElement>) => {
+    // Otherwise the drag starts a text selection across both panes.
+    event.preventDefault();
+    // Capturing means a fast drag that outruns the pointer keeps reporting here
+    // rather than to whatever it happened to pass over.
+    event.currentTarget.setPointerCapture?.(event.pointerId);
+    setDragging(index);
+  };
+
+  const onPointerMove = (index: number) => (event: React.PointerEvent<HTMLDivElement>) => {
+    if (dragging !== index) return;
+    const position = positionFromPointer(index, event);
+    if (position === null) return;
+    setShares((current) => moveSplitBoundary(current, index, position));
+  };
+
+  const onPointerUp = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (event.currentTarget.hasPointerCapture?.(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+    setDragging(-1);
+  };
+
+  /** Both axes answer all four arrows: the divider is small, the keys are free. */
+  const onKeyDown = (index: number) => (event: React.KeyboardEvent<HTMLDivElement>) => {
+    const { key } = event;
+
+    if (key === 'Home' || key === 'Enter') {
+      event.preventDefault();
+      setShares(authored);
+      return;
+    }
+
+    const step = event.shiftKey ? SPLIT_STEP_LARGE : SPLIT_STEP;
+    const delta =
+      key === 'ArrowLeft' || key === 'ArrowUp'
+        ? -step
+        : key === 'ArrowRight' || key === 'ArrowDown'
+          ? step
+          : 0;
+    if (delta === 0) return;
+
+    event.preventDefault();
+    setShares((current) =>
+      moveSplitBoundary(current, index, splitBoundaryPosition(current, index) + delta)
+    );
+  };
+
+  // Nothing to compare, and nothing worth an empty box either.
+  if (panes.length === 0) return null;
+
+  const className = [
+    'mdxstudio-split',
+    `mdxstudio-split--${renderAxis}`,
+    trackHeight ? 'mdxstudio-split--sized' : '',
+    isPdf ? 'mdxstudio-split--pdf' : '',
+    dragging >= 0 ? 'mdxstudio-split--dragging' : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
+
+  const Grip = renderAxis === 'row' ? GripVertical : GripHorizontal;
+
+  return (
+    <div ref={trackRef} className={className} style={heightStyle(trackHeight)}>
+      {panes.map((pane, index) => {
+        // A stacked export loses the one thing that told the panes apart, so a
+        // pane that never named itself is numbered rather than left anonymous.
+        const heading = pane.title ?? (exportStacks ? `Pane ${index + 1}` : null);
+        const hasHead = heading !== null || Boolean(pane.badge);
+
+        const nodes: React.ReactNode[] = [];
+
+        if (index > 0) {
+          const boundary = splitBoundaryPosition(shares, index - 1);
+          const before = shares.slice(0, index - 1).reduce((sum, share) => sum + share, 0);
+          const pair = shares[index - 1] + shares[index];
+
+          nodes.push(
+            isPdf ? (
+              // The export deletes every button and cannot be dragged anyway, so
+              // the seam is all that is left of the divider.
+              <div
+                key={`divider-${index}`}
+                role="separator"
+                aria-orientation={renderAxis === 'row' ? 'vertical' : 'horizontal'}
+                className="mdxstudio-split__divider mdxstudio-split__divider--static"
+              >
+                <span className="mdxstudio-split__seam" />
+              </div>
+            ) : (
+              <div
+                key={`divider-${index}`}
+                role="separator"
+                aria-orientation={renderAxis === 'row' ? 'vertical' : 'horizontal'}
+                aria-label={boundaryLabel(index - 1)}
+                aria-valuenow={Math.round(boundary)}
+                aria-valuemin={Math.round(before + SPLIT_MIN_SHARE)}
+                aria-valuemax={Math.round(before + pair - SPLIT_MIN_SHARE)}
+                tabIndex={0}
+                title="Drag to resize, double-click to reset"
+                onPointerDown={onPointerDown(index - 1)}
+                onPointerMove={onPointerMove(index - 1)}
+                onPointerUp={onPointerUp}
+                onPointerCancel={onPointerUp}
+                onKeyDown={onKeyDown(index - 1)}
+                onDoubleClick={() => setShares(authored)}
+                className={`mdxstudio-split__divider${
+                  dragging === index - 1 ? ' mdxstudio-split__divider--active' : ''
+                }`}
+              >
+                <span className="mdxstudio-split__seam" />
+                <span className="mdxstudio-split__grip">
+                  <Grip className="mdxstudio-icon-14" />
+                </span>
+              </div>
+            )
+          );
+        }
+
+        nodes.push(
+          <div
+            key={`pane-${index}`}
+            className="mdxstudio-split__pane"
+            style={shareStyle(shares[index] ?? 100 / panes.length)}
+          >
+            {hasHead && (
+              <div className="mdxstudio-split__head">
+                <span className="mdxstudio-split__label">
+                  {pane.icon && (
+                    <span className="mdxstudio-split__icon">
+                      <DynamicIcon name={pane.icon} className="mdxstudio-icon-14" />
+                    </span>
+                  )}
+                  {heading !== null && <span className="mdxstudio-split__title">{heading}</span>}
+                </span>
+                {pane.badge && <span className="mdxstudio-split__badge">{pane.badge}</span>}
+              </div>
+            )}
+            <div className="mdxstudio-split__body">{pane.content}</div>
+          </div>
+        );
+
+        return <React.Fragment key={`slot-${index}`}>{nodes}</React.Fragment>;
+      })}
+    </div>
+  );
+}
+
+/**
+ * One side of a comparison. Read by `<Split>` from its props rather than
+ * mounted, the way `<Tab>` is; on its own it is a one-pane split, so its
+ * content is still on the page.
+ */
+export function Pane(props: PaneProps) {
+  return (
+    <Split>
+      <Pane {...props} />
+    </Split>
+  );
+}
+
 // Built-in custom components available in MDX scope. Heavier components
 // (Mermaid, charts, flow graphs) live in their own packages and reach the
 // renderer through their own plugins - see ./plugin.
@@ -850,6 +1438,8 @@ export const baseMdxComponents = {
   Tab,
   Accordion,
   AccordionItem,
+  Split,
+  Pane,
   InteractiveCounter,
   ProgressBar,
   Timeline,
@@ -868,4 +1458,7 @@ export const baseMdxAliases = {
   Counter: 'InteractiveCounter',
   CustomTable: 'Table',
   Code: 'InlineCode',
+  // What the component is for, next to what it is. Nothing generic - `Row`,
+  // `Column` and `Box` belong to the document, not to us.
+  Compare: 'Split',
 };

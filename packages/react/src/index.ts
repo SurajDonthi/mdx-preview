@@ -23,6 +23,8 @@ export {
   Tab,
   Accordion,
   AccordionItem,
+  Split,
+  Pane,
   InteractiveCounter,
   ProgressBar,
   Timeline,
@@ -41,6 +43,10 @@ export type {
   AccordionProps,
   AccordionItemProps,
   AccordionOpen,
+  SplitProps,
+  SplitDirection,
+  SplitRatio,
+  PaneProps,
   TimelineItem,
 } from './CustomComponents';
 

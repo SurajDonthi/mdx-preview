@@ -2,8 +2,8 @@
 
 Renders an MDX string to React. `MdxRenderer` parses the document, evaluates its
 expressions and mounts the result with a set of built-in components — callouts,
-cards, stat grids, tabs, accordions, steps, timelines, badges and syntax-highlighted
-code blocks — none of which the consuming app has to write.
+cards, stat grids, tabs, accordions, side-by-side splits, steps, timelines, badges
+and syntax-highlighted code blocks — none of which the consuming app has to write.
 
 ## Install
 
@@ -179,6 +179,71 @@ The 0.2.3 prop form still renders, and reads the same extra fields:
 `content` is a prop, so markdown written there stays literal. Children win when
 a document gives both.
 
+### Splits
+
+Two things on the page at once — the one thing `Tabs` cannot do, because a tab
+shows one variant at a time and a comparison needs both together. Pane content
+is children, so anything a document can hold goes in one: fences, lists, other
+components, a diagram.
+
+````mdx
+<Split ratio="60/40">
+
+<Pane title="Before" icon="Ban">
+
+```ts
+const x = 1;
+```
+
+</Pane>
+
+<Pane title="After" icon="Check" badge="Typed">
+
+```ts
+const x: number = 1;
+```
+
+</Pane>
+
+</Split>
+````
+
+`direction` says how the *panes* are arranged: `row` (the default) puts them
+beside each other, `column` stacks them. It deliberately does not take
+`horizontal` or `vertical` — those name the divider to some readers and the
+arrangement to others. The divider's own axis is the opposite one, and is
+reported where it matters: `aria-orientation` is `vertical` for a row of panes
+and `horizontal` for a column of them.
+
+`ratio` sets where the split starts. A list of weights spelled any of the usual
+ways — `"60/40"`, `"2:1"`, `"3 1"`, `{[3, 1]}` — or a single number, which is
+the first pane's percentage. Anything unreadable gives equal panes, and no pane
+is ever narrower than 10%. More than two panes work; each divider moves only the
+two panes it sits between.
+
+Dragging a divider changes the split for the session only — nothing is stored,
+and a reload is back to what the document said. The divider is focusable:
+arrow keys move it by 2%, Shift by 10%, Home (or a double-click) puts the
+authored ratio back.
+
+`height` gives the split a fixed size, and its panes scroll instead of growing.
+A column split needs one for its divider to have anything to move, so it takes
+`24rem` unless told otherwise; a row split grows with its content by default.
+
+`Pane` takes `title`, plus the same optional `icon` (a lucide name) and `badge`
+that `Card` does. `Compare` is another name for `Split`.
+
+Below 48rem a row of panes stacks, because two fences side by side in a narrow
+column are unreadable, and the divider goes with it — there is nothing left for
+it to move.
+
+In `renderMode="pdf"` the layout is decided against the A4 sheet rather than
+against the reader's window. Two panes print side by side down to 60/40; a
+three-way split, or anything more lopsided, is stacked instead, each pane at
+full width under its own title — and a pane that never named itself is numbered,
+so a stacked export is never a column of unlabelled content. The divider is
+still drawn but is not a button, so the exporter has nothing to delete.
+
 ### Images
 
 Clicking an image opens it enlarged over the document; Escape, the close button
@@ -197,9 +262,9 @@ themselves still run in your page. Use [`@mdxstudio/sandbox`](https://github.com
 `MdxRenderer`, `FrontmatterHeader`, `InlineToken`, `MdxImage`, `ImageLightbox`,
 `THEMES`, `reactPlugin`, `createRendererRegistry`, `baseMdxRegistry`, and every
 built-in component (`Callout`, `Card`, `CardGrid`, `Stat`, `StatGrid`, `Tabs`,
-`Tab`, `Accordion`, `AccordionItem`, `Steps`, `Step`, `Timeline`, `ProgressBar`,
-`InteractiveCounter`, `Kbd`, `Badge`, `Button`, `TableComponent`, `InlineCode`,
-`MathExpression`).
+`Tab`, `Accordion`, `AccordionItem`, `Split`, `Pane`, `Steps`, `Step`,
+`Timeline`, `ProgressBar`, `InteractiveCounter`, `Kbd`, `Badge`, `Button`,
+`TableComponent`, `InlineCode`, `MathExpression`).
 
 ESM only, with TypeScript declarations.
 

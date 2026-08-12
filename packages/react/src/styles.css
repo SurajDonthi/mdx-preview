@@ -1720,6 +1720,259 @@
 }
 
 /* ------------------------------------------------------------------ *
+ * Split / Pane
+ *
+ * `--mdxstudio-split-share` carries each pane's share of the track, written by
+ * the component. It is read here rather than applied as an inline `flex-grow`
+ * so that the narrow-width stack below can turn it off: an inline style would
+ * outrank any rule in this file, and a stacked pane whose flex-basis is still
+ * zero has no height at all.
+ * ------------------------------------------------------------------ */
+
+.mdxstudio-split {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  margin-block: var(--mdxstudio-space-6);
+  min-width: 0;
+}
+
+.mdxstudio-split--column { flex-direction: column; }
+
+/* A column split has no content to be sized by along its main axis, so the
+   height is what gives its divider something to move. */
+.mdxstudio-split--sized { height: var(--mdxstudio-split-height); }
+
+/* A drag is not a text selection, however far it travels. */
+.mdxstudio-split--dragging { user-select: none; }
+
+.mdxstudio-split__pane {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  /* Without these a wide fence inside a pane sets the pane's width, and the
+     row grows past the document instead of the fence scrolling. */
+  min-width: 0;
+  min-height: 0;
+  border-radius: var(--mdxstudio-radius-xl);
+  border: 1px solid var(--mdxstudio-border);
+  background-color: var(--mdxstudio-card-bg-soft);
+  overflow: hidden;
+}
+
+/* Shares apply along whichever axis is definite: a row's width always is, a
+   column's height only when the split was given one. */
+.mdxstudio-split--row > .mdxstudio-split__pane,
+.mdxstudio-split--column.mdxstudio-split--sized > .mdxstudio-split__pane {
+  flex: var(--mdxstudio-split-share, 1) 1 0;
+}
+
+.mdxstudio-split__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--mdxstudio-space-2);
+  flex: 0 0 auto;
+  padding: var(--mdxstudio-space-2) var(--mdxstudio-space-3);
+  border-bottom: 1px solid var(--mdxstudio-border-faint);
+  background-color: var(--mdxstudio-panel-bg-soft);
+  font-size: var(--mdxstudio-text-xs);
+  line-height: calc(1 / 0.75);
+}
+
+.mdxstudio-split__label {
+  display: flex;
+  align-items: center;
+  gap: var(--mdxstudio-space-2);
+  min-width: 0;
+}
+
+.mdxstudio-split__icon {
+  display: flex;
+  flex-shrink: 0;
+  color: var(--mdxstudio-accent-icon);
+}
+
+.mdxstudio-split__title {
+  font-weight: var(--mdxstudio-weight-semibold);
+  color: var(--mdxstudio-fg-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mdxstudio-split__badge {
+  flex-shrink: 0;
+  padding: var(--mdxstudio-space-0-5) var(--mdxstudio-space-2);
+  border-radius: var(--mdxstudio-radius-full);
+  font-weight: var(--mdxstudio-weight-medium);
+  background-color: var(--mdxstudio-accent-soft-bg);
+  color: var(--mdxstudio-accent-soft-fg);
+  border: 1px solid var(--mdxstudio-accent-soft-border);
+}
+
+.mdxstudio-split__body {
+  padding: var(--mdxstudio-space-3) var(--mdxstudio-space-4);
+  min-width: 0;
+  min-height: 0;
+  font-size: var(--mdxstudio-text-sm);
+  color: var(--mdxstudio-fg-secondary);
+  line-height: var(--mdxstudio-leading-relaxed);
+}
+
+/* Only a split with a height of its own can overflow, and then the pane
+   scrolls rather than clipping what the document put in it. */
+.mdxstudio-split--sized .mdxstudio-split__body { overflow: auto; }
+
+/* The gutter. Wide enough to be hit with a pointer; the seam inside it is what
+   the reader actually sees. */
+.mdxstudio-split__divider {
+  position: relative;
+  flex: 0 0 auto;
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--mdxstudio-space-3);
+  cursor: col-resize;
+  /* A drag on a touch screen is a resize, not a scroll. */
+  touch-action: none;
+}
+
+.mdxstudio-split--column > .mdxstudio-split__divider {
+  width: auto;
+  height: var(--mdxstudio-space-3);
+  cursor: row-resize;
+}
+
+.mdxstudio-split__divider:focus-visible {
+  outline: 2px solid var(--mdxstudio-accent);
+  outline-offset: -2px;
+  border-radius: var(--mdxstudio-radius-sm);
+}
+
+.mdxstudio-split__seam {
+  position: absolute;
+  background-color: var(--mdxstudio-border-strong);
+  border-radius: var(--mdxstudio-radius-full);
+  transition:
+    background-color var(--mdxstudio-transition-duration) var(--mdxstudio-transition-timing),
+    width var(--mdxstudio-transition-duration) var(--mdxstudio-transition-timing),
+    height var(--mdxstudio-transition-duration) var(--mdxstudio-transition-timing);
+}
+
+.mdxstudio-split--row > .mdxstudio-split__divider > .mdxstudio-split__seam {
+  inset-block: 0;
+  width: 1px;
+}
+
+.mdxstudio-split--column > .mdxstudio-split__divider > .mdxstudio-split__seam {
+  inset-inline: 0;
+  height: 1px;
+}
+
+.mdxstudio-split__divider:hover > .mdxstudio-split__seam,
+.mdxstudio-split__divider:focus-visible > .mdxstudio-split__seam,
+.mdxstudio-split__divider--active > .mdxstudio-split__seam {
+  background-color: var(--mdxstudio-accent);
+}
+
+.mdxstudio-split--row > .mdxstudio-split__divider:hover > .mdxstudio-split__seam,
+.mdxstudio-split--row > .mdxstudio-split__divider:focus-visible > .mdxstudio-split__seam,
+.mdxstudio-split--row > .mdxstudio-split__divider--active > .mdxstudio-split__seam {
+  width: 2px;
+}
+
+.mdxstudio-split--column > .mdxstudio-split__divider:hover > .mdxstudio-split__seam,
+.mdxstudio-split--column > .mdxstudio-split__divider:focus-visible > .mdxstudio-split__seam,
+.mdxstudio-split--column > .mdxstudio-split__divider--active > .mdxstudio-split__seam {
+  height: 2px;
+}
+
+/* Out of the way until the divider is worth noticing - pointer on it, keyboard
+   focus, or a drag under way. */
+.mdxstudio-split__grip {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--mdxstudio-radius-full);
+  border: 1px solid var(--mdxstudio-border-strong);
+  background-color: var(--mdxstudio-solid-bg);
+  color: var(--mdxstudio-fg-muted);
+  opacity: 0;
+  transition:
+    opacity var(--mdxstudio-transition-duration) var(--mdxstudio-transition-timing),
+    color var(--mdxstudio-transition-duration) var(--mdxstudio-transition-timing),
+    border-color var(--mdxstudio-transition-duration) var(--mdxstudio-transition-timing);
+}
+
+.mdxstudio-split--row > .mdxstudio-split__divider > .mdxstudio-split__grip {
+  width: 0.875rem;
+  height: 2rem;
+}
+
+.mdxstudio-split--column > .mdxstudio-split__divider > .mdxstudio-split__grip {
+  width: 2rem;
+  height: 0.875rem;
+}
+
+.mdxstudio-split__divider:hover > .mdxstudio-split__grip,
+.mdxstudio-split__divider:focus-visible > .mdxstudio-split__grip,
+.mdxstudio-split__divider--active > .mdxstudio-split__grip {
+  opacity: 1;
+}
+
+.mdxstudio-split__divider--active > .mdxstudio-split__grip {
+  color: var(--mdxstudio-accent);
+  border-color: var(--mdxstudio-accent);
+}
+
+/*
+ * Narrow containers stack.
+ *
+ * 48rem is where this stylesheet already decides two columns fit - it is the
+ * breakpoint `.mdxstudio-card-grid--2` uses. Below it a two-pane row leaves
+ * each pane under about 340px, which is under the floor a fence needs, and the
+ * comparison is easier to follow one above the other. The divider goes with it:
+ * there is nothing left for it to move, so it should not be in the tab order
+ * either.
+ */
+@media (width < 48rem) {
+  .mdxstudio-split--row {
+    flex-direction: column;
+    gap: var(--mdxstudio-space-3);
+  }
+
+  .mdxstudio-split--row.mdxstudio-split--sized { height: auto; }
+
+  .mdxstudio-split--row > .mdxstudio-split__pane { flex: 0 0 auto; }
+
+  .mdxstudio-split--row > .mdxstudio-split__divider { display: none; }
+
+  .mdxstudio-split--row .mdxstudio-split__body { overflow: visible; }
+}
+
+/*
+ * The export. A media query is a question about the reader's window, and the
+ * capture sheet is a fixed 794px regardless of it, so the layout the component
+ * chose in `renderMode="pdf"` is restored here whatever the window happens to
+ * be. Two classes, so it outranks the block above on specificity rather than
+ * on source order.
+ */
+.mdxstudio-split--pdf { height: auto; }
+
+.mdxstudio-split--pdf.mdxstudio-split--row { flex-direction: row; gap: 0; }
+
+.mdxstudio-split--pdf.mdxstudio-split--row > .mdxstudio-split__pane {
+  flex: var(--mdxstudio-split-share, 1) 1 0;
+}
+
+.mdxstudio-split--pdf.mdxstudio-split--row > .mdxstudio-split__divider { display: flex; }
+
+.mdxstudio-split--pdf .mdxstudio-split__body { overflow: visible; }
+
+/* ------------------------------------------------------------------ *
  * InteractiveCounter
  * ------------------------------------------------------------------ */
 
