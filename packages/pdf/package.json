@@ -1,6 +1,6 @@
 {
   "name": "@mdxstudio/pdf",
-  "version": "0.2.8",
+  "version": "0.2.9",
   "type": "module",
   "description": "DOM-to-A4-PDF exporter for rendered MDX documents.",
   "keywords": [
