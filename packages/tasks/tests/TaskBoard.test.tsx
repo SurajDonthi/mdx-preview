@@ -499,6 +499,19 @@ describe('the board columns', () => {
     expect(columnHeads(lanes()[1])).toEqual(COLUMNS);
   });
 
+  it('folds a column in every lane at once, because it is one column', () => {
+    render(<TaskBoard source={EVERY} defaultView="board" />);
+    choose('Group', 'parent');
+    click(buttonLabelled('Collapse Backlog'));
+
+    const [alpha, beta] = lanes();
+    expect(cardsIn('todo', alpha)).toEqual([]);
+    expect(cardsIn('todo', beta)).toEqual([]);
+    // Both headings stay, each with its own count.
+    expect(countIn('todo', alpha)).toBe('1');
+    expect(countIn('todo', beta)).toBe('0');
+  });
+
   it('offers no status grouping on a board, and drops it on the way in', () => {
     render(<TaskBoard source={EVERY} />);
     choose('Group', 'status');
