@@ -75,6 +75,7 @@ renderer mounts.
 The full set:
 
 - **Layout** — `Card`, `CardGrid`, `Stat`, `StatGrid`, `Tabs` / `Tab`, `Accordion`,
+  `Split` / `Pane`,
   `Steps` / `Step`, `Timeline`
 - **Emphasis** — `Callout` (`info`, `warning`, `success`, `error`, `note`), `Badge`,
   `Kbd`, `InlineCode`, `Button`, `ProgressBar`

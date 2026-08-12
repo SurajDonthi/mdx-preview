@@ -164,6 +164,65 @@ Use children.
 **No PDF caveat, unlike `Tabs`.** In `pdf` render mode every panel is open and
 the trigger is not a button, so an accordion survives an export whole.
 
+## Split and Pane
+
+Two things beside each other, for a reader who has to compare them. `Tabs` shows
+one variant at a time and is wrong for this - a difference you have to remember
+across a click is a difference you will miss.
+
+````mdx
+<Split ratio="60/40">
+<Pane title="Before" icon="Ban">
+
+Panes take **full markdown** - fences, lists, other components, diagrams:
+
+```ts
+const x = 1;
+```
+
+</Pane>
+<Pane title="After" icon="Check" badge="Typed">
+
+```ts
+const x: number = 1;
+```
+
+</Pane>
+</Split>
+````
+
+**Panes are children, and the blank lines are load-bearing** - a blank line after
+the opening tag and before the closing one is what makes the content markdown
+rather than literal text.
+
+| Prop | On | |
+| --- | --- | --- |
+| `ratio` | `Split` | `"60/40"`, `"2:1"`, `"3 1"`, `{[3, 1]}`, or a single number meaning the first pane's share. Unreadable values give equal panes; no pane goes below 10% |
+| `direction` | `Split` | `row` (default) or `column` |
+| `height` | `Split` | A fixed size; the panes scroll inside it |
+| `title`, `icon`, `badge` | `Pane` | A one-line header above the pane |
+
+`direction` describes **the panes**, not the divider - `row` puts them beside
+each other. It deliberately does not accept `horizontal` or `vertical`, because
+both words are used for both meanings; an unrecognised value falls back to `row`.
+A `column` split defaults to `24rem` tall, since a divider with no definite
+height has nothing to move.
+
+More than two panes work, and each divider moves only the pair it sits between.
+Dragging one lasts for the session: nothing is stored, and a reload returns to
+the ratio you wrote. The divider is focusable - arrows move it 2%, with shift
+10%, and Home or a double-click resets it.
+
+Below 48rem the panes stack and the divider disappears. Two code fences side by
+side in a narrow preview pane are unreadable, so do not fight this.
+
+`Compare` is another name for `Split`.
+
+**No PDF caveat, unlike `Tabs`.** Two panes print side by side down to about
+60/40; three panes, or anything more lopsided, stack at full width under their
+titles, and an untitled pane in a stacked export is numbered so it is never a
+column of unlabelled content.
+
 ## Steps and Step
 
 ```jsx
@@ -414,7 +473,8 @@ frontmatter card. It runs entirely in the browser.
 - The output is a **raster image**, so its text is not selectable or searchable.
 - Every `button` is stripped, so a `Tabs` block exports only its open tab -
   do not put anything load-bearing in a tab that is not the default one.
-  `Accordion` and the ` ```tasks ` board are safe: both render every panel,
-  description and bucket open in `pdf` mode, with no buttons to strip.
+  `Accordion`, `Split` and the ` ```tasks ` board are safe: they render every
+  panel, pane, description and bucket open in `pdf` mode, with no buttons to
+  strip.
 - Export **fails outright** if any Mermaid diagram in the document is in the
   error state, or if diagrams have not finished rendering within 10 seconds.

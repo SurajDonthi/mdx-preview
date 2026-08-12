@@ -107,6 +107,7 @@ every prop: [references/components.md](references/components.md).**
 | `Card` / `CardGrid` | Parallel items of equal weight |
 | `Stat` / `StatGrid` | Headline numbers |
 | `Tabs` / `Tab` | One thing, several variants (per-OS, per-language) |
+| `Split` / `Pane` | Two things beside each other, for a reader comparing them |
 | `Steps` / `Step` | An ordered procedure |
 | `Accordion` | Q&A the reader scans and mostly skips |
 | `Timeline` | Dated milestones |
