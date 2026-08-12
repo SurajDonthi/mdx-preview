@@ -123,17 +123,46 @@ non-default tab of a document meant to be exported.
 
 ## Accordion
 
-```jsx
-<Accordion
-  items={[
-    { title: "Question?", content: "Answer." },
-    { title: "Another?", content: "Also an answer." }
-  ]}
-/>
+```mdx
+<Accordion>
+<AccordionItem title="How does parsing work?" icon="Code2">
+
+Panels take **full markdown** - lists, fences, other components:
+
+```mermaid
+graph LR
+  A --> B
 ```
 
-`items` is a prop, not children. `content` is a string or a node. The first item
-is open on load. Same PDF caveat as `Tabs`.
+</AccordionItem>
+<AccordionItem title="And the second?" subtitle="optional" badge="New">
+
+Anything at all.
+
+</AccordionItem>
+</Accordion>
+```
+
+**Panels are children, and the blank lines are load-bearing.** A blank line
+after the opening tag and before the closing one is what makes the content
+markdown; without them it stays literal text, though the panels still group.
+
+| Prop | On | |
+| --- | --- | --- |
+| `title` | `AccordionItem` | The trigger's label |
+| `icon` | `AccordionItem` | A lucide name, as on `Card` |
+| `subtitle`, `badge` | `AccordionItem` | Optional detail on the trigger |
+| `defaultOpen` | either | On a panel, a boolean; on the accordion, an index, a title, `"all"`, `"none"`, or a list |
+| `multiple` | `Accordion` | More than one panel open at once |
+
+With nothing specified the first panel is open. `defaultOpen="none"` starts shut.
+
+The older `items={[{ title, content }]}` form still renders, but **`content` is
+a prop, so markdown inside it stays literal** - `**bold**` renders as asterisks.
+Use children.
+
+**No PDF caveat, unlike `Tabs`.** In `pdf` render mode every panel is open and
+the trigger is not a button, so an accordion survives an export whole.
 
 ## Steps and Step
 
@@ -383,7 +412,9 @@ A4, page breaks measured to avoid splitting diagrams, headings, tables and the
 frontmatter card. It runs entirely in the browser.
 
 - The output is a **raster image**, so its text is not selectable or searchable.
-- Every `button` is stripped, so `Tabs` labels and `Accordion` questions do not
-  appear.
+- Every `button` is stripped, so a `Tabs` block exports only its open tab -
+  do not put anything load-bearing in a tab that is not the default one.
+  `Accordion` and the ` ```tasks ` board are safe: both render every panel,
+  description and bucket open in `pdf` mode, with no buttons to strip.
 - Export **fails outright** if any Mermaid diagram in the document is in the
   error state, or if diagrams have not finished rendering within 10 seconds.

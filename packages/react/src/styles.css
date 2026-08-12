@@ -1607,6 +1607,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: var(--mdxstudio-space-3);
   padding: var(--mdxstudio-space-4);
   text-align: left;
   font-weight: var(--mdxstudio-weight-medium);
@@ -1614,6 +1615,62 @@
   transition:
     color var(--mdxstudio-transition-duration) var(--mdxstudio-transition-timing),
     background-color var(--mdxstudio-transition-duration) var(--mdxstudio-transition-timing);
+}
+
+.mdxstudio-accordion__trigger:focus-visible {
+  outline: 2px solid var(--mdxstudio-accent);
+  outline-offset: -2px;
+}
+
+/* The PDF pass deletes every button, so the export gets a plain element with
+   the same face and none of the affordances. */
+.mdxstudio-accordion__trigger--static:hover { background-color: transparent; }
+
+.mdxstudio-accordion__label {
+  display: flex;
+  align-items: center;
+  gap: var(--mdxstudio-space-3);
+  min-width: 0;
+}
+
+.mdxstudio-accordion__icon {
+  display: flex;
+  flex-shrink: 0;
+  padding: var(--mdxstudio-space-2);
+  border-radius: var(--mdxstudio-radius-lg);
+  background-color: var(--mdxstudio-accent-wash);
+  color: var(--mdxstudio-accent);
+}
+
+.mdxstudio-accordion__title {
+  display: block;
+}
+
+.mdxstudio-accordion__subtitle {
+  display: block;
+  margin-top: var(--mdxstudio-space-0-5);
+  font-size: var(--mdxstudio-text-xs);
+  line-height: calc(1 / 0.75);
+  font-weight: var(--mdxstudio-weight-normal);
+  color: var(--mdxstudio-fg-muted);
+}
+
+.mdxstudio-accordion__aside {
+  display: flex;
+  align-items: center;
+  gap: var(--mdxstudio-space-2-5);
+  flex-shrink: 0;
+}
+
+.mdxstudio-accordion__badge {
+  padding: var(--mdxstudio-space-1) var(--mdxstudio-space-2-5);
+  font-size: var(--mdxstudio-text-xs);
+  line-height: calc(1 / 0.75);
+  font-weight: var(--mdxstudio-weight-medium);
+  border-radius: var(--mdxstudio-radius-full);
+  background-color: var(--mdxstudio-accent-soft-bg);
+  color: var(--mdxstudio-accent-soft-fg);
+  border: 1px solid var(--mdxstudio-accent-soft-border);
 }
 
 :where([data-mdxstudio-theme='light']) .mdxstudio-accordion__trigger {
@@ -1638,12 +1695,28 @@
 }
 
 .mdxstudio-accordion__panel {
-  padding: 0 var(--mdxstudio-space-4) var(--mdxstudio-space-4);
+  padding: var(--mdxstudio-space-2) var(--mdxstudio-space-4) var(--mdxstudio-space-4);
   font-size: var(--mdxstudio-text-sm);
   color: var(--mdxstudio-fg-secondary);
   line-height: var(--mdxstudio-leading-relaxed);
   border-top: 1px solid var(--mdxstudio-border-faint);
   background-color: var(--mdxstudio-sunken-bg);
+}
+
+/* A closed panel stays mounted so `aria-controls` resolves and anything inside
+   keeps its state; `hidden` is what takes it off the page. Spelled out because
+   the rule above would otherwise beat the user-agent's `[hidden]`. */
+.mdxstudio-accordion__panel[hidden] {
+  display: none;
+}
+
+/* Something that is not a panel, written between panels. Shown where it was
+   written rather than dropped. */
+.mdxstudio-accordion__loose {
+  padding: var(--mdxstudio-space-4);
+  font-size: var(--mdxstudio-text-sm);
+  color: var(--mdxstudio-fg-secondary);
+  line-height: var(--mdxstudio-leading-relaxed);
 }
 
 /* ------------------------------------------------------------------ *

@@ -22,6 +22,7 @@ export {
   Tabs,
   Tab,
   Accordion,
+  AccordionItem,
   InteractiveCounter,
   ProgressBar,
   Timeline,
@@ -37,7 +38,9 @@ export type {
   CalloutProps,
   CardProps,
   StatProps,
-  AccordionItem,
+  AccordionProps,
+  AccordionItemProps,
+  AccordionOpen,
   TimelineItem,
 } from './CustomComponents';
 

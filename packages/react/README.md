@@ -125,6 +125,60 @@ themed by the same `--mdxstudio-callout-*` properties:
 > Mind the gap.
 ```
 
+### Accordions
+
+Panels are children, so anything a document can hold goes inside one — lists,
+fenced code, other components, a diagram:
+
+```mdx
+<Accordion>
+
+<AccordionItem title="How does parsing work?" icon="BookOpen" badge="New">
+
+Full **markdown** here, because the panel goes through the MDX pipeline.
+
+- a list
+- another item
+
+</AccordionItem>
+
+<AccordionItem title="What about a diagram?" subtitle="Yes, that too">
+  Anything at all.
+</AccordionItem>
+
+</Accordion>
+```
+
+Markdown inside a panel needs a blank line after the opening tag and before the
+closing one — that is MDX, not this component. Panels written compactly on one
+line each still group correctly; only the markdown in them stays literal.
+
+`AccordionItem` takes `title` plus the same optional `icon` (a lucide name),
+`subtitle` and `badge` that `Card` does, and `defaultOpen`.
+
+The accordion itself takes `multiple`, which lets more than one panel be open at
+once, and `defaultOpen`, which decides what is open on load: an index, a title,
+`"all"`, `"none"`, or a list of those. Given neither, the panels marked
+`defaultOpen` open, and if none are, the first one does — an accordion arrives
+with something to read. `<Accordion defaultOpen="none">` starts shut.
+
+The trigger is a real button: `aria-expanded`, `aria-controls`, Enter and Space
+to open and close, Up/Down/Home/End to move between panels. A closed panel stays
+mounted and `hidden`, so a component inside it keeps its state.
+
+In `renderMode="pdf"` every panel is open and the trigger is not a button, so
+nothing is lost to the exporter — which deletes every button and photographs
+only what is visible.
+
+The 0.2.3 prop form still renders, and reads the same extra fields:
+
+```jsx
+<Accordion items={[{ title: 'Question?', content: 'Answer.' }]} />
+```
+
+`content` is a prop, so markdown written there stays literal. Children win when
+a document gives both.
+
 ### Images
 
 Clicking an image opens it enlarged over the document; Escape, the close button
@@ -143,7 +197,7 @@ themselves still run in your page. Use [`@mdxstudio/sandbox`](https://github.com
 `MdxRenderer`, `FrontmatterHeader`, `InlineToken`, `MdxImage`, `ImageLightbox`,
 `THEMES`, `reactPlugin`, `createRendererRegistry`, `baseMdxRegistry`, and every
 built-in component (`Callout`, `Card`, `CardGrid`, `Stat`, `StatGrid`, `Tabs`,
-`Tab`, `Accordion`, `Steps`, `Step`, `Timeline`, `ProgressBar`,
+`Tab`, `Accordion`, `AccordionItem`, `Steps`, `Step`, `Timeline`, `ProgressBar`,
 `InteractiveCounter`, `Kbd`, `Badge`, `Button`, `TableComponent`, `InlineCode`,
 `MathExpression`).
 
