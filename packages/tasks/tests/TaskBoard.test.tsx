@@ -89,18 +89,21 @@ describe('what is open on load', () => {
     expect(titles()).toEqual(['one', 'three']);
   });
 
-  it('opens the path down to work in progress and nothing else', () => {
+  it('starts with every branch closed, whatever the plan contains', () => {
     render(<TaskBoard source={PLAN} />);
 
-    // AG-1 and "Rewire the API" are on the path to the [~]; AG-9 is not on it
-    // and stays closed, so its child is not rendered. "Prune the schema
-    // package" is done, so it has sunk into the bucket at the bottom.
-    expect(titles()).toEqual([
-      'Delete the engine',
-      'Rewire the API',
-      'Port the routes',
-      'Second epic',
-    ]);
+    // Only the top level. Nothing below it is rendered - not the path to the
+    // [~] either, which an earlier version opened. A board whose starting
+    // shape depends on the contents is one a reader cannot learn.
+    expect(titles()).toEqual(['Delete the engine', 'Second epic']);
+  });
+
+  it('opens the same way whether or not there is work in progress', () => {
+    render(<TaskBoard source={'- [ ] parent\n    - [~] child'} />);
+    expect(titles()).toEqual(['parent']);
+
+    render(<TaskBoard source={'- [ ] parent\n    - [ ] child'} />);
+    expect(titles()).toEqual(['parent']);
   });
 
   it('pins the work in flight above everything else', () => {
@@ -223,6 +226,7 @@ describe('what a collapsed parent carries', () => {
 
   it('gives a leaf no summary to carry', () => {
     render(<TaskBoard source={PLAN} />);
+    click(buttonLabelled('Expand every item'));
 
     expect(titled('Port the routes')?.querySelector('.mdxstudio-tasks__summary')).toBeNull();
   });
@@ -619,6 +623,8 @@ describe('copy', () => {
     Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
 
     render(<TaskBoard source={PLAN} />);
+    // Everything starts closed, so open it before reaching for a nested row.
+    click(buttonLabelled('Expand every item'));
     click(buttonLabelled('Copy the source line for Rewire the API'));
 
     expect(writeText).toHaveBeenCalledWith('    - [ ] Rewire the API needs: AG-9');
@@ -629,6 +635,7 @@ describe('copy', () => {
     Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
 
     render(<TaskBoard source={PLAN} />);
+    click(buttonLabelled('Expand every item'));
     click(buttonLabelled('Copy every visible line'));
 
     const payload = writeText.mock.calls[0][0];
@@ -639,6 +646,7 @@ describe('copy', () => {
       '    - [ ] Rewire the API needs: AG-9',
       '        - [~] Port the routes',
       '- [ ] AG-9: Second epic @bo #ui',
+      '    - [ ] A leaf with no prose',
       '- [?] a line the parser cannot read',
     ]);
   });
@@ -796,7 +804,7 @@ describe('the source it reads', () => {
   });
 
   it('never throws on input it cannot read', () => {
-    expect(() => render(<TaskBoard source={'- [?] junk\n\t\t- [ ]  '} />)).not.toThrow();
+    expect(() => render(<TaskBoard source={'- [?] junk\n\t\t- [ ] \u0000'} />)).not.toThrow();
     expect(() => render(<TaskBoard>{42 as unknown as React.ReactNode}</TaskBoard>)).not.toThrow();
   });
 });

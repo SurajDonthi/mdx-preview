@@ -176,27 +176,22 @@ interface Disclosure {
 }
 
 /**
- * What is open on first render.
+ * What is open on first render: nothing.
  *
- * Everything is closed except the path down to work in progress: a sixty-node
- * plan opened flat is a wall of text with no overview, and the one thing a
- * reader always wants to see is where the work currently is.
+ * An earlier version opened the path down to whatever was in progress, on the
+ * argument that it is what a reader wants to see first. In practice a plan with
+ * work at several depths came up part-opened in a different shape each time it
+ * was edited, and a board whose starting state depends on the contents is one
+ * you cannot learn. Closed is predictable, gives the overview the collapsed
+ * rows are carrying anyway, and leaves opening a deliberate act.
+ *
+ * The settled buckets fold for the same reason they always did - they are there
+ * to be checked, not scrolled past.
  */
 function initialDisclosure(document: TaskDocument): Disclosure {
-  const open = new Set<string>();
-  for (const task of document.tasks) {
-    if (task.status !== 'in-progress') continue;
-    let parentKey = task.parentKey;
-    while (parentKey) {
-      if (open.has(parentKey)) break;
-      open.add(parentKey);
-      const parent = document.byKey.get(parentKey);
-      parentKey = parent?.parentKey;
-    }
-  }
   return {
     document,
-    children: open,
+    children: new Set<string>(),
     descriptions: new Set(),
     // Settled work starts folded, wherever it is shown. It is there to be
     // checked, not to be scrolled past.
