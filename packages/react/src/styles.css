@@ -1861,10 +1861,14 @@
  * ------------------------------------------------------------------ */
 
 .mdxstudio-timeline {
+  /* Named, because the marker has to be centred on this line and a second
+     hard-coded width in the marker rule is how the dot drifted off it. */
+  --mdxstudio-timeline-rail: 2px;
   margin-block: var(--mdxstudio-space-6);
   position: relative;
   padding-left: var(--mdxstudio-space-6);
-  border-left: 2px solid color-mix(in oklab, var(--mdxstudio-accent-icon) 30%, transparent);
+  border-left: var(--mdxstudio-timeline-rail) solid
+    color-mix(in oklab, var(--mdxstudio-accent-icon) 30%, transparent);
 }
 
 :where(.mdxstudio-timeline > :not(:last-child)) {
@@ -1875,7 +1879,13 @@
 
 .mdxstudio-timeline__marker {
   position: absolute;
-  left: -31px;
+  /* Put the marker's left edge on the rail's centre line, then pull it back by
+     half its own width. The previous `-31px` restated the marker's total size
+     as a constant - it assumed 30px and was nine pixels out, so the rail ran
+     through the left of every dot. Expressed this way the dot stays centred
+     whatever the icon size or the padding become. */
+  left: calc(-1 * (var(--mdxstudio-space-6) + var(--mdxstudio-timeline-rail) / 2));
+  transform: translateX(-50%);
   top: var(--mdxstudio-space-1);
   padding: var(--mdxstudio-space-1-5);
   border-radius: var(--mdxstudio-radius-full);
